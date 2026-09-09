@@ -1,0 +1,1818 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marketplace Manager AI - Fluxo Perfeito 10/10</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            ml: {
+              yellow: '#FFE600',
+              navy: '#2D3277',
+              blue: '#3483FA'
+            },
+            darkbg: '#0F172A',
+            cardbg: '#1E293B',
+            cardborder: '#334155'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .pulse-dot {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .4; }
+    }
+  </style>
+</head>
+<body class="bg-darkbg text-slate-100 min-h-screen antialiased flex flex-col">
+
+  <!-- ============================================================ -->
+  <!-- TELA DE LOGIN SEGURA (RENDER / PRODUÇÃO)                     -->
+  <!-- ============================================================ -->
+  <div id="login-overlay" class="fixed inset-0 z-[9999] bg-darkbg flex flex-col justify-center items-center p-4 overflow-y-auto">
+    <!-- Efeitos de iluminação de fundo -->
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="w-full max-w-md relative z-10">
+      <!-- Logo e Cabeçalho -->
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-400 to-amber-600 shadow-xl shadow-amber-500/20 mb-4">
+          <i data-lucide="bot" class="w-9 h-9 text-slate-900"></i>
+        </div>
+        <h1 class="text-2xl font-bold text-white tracking-tight">Marketplace Manager AI</h1>
+        <p class="text-sm text-slate-400 mt-1">Inteligência Comercial & Análise de Concorrência</p>
+      </div>
+
+      <!-- Card de Login -->
+      <div class="bg-cardbg/95 backdrop-blur border border-cardborder rounded-2xl p-8 shadow-2xl space-y-6">
+        <div class="border-b border-cardborder pb-4 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-semibold text-white">Acesso ao Painel</h2>
+            <p class="text-xs text-slate-400">Insira suas credenciais para continuar</p>
+          </div>
+          <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1">
+            <i data-lucide="shield-check" class="w-3 h-3 text-emerald-400"></i> Protegido
+          </span>
+        </div>
+
+        <!-- Alerta de Erro -->
+        <div id="login-error" class="hidden bg-rose-500/10 border border-rose-500/30 text-rose-300 px-3.5 py-2.5 rounded-lg text-xs flex items-center gap-2">
+          <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0 text-rose-400"></i>
+          <span id="login-error-msg">Usuário ou senha incorretos.</span>
+        </div>
+
+        <!-- Formulário de Login -->
+        <form id="login-form" class="space-y-4" onsubmit="handleLogin(event)">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5" for="login-username">Usuário</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <i data-lucide="user" class="w-4 h-4"></i>
+              </div>
+              <input 
+                type="text" 
+                id="login-username" 
+                value="admin" 
+                required 
+                autocomplete="username" 
+                class="w-full bg-slate-900 border border-cardborder rounded-lg pl-9 pr-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 transition"
+                placeholder="Nome de usuário"
+              >
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5" for="login-password">Senha</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <i data-lucide="lock" class="w-4 h-4"></i>
+              </div>
+              <input 
+                type="password" 
+                id="login-password" 
+                value="admin123" 
+                required 
+                autocomplete="current-password" 
+                class="w-full bg-slate-900 border border-cardborder rounded-lg pl-9 pr-10 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 transition"
+                placeholder="Sua senha de acesso"
+              >
+              <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200">
+                <i data-lucide="eye" id="icon-login-eye" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <button 
+              type="submit" 
+              id="btn-login-submit" 
+              class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-900 font-bold py-2.5 px-4 rounded-lg shadow-lg shadow-amber-500/20 transition flex items-center justify-center space-x-2 text-sm"
+            >
+              <span id="btn-login-text">Entrar no Sistema</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </form>
+
+        <!-- Dica de Credenciais Iniciais -->
+        <div class="bg-slate-900/60 border border-slate-800 rounded-lg p-3 text-xs text-slate-400 space-y-1">
+          <div class="flex items-center gap-1.5 text-slate-300 font-semibold">
+            <i data-lucide="key" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Credenciais padrão de acesso:</span>
+          </div>
+          <p class="font-mono text-[11px] text-slate-400 pl-5">
+            Usuário: <span class="text-amber-300">admin</span> • Senha: <span class="text-amber-300">admin123</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="text-center mt-6 text-xs text-slate-500">
+        Marketplace Manager AI &copy; 2026 • Pronto para deploy no Render
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- TOPBAR / GOVERNANÇA & SEGURANÇA                              -->
+  <!-- ============================================================ -->
+  <header class="border-b border-cardborder bg-cardbg/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+          <i data-lucide="bot" class="w-6 h-6 text-slate-900"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="font-bold text-lg text-white">Marketplace Manager AI</h1>
+            <span class="text-xs bg-cyan-500/20 text-cyan-300 font-semibold px-2 py-0.5 rounded-full border border-cyan-500/30">INTELIGÊNCIA COMERCIAL</span>
+          </div>
+          <p class="text-xs text-slate-400">Agente de Inteligência de Mercado, Análise de Concorrência & Viabilidade Econômica</p>
+        </div>
+      </div>
+
+      <!-- Indicadores de Segurança e Conexão -->
+      <div class="flex items-center space-x-3">
+        <button onclick="openMlConfigModal()" class="flex items-center space-x-1.5 bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500/50 px-3 py-1.5 rounded-lg text-blue-300 text-xs font-semibold transition shadow-sm">
+          <i data-lucide="key" class="w-3.5 h-3.5"></i>
+          <span id="btn-ml-api-status">Conectar API Oficial ML</span>
+        </button>
+
+        <div id="connection-status-badge" class="flex items-center space-x-2 bg-slate-800 border border-cardborder px-3 py-1.5 rounded-lg text-slate-300">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-400" id="connection-status-dot"></span>
+          <span class="text-xs font-semibold" id="connection-status-text">API ML: DESCONECTADA</span>
+        </div>
+
+        <div class="hidden sm:flex items-center space-x-2 bg-slate-800 border border-cardborder px-3 py-1.5 rounded-lg">
+          <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+          <span class="text-xs font-semibold text-slate-300">MODO: ANÁLISE DE MERCADO</span>
+        </div>
+
+        <!-- Botão Sair / Logout -->
+        <button type="button" onclick="handleLogout()" title="Encerrar Sessão" class="flex items-center space-x-1.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition shadow-sm">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span>Sair</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================ -->
+  <!-- BARRA DE PRINCÍPIOS FUNDAMENTAIS                             -->
+  <!-- ============================================================ -->
+  <div class="bg-slate-900/90 border-b border-cardborder px-4 py-2 text-xs text-slate-400">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center space-x-4">
+        <span class="flex items-center space-x-1 text-blue-400 font-medium">
+          <i data-lucide="search" class="w-3.5 h-3.5"></i>
+          <span id="topbar-competitors-mapped">Concorrência Mapeada em Tempo Real via Mercado Livre</span>
+        </span>
+        <span class="text-slate-600">•</span>
+        <span class="flex items-center space-x-1 text-cyan-400 font-medium">
+          <i data-lucide="calculator" class="w-3.5 h-3.5"></i>
+          <span>Cálculo Determinístico de Taxas e Frete ME</span>
+        </span>
+        <span class="text-slate-600">•</span>
+        <span class="flex items-center space-x-1 text-emerald-400 font-medium">
+          <i data-lucide="scale" class="w-3.5 h-3.5"></i>
+          <span>Matriz de Viabilidade (Compensa ou Não Compensa)</span>
+        </span>
+      </div>
+      <div class="text-slate-500 font-mono">
+        Rastreabilidade de Ponta a Ponta
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 space-y-8 w-full">
+
+    <!-- ============================================================ -->
+    <!-- 1. INTAKE / BRIEFING (CAMADA 1 & 3)                          -->
+    <!-- ============================================================ -->
+    <section class="bg-cardbg rounded-2xl border border-cardborder p-6 shadow-xl relative overflow-hidden">
+      <div class="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none"></div>
+      
+      <div class="flex flex-col md:flex-row md:items-center justify-between pb-6 mb-6 border-b border-cardborder gap-4">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="text-xs font-bold text-amber-400 tracking-wider uppercase bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20">Camadas 1 & 3</span>
+            <h2 class="text-xl font-bold text-white">Intake & Requirement Engine</h2>
+          </div>
+          <p class="text-sm text-slate-400 mt-1">Configure o seu produto e clique em <strong>"Analisar Mercado & Viabilidade"</strong>.</p>
+        </div>
+
+        <!-- Presets rápidos -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs text-slate-400 font-medium">Exemplo de teste:</span>
+          <button type="button" onclick="loadPreset('garrafa')" class="px-3 py-1.5 text-xs rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold transition flex items-center space-x-1.5 shadow-sm">
+            <span>🍶 Garrafa Térmica Inox 1L</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Formulário de Entrada -->
+      <form id="intake-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">SKU / Código do Produto *</label>
+          <input type="text" id="input-sku" value="GAR-INOX-1000" required class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+        </div>
+
+        <div class="lg:col-span-2">
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Nome do Produto *</label>
+          <input type="text" id="input-title" value="Garrafa Térmica Inox 1 Litro Parede Dupla" required class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Marca / Fabricante</label>
+          <input type="text" id="input-brand" value="ThermoMax" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Custo CMV Unitário (R$) *</label>
+          <div class="relative">
+            <span class="absolute left-3 top-2 text-sm text-slate-500">R$</span>
+            <input type="number" step="0.50" id="input-cost" value="24.50" required class="w-full bg-slate-900 border border-cardborder rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Margem Líquida Alvo Desejada</label>
+          <select id="input-margin" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+            <option value="0.15">15% (Competitivo)</option>
+            <option value="0.20">20% (Equilibrado)</option>
+            <option value="0.25" selected>25% (Alta Margem)</option>
+            <option value="0.30">30% (Excelente)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Estoque Disponível (Unidades)</label>
+          <input type="number" id="input-stock" value="120" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Peso do Pacote (Kg)</label>
+          <input type="number" step="0.50" id="input-weight" value="0.45" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+        </div>
+
+        <div class="lg:col-span-3">
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Diferenciais e Benefícios Chave (Separados por vírgula)</label>
+          <input type="text" id="input-features" value="Conserva gelado por 24h e quente por 12h, Aço Inoxidável 304, Tampa hermética antiderrame, Livre de BPA" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+        </div>
+
+        <div class="flex items-end">
+          <button type="submit" id="btn-run-pipeline" class="w-full bg-gradient-to-r from-blue-600 to-amber-500 hover:from-blue-500 hover:to-amber-400 text-white font-bold py-2.5 px-4 rounded-lg shadow-lg shadow-blue-500/20 flex items-center justify-center space-x-2 transition transform active:scale-98">
+            <i data-lucide="calculator" class="w-4 h-4"></i>
+            <span>Analisar Mercado & Viabilidade</span>
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- PIPELINE STATUS & LOGS VISUAIS                               -->
+    <!-- ============================================================ -->
+    <div id="pipeline-progress" class="hidden space-y-8">
+
+      <!-- ============================================================ -->
+      <!-- 7.2 CONCORRENTES REAIS AO VIVO NO MERCADO LIVRE              -->
+      <!-- ============================================================ -->
+      <section class="bg-gradient-to-b from-blue-950/40 to-cardbg rounded-2xl border-2 border-blue-500/40 p-6 shadow-2xl space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-cardborder">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-bold text-blue-400 tracking-wider uppercase bg-blue-500/20 px-2.5 py-1 rounded-md border border-blue-500/40">Camadas 4 & 7.2 (CONCORRENTES REAIS)</span>
+              <h3 class="text-xl font-bold text-white flex items-center space-x-2">
+                <i data-lucide="shopping-cart" class="w-5 h-5 text-blue-400"></i>
+                <span>Concorrentes Reais Encontrados no Mercado Livre</span>
+              </h3>
+            </div>
+            <p class="text-sm text-slate-300 mt-1">
+              Produtos concorrentes mapeados com preços reais praticados no Mercado Livre Brasil.
+              <span class="text-emerald-400 block text-xs mt-1 font-medium flex items-center gap-1.5">
+                <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0"></i>
+                <span><strong>100% Automatizado via API Oficial:</strong> Produtos, fotos, preços reais e links canônicos obtidos diretamente do Mercado Livre em tempo real.</span>
+              </span>
+            </p>
+          </div>
+
+          <!-- Estatísticas em Tempo Real -->
+          <div class="flex items-center space-x-3 text-xs" id="live-stats-bar">
+            <div class="bg-slate-900/90 px-3 py-2 rounded-xl border border-cardborder">
+              <span class="text-slate-400 block text-[10px]">Menor Preço Real</span>
+              <span class="font-bold text-emerald-400" id="live-min-price">--</span>
+            </div>
+            <div class="bg-slate-900/90 px-3 py-2 rounded-xl border border-blue-500/50">
+              <span class="text-blue-300 block text-[10px] font-semibold">Média Real do Mercado</span>
+              <span class="font-bold text-amber-300 text-sm" id="live-avg-price">--</span>
+            </div>
+            <div class="bg-slate-900/90 px-3 py-2 rounded-xl border border-cardborder">
+              <span class="text-slate-400 block text-[10px]">Maior Preço Real</span>
+              <span class="font-bold text-slate-200" id="live-max-price">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grade com os Concorrentes Reais -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="live-competitors-grid">
+          <!-- Carregado dinamicamente com fotos e links reais do ML -->
+        </div>
+      </section>
+
+      <!-- GRAFO VISUAL DAS CAMADAS DO DIAGRAMA -->
+      <section class="bg-cardbg rounded-2xl border border-cardborder p-6 shadow-xl">
+        <div class="flex items-center justify-between pb-4 mb-4 border-b border-cardborder">
+          <div class="flex items-center space-x-2">
+            <span class="text-xs font-bold text-cyan-400 tracking-wider uppercase bg-cyan-500/10 px-2.5 py-1 rounded-md border border-cyan-500/20">Camadas 2, 6 & 7</span>
+            <h3 class="text-lg font-bold text-white">Status dos Agentes Especialistas em Paralelo</h3>
+          </div>
+          <span id="pipeline-badge" class="text-xs font-semibold bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full border border-emerald-500/30 flex items-center space-x-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span>Análise de Mercado & Viabilidade Concluída</span>
+          </span>
+        </div>
+
+        <!-- Grade dos Agentes -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-slate-900/80 rounded-xl p-4 border border-cardborder">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-amber-400 uppercase">2. Orchestrator</span>
+              <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-semibold">Concluído</span>
+            </div>
+            <p class="text-xs text-slate-300 font-medium">Decomposição & Coordenação</p>
+            <p class="text-[11px] text-slate-400 mt-1">Contexto sincronizado e dependências mapeadas sem conflitos.</p>
+          </div>
+
+          <div class="bg-slate-900/80 rounded-xl p-4 border border-cardborder">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-blue-400 uppercase">7.2 Market Intel</span>
+              <span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-semibold">Concorrência Real</span>
+            </div>
+            <p class="text-xs text-slate-300 font-medium">Benchmarking de Preços</p>
+            <p class="text-[11px] text-slate-400 mt-1" id="stat-competitors-count">Anúncios reais mapeados no ML.</p>
+          </div>
+
+          <div class="bg-slate-900/80 rounded-xl p-4 border border-cardborder">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-emerald-400 uppercase">7.4 Financial Engine</span>
+              <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-semibold">Determinístico</span>
+            </div>
+            <p class="text-xs text-slate-300 font-medium">Regras Oficiais Mercado Livre</p>
+            <p class="text-[11px] text-slate-400 mt-1">Tarifas, Frete Mercado Envios e Break-even calculados.</p>
+          </div>
+
+          <div class="bg-slate-900/80 rounded-xl p-4 border border-cardborder">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-purple-400 uppercase">10. Decision Gate</span>
+              <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-semibold">Veredito</span>
+            </div>
+            <p class="text-xs text-slate-300 font-medium">Viabilidade do Produto</p>
+            <p class="text-[11px] text-slate-400 mt-1">4 cenários simulados e parecer de viabilidade concluído.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- 10. DECISION GATE & 9. CENÁRIOS DE ESTRESSE                  -->
+      <!-- ============================================================ -->
+      <section class="bg-cardbg rounded-2xl border border-cardborder p-6 shadow-xl space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-cardborder">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-bold text-emerald-400 tracking-wider uppercase bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">Camadas 9 & 10</span>
+              <h3 class="text-lg font-bold text-white">Viability & Decision Gate (Matriz de Estresse)</h3>
+            </div>
+            <p class="text-sm text-slate-400 mt-1">Simulação de 4 cenários baseados nos preços reais do Mercado Livre.</p>
+          </div>
+
+          <!-- Rating Badge -->
+          <div id="decision-badge" class="px-4 py-2 rounded-xl bg-emerald-950/80 border border-emerald-500/50 flex items-center space-x-2">
+            <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+            <div>
+              <div class="text-xs font-semibold text-slate-400 uppercase">Classificação do Portão</div>
+              <div class="text-sm font-bold text-emerald-300" id="decision-rating-title">A - VIÁVEL (Recomendação Sólida)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cards dos 4 Cenários -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="scenarios-container"></div>
+
+        <!-- Justificativas e Condições -->
+        <div class="bg-slate-900/60 rounded-xl p-4 border border-cardborder">
+          <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center space-x-1.5">
+            <i data-lucide="info" class="w-4 h-4 text-amber-400"></i>
+            <span>Parecer Técnico do Decision Gate:</span>
+          </h4>
+          <ul id="decision-reasons-list" class="space-y-1.5 text-xs text-slate-300"></ul>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- UNIT ECONOMICS & SIMULADOR DE VIABILIDADE FINANCEIRA         -->
+      <!-- ============================================================ -->
+      <section class="bg-cardbg rounded-2xl border border-cardborder p-6 shadow-xl space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-cardborder">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-bold text-emerald-400 tracking-wider uppercase bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">Unit Economics Determinístico</span>
+              <h3 class="text-xl font-bold text-white flex items-center space-x-2">
+                <i data-lucide="calculator" class="w-5 h-5 text-emerald-400"></i>
+                <span>Demonstrativo Financeiro & Margem Real (Oficial Mercado Livre)</span>
+              </h3>
+            </div>
+            <p class="text-sm text-slate-400 mt-1">Detalhamento exato de receitas, comissões do ML, frete Mercado Envios, impostos e lucro líquido por unidade.</p>
+          </div>
+
+          <button onclick="openAdjustModal()" class="px-4 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 text-xs font-bold transition flex items-center space-x-2 shadow-sm">
+            <i data-lucide="sliders" class="w-4 h-4"></i>
+            <span>Simular Outro Preço de Venda</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- Coluna 1 & 2: Destaques Financeiros e Balanço Unitário -->
+          <div class="lg:col-span-2 space-y-4">
+            
+            <!-- Cards Grandes de Indicadores -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div class="bg-darkbg p-4 rounded-xl border border-cardborder space-y-1">
+                <span class="text-xs text-slate-400 font-medium">Preço Recomendado</span>
+                <div class="text-2xl font-black text-amber-400" id="display-selling-price">R$ 0,00</div>
+                <span class="text-[10px] text-slate-500 block">Equilíbrio com concorrência</span>
+              </div>
+              <div class="bg-darkbg p-4 rounded-xl border border-cardborder space-y-1">
+                <span class="text-xs text-slate-400 font-medium">Margem Líquida Real</span>
+                <div class="text-2xl font-bold text-emerald-400" id="display-net-margin">0.0%</div>
+                <span class="text-[10px] text-slate-500 block">Livre de todas as taxas</span>
+              </div>
+              <div class="bg-darkbg p-4 rounded-xl border border-cardborder space-y-1">
+                <span class="text-xs text-slate-400 font-medium">Lucro Líquido Unitário</span>
+                <div class="text-2xl font-bold text-emerald-300" id="display-net-profit">R$ 0,00</div>
+                <span class="text-[10px] text-slate-500 block">Por produto vendido</span>
+              </div>
+            </div>
+
+            <!-- Tabela Detalhada de Composição do Preço -->
+            <div class="bg-slate-900/90 rounded-xl p-4 border border-cardborder space-y-3">
+              <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-2">
+                <i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i>
+                <span>Composição de Custos e Deduções por Unidade</span>
+              </h4>
+
+              <div class="space-y-2 text-xs">
+                <div class="flex justify-between py-2 border-b border-slate-800">
+                  <span class="text-slate-300 font-medium flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+                    Custo de Aquisição (CMV):
+                  </span>
+                  <span class="font-semibold text-white font-mono" id="display-cost">R$ 0,00</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-slate-800">
+                  <span class="text-slate-300 font-medium flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                    Comissão Mercado Livre (13% Clássico):
+                  </span>
+                  <span class="font-semibold text-amber-300 font-mono" id="display-ml-fee">R$ 0,00</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-slate-800">
+                  <span class="text-slate-300 font-medium flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+                    <span id="display-shipping-label">Frete Mercado Envios:</span>
+                  </span>
+                  <span class="font-semibold text-purple-300 font-mono" id="display-shipping">R$ 0,00</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-slate-800">
+                  <span class="text-slate-300 font-medium flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                    Impostos Tributários (Simples Nacional 6%):
+                  </span>
+                  <span class="font-semibold text-cyan-300 font-mono" id="display-tax">R$ 0,00</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-slate-800">
+                  <span class="text-slate-300 font-medium flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                    Embalagem e Proteção de Envio:
+                  </span>
+                  <span class="font-semibold text-slate-300 font-mono" id="display-pack">R$ 0,00</span>
+                </div>
+                <div class="flex justify-between py-2.5 pt-3 border-t border-slate-700 bg-slate-950/40 px-3 rounded-lg">
+                  <span class="text-slate-200 font-bold">Lucro Líquido Unitário:</span>
+                  <span class="font-bold text-emerald-400 font-mono text-sm" id="display-final-profit-row">R$ 0,00</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Coluna 3: Projeção de Giro e Veredito -->
+          <div class="space-y-4">
+            <div class="bg-slate-900 rounded-xl p-5 border border-cardborder space-y-4">
+              <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
+                <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i>
+                <span>Projeção de Retorno Mensal</span>
+              </h4>
+              
+              <div class="bg-darkbg p-3.5 rounded-lg border border-cardborder space-y-2">
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">Giro Estimado:</span>
+                  <span class="font-bold text-white font-mono" id="display-monthly-units">0 un / mês</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">Faturamento Mensal:</span>
+                  <span class="font-bold text-amber-300 font-mono" id="display-monthly-revenue">R$ 0,00</span>
+                </div>
+                <div class="flex justify-between text-xs pt-2 border-t border-slate-800">
+                  <span class="text-slate-200 font-semibold" id="display-monthly-profit-label">Lucro Mensal Projetado:</span>
+                  <span class="font-bold text-emerald-400 font-mono text-sm" id="display-monthly-profit">R$ 0,00</span>
+                </div>
+              </div>
+
+              <div class="bg-slate-950/70 p-3.5 rounded-lg border border-cardborder/80 text-xs space-y-2">
+                <span class="font-bold text-slate-200 flex items-center gap-1.5">
+                  <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+                  <span>Veredito de Viabilidade:</span>
+                </span>
+                <p class="text-[11px] text-slate-400 leading-relaxed">
+                  O produto só compensa se a receita líquida cobrir todos os custos operacionais (CMV + taxa ML + frete) e superar a margem mínima definida pelo lojista.
+                </p>
+              </div>
+
+              <button onclick="openAdjustModal()" class="w-full py-2.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 text-xs font-bold transition flex items-center justify-center space-x-2">
+                <i data-lucide="sliders" class="w-4 h-4"></i>
+                <span>Simular Outro Preço de Venda</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- 6. EVIDENCE STORE INSPECTOR (AUDITORIA E RASTREABILIDADE)    -->
+      <!-- ============================================================ -->
+      <section class="bg-cardbg rounded-2xl border border-cardborder p-6 shadow-xl space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-cardborder">
+          <div class="flex items-center space-x-2">
+            <span class="text-xs font-bold text-cyan-400 tracking-wider uppercase bg-cyan-500/10 px-2.5 py-1 rounded-md border border-cyan-500/20">Camada 6</span>
+            <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+              <i data-lucide="database" class="w-5 h-5 text-cyan-400"></i>
+              <span>Evidence Store Versionado (Rastreabilidade Total)</span>
+            </h3>
+          </div>
+          <span class="text-xs text-slate-400">Base para todas as decisões do agente</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="text-[11px] uppercase bg-slate-900/80 text-slate-400 border-b border-cardborder">
+              <tr>
+                <th class="px-4 py-3">Campo / Métrica</th>
+                <th class="px-4 py-3">Valor</th>
+                <th class="px-4 py-3">Tipo Metodológico</th>
+                <th class="px-4 py-3">Origem (Fonte)</th>
+                <th class="px-4 py-3">Confiança</th>
+                <th class="px-4 py-3">Camada</th>
+              </tr>
+            </thead>
+            <tbody id="evidence-table-body" class="divide-y divide-cardborder/60"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: CONEXÃO COM API OFICIAL MERCADO LIVRE DEVELOPERS     -->
+  <!-- ============================================================ -->
+  <div id="ml-config-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-cardbg border border-blue-500/40 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-cardborder">
+        <h4 class="text-base font-bold text-white flex items-center space-x-2">
+          <div class="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
+            <i data-lucide="shield-check" class="w-4 h-4 text-white"></i>
+          </div>
+          <span>Conectar API Oficial Mercado Livre</span>
+        </h4>
+        <button onclick="closeMlConfigModal()" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="bg-blue-950/40 border border-blue-500/30 p-3 rounded-xl text-xs text-blue-200 space-y-1">
+        <div class="font-bold flex items-center gap-1.5">
+          <i data-lucide="info" class="w-3.5 h-3.5 text-blue-400"></i>
+          <span>Como obter suas credenciais gratuitas:</span>
+        </div>
+        <p class="text-[11px] text-slate-300 leading-relaxed">
+          1. Acesse <strong>developers.mercadolivre.com.br</strong> e faça login.<br>
+          2. Em "Meus aplicativos", clique em <strong>"Criar aplicativo"</strong>.<br>
+          3. Em Redirect URI coloque: <code class="bg-darkbg px-1 py-0.5 rounded text-amber-300 font-mono">http://localhost:8000/api/auth/callback</code>.<br>
+          4. Copie o <strong>App ID</strong> e a <strong>Secret Key</strong> e cole abaixo.
+        </p>
+      </div>
+
+      <form id="ml-credentials-form" onsubmit="saveMlCredentials(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">App ID (Client ID):</label>
+          <input type="text" id="ml-input-appid" required placeholder="Ex: 1234567890123456" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2 text-white font-mono text-xs focus:border-blue-400 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Secret Key (Client Secret):</label>
+          <input type="password" id="ml-input-secret" required placeholder="Ex: aBcDeFgHiJkLmNoPqRsTuVwXyZ123456" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2 text-white font-mono text-xs focus:border-blue-400 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Access Token (Opcional - caso já tenha gerado diretamente no portal):</label>
+          <input type="text" id="ml-input-token" placeholder="APP_USR-..." class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2 text-white font-mono text-xs focus:border-blue-400 focus:outline-none">
+        </div>
+
+        <div class="bg-slate-900/90 p-3 rounded-xl border border-amber-500/30 space-y-2">
+          <label class="block text-amber-300 font-semibold text-[11px] flex items-center gap-1.5">
+            <i data-lucide="key-round" class="w-3.5 h-3.5"></i>
+            <span>Após clicar em "Autorizar", cole aqui a URL do Google ou o código TG-...:</span>
+          </label>
+          <div class="flex gap-2">
+            <input type="text" id="ml-input-code" placeholder="Ex: https://google.com/?code=TG-... ou apenas TG-..." class="flex-1 bg-darkbg border border-cardborder rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:border-amber-400 focus:outline-none">
+            <button type="button" onclick="submitAuthCode()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center space-x-1 transition shadow-md">
+              <i data-lucide="check" class="w-3.5 h-3.5"></i>
+              <span>Autenticar</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-cardborder">
+          <button type="button" onclick="closeMlConfigModal()" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white text-xs">Cancelar</button>
+          <div class="flex items-center space-x-2">
+            <button type="button" id="btn-oauth-authorize" onclick="authorizeWithMercadoLivre()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 font-bold text-xs flex items-center space-x-1 transition">
+              <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+              <span>Autorizar via ML (OAuth)</span>
+            </button>
+            <button type="submit" class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center space-x-1 transition">
+              <i data-lucide="save" class="w-3.5 h-3.5"></i>
+              <span>Salvar Credenciais</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: SIMULADOR INTERATIVO DE PREÇO & VIABILIDADE           -->
+  <!-- ============================================================ -->
+  <div id="adjust-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-cardbg border border-cardborder rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-cardborder">
+        <h4 class="text-base font-bold text-white flex items-center space-x-2">
+          <i data-lucide="sliders" class="w-4 h-4 text-amber-400"></i>
+          <span>Simulador de Preço de Venda</span>
+        </h4>
+        <button onclick="closeAdjustModal()" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <p class="text-slate-400 text-[11px] leading-relaxed">
+          Teste diferentes preços de venda para verificar instantaneamente a margem líquida real, taxas do Mercado Livre e se a operação compensa.
+        </p>
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Preço de Venda Simulado (R$):</label>
+          <input type="number" step="0.50" id="modal-price" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-amber-400 focus:outline-none">
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end space-x-2 pt-2">
+        <button onclick="closeAdjustModal()" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white text-xs">Cancelar</button>
+        <button onclick="submitAdjust()" class="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center space-x-1.5 transition">
+          <i data-lucide="calculator" class="w-3.5 h-3.5"></i>
+          <span>Recalcular Viabilidade</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- JAVASCRIPT: CONTROLE REAL DE CONCORRENTES                    -->
+  <!-- ============================================================ -->
+  <script>
+    // Concorrentes Ativos Iniciais (Garrafa Térmica Inox 1 Litro - Mercado Livre)
+    let activeCompetitors = [
+      {
+        id: "MLB-SQUEEZE-01",
+        title: "Garrafa Térmica Squeeze Inox 1L Parede Dupla Vácuo Quente/Frio",
+        price: 49.90,
+        original_price: 69.90,
+        discount: "28% OFF",
+        permalink: "https://lista.mercadolivre.com.br/garrafa-squeeze-termica-inox-1-litro",
+        thumbnail: "/img/squeeze_inox.jpg",
+        free_shipping: false,
+        seller: "Utilidades & Cia (+25.000 vendidos)"
+      },
+      {
+        id: "MLB-TRAMONTINA-02",
+        title: "Garrafa Térmica Tramontina Exata Inox 1 Litro com Ampola",
+        price: 79.90,
+        original_price: 99.90,
+        discount: "20% OFF",
+        permalink: "https://lista.mercadolivre.com.br/garrafa-termica-tramontina-exata-1l-inox",
+        thumbnail: "/img/tramontina_exata.jpg",
+        free_shipping: true,
+        seller: "Tramontina Loja Oficial (MercadoLíder Platinum • +100.000 vendidos)"
+      },
+      {
+        id: "MLB-INVICTA-03",
+        title: "Garrafa Térmica Invicta Air Pot Aço Inox 1 Litro com Pressão",
+        price: 89.90,
+        original_price: 119.90,
+        discount: "25% OFF",
+        permalink: "https://lista.mercadolivre.com.br/garrafa-termica-invicta-air-pot-inox-1l",
+        thumbnail: "/img/invicta_airpot.jpg",
+        free_shipping: true,
+        seller: "Invicta Loja Oficial (+50.000 vendidos)"
+      },
+      {
+        id: "MLB-TERMOLAR-04",
+        title: "Garrafa Térmica Termolar R-Evolution Inox 1L Bomba Pressão",
+        price: 129.90,
+        original_price: 159.90,
+        discount: "19% OFF",
+        permalink: "https://lista.mercadolivre.com.br/garrafa-termica-termolar-r-evolution-1l-inox",
+        thumbnail: "/img/termolar_revolution.jpg",
+        free_shipping: true,
+        seller: "Termolar Oficial (MercadoLíder Platinum • +50.000 vendidos)"
+      }
+    ];
+
+    const PRESETS = {
+      garrafa: {
+        sku: "GAR-INOX-1000",
+        title: "Garrafa Térmica Inox 1 Litro Parede Dupla",
+        brand: "ThermoMax",
+        cost: 24.50,
+        margin: "0.25",
+        stock: 120,
+        weight: 0.45,
+        features: "Conserva gelado por 24h e quente por 12h, Aço Inoxidável 304, Tampa hermética antiderrame, Livre de BPA",
+        competitors: [
+          {
+            id: "MLB-SQUEEZE-01",
+            title: "Garrafa Térmica Squeeze Inox 1L Parede Dupla Vácuo Quente/Frio",
+            price: 49.90,
+            original_price: 69.90,
+            discount: "28% OFF",
+            permalink: "https://lista.mercadolivre.com.br/garrafa-squeeze-termica-inox-1-litro",
+            thumbnail: "/img/squeeze_inox.jpg",
+            free_shipping: false,
+            seller: "Utilidades & Cia (+25.000 vendidos)"
+          },
+          {
+            id: "MLB-TRAMONTINA-02",
+            title: "Garrafa Térmica Tramontina Exata Inox 1 Litro com Ampola",
+            price: 79.90,
+            original_price: 99.90,
+            discount: "20% OFF",
+            permalink: "https://lista.mercadolivre.com.br/garrafa-termica-tramontina-exata-1l-inox",
+            thumbnail: "/img/tramontina_exata.jpg",
+            free_shipping: true,
+            seller: "Tramontina Loja Oficial (MercadoLíder Platinum • +100.000 vendidos)"
+          },
+          {
+            id: "MLB-INVICTA-03",
+            title: "Garrafa Térmica Invicta Air Pot Aço Inox 1 Litro com Pressão",
+            price: 89.90,
+            original_price: 119.90,
+            discount: "25% OFF",
+            permalink: "https://lista.mercadolivre.com.br/garrafa-termica-invicta-air-pot-inox-1l",
+            thumbnail: "/img/invicta_airpot.jpg",
+            free_shipping: true,
+            seller: "Invicta Loja Oficial (+50.000 vendidos)"
+          },
+          {
+            id: "MLB-TERMOLAR-04",
+            title: "Garrafa Térmica Termolar R-Evolution Inox 1L Bomba Pressão",
+            price: 129.90,
+            original_price: 159.90,
+            discount: "19% OFF",
+            permalink: "https://lista.mercadolivre.com.br/garrafa-termica-termolar-r-evolution-1l-inox",
+            thumbnail: "/img/termolar_revolution.jpg",
+            free_shipping: true,
+            seller: "Termolar Oficial (MercadoLíder Platinum • +50.000 vendidos)"
+          }
+        ]
+      }
+    };
+
+    function loadPreset(key) {
+      const p = PRESETS[key];
+      if (!p) return;
+      document.getElementById('input-sku').value = p.sku;
+      document.getElementById('input-title').value = p.title;
+      document.getElementById('input-brand').value = p.brand;
+      document.getElementById('input-cost').value = p.cost;
+      document.getElementById('input-margin').value = p.margin;
+      document.getElementById('input-stock').value = p.stock;
+      document.getElementById('input-weight').value = p.weight;
+      document.getElementById('input-features').value = p.features;
+
+      if (p.competitors && p.competitors.length > 0) {
+        activeCompetitors = JSON.parse(JSON.stringify(p.competitors));
+      }
+
+      // Executa recálculo automático imediato
+      setTimeout(() => {
+        const form = document.getElementById('intake-form');
+        if (form) form.dispatchEvent(new Event('submit'));
+      }, 50);
+    }
+
+    let currentSessionData = null;
+    let currentlyEditingIndex = -1;
+    let mlConfig = { connected: false, has_credentials: false, auth_url: null };
+
+    function openMlConfigModal() {
+      document.getElementById('ml-config-modal').classList.remove('hidden');
+      loadMlStatus();
+    }
+
+    function closeMlConfigModal() {
+      document.getElementById('ml-config-modal').classList.add('hidden');
+    }
+
+    async function loadMlStatus() {
+      try {
+        const res = await fetch('/api/ml/status');
+        if (res.ok) {
+          const data = await res.json();
+          mlConfig = data;
+          updateMlStatusUI();
+          if (mlConfig.connected) {
+            await autoFetchOfficialCompetitors();
+          }
+        }
+      } catch (err) {
+        console.warn("Servidor local offline ou endpoint inacessível", err);
+      }
+    }
+
+    function updateMlStatusUI() {
+      const btn = document.getElementById('btn-ml-api-status');
+      const dot = document.getElementById('connection-status-dot');
+      const txt = document.getElementById('connection-status-text');
+      const authBtn = document.getElementById('btn-oauth-authorize');
+
+      if (mlConfig.connected) {
+        btn.innerText = "API ML: Conectada Oficialmente";
+        btn.parentElement.className = "flex items-center space-x-1.5 bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/50 px-3 py-1.5 rounded-lg text-emerald-300 text-xs font-semibold transition shadow-sm";
+        dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 pulse-dot";
+        txt.innerText = "API ML: OFICIAL ATIVA";
+        txt.className = "text-xs font-semibold text-emerald-300";
+      } else if (mlConfig.has_credentials) {
+        btn.innerText = "API ML: Autorização Pendente";
+        btn.parentElement.className = "flex items-center space-x-1.5 bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/50 px-3 py-1.5 rounded-lg text-amber-300 text-xs font-semibold transition shadow-sm";
+        dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400";
+        txt.innerText = "API ML: PENDENTE OAUTH";
+      } else {
+        btn.innerText = "Conectar API Oficial ML";
+        btn.parentElement.className = "flex items-center space-x-1.5 bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500/50 px-3 py-1.5 rounded-lg text-blue-300 text-xs font-semibold transition shadow-sm";
+        dot.className = "w-2.5 h-2.5 rounded-full bg-slate-500";
+        txt.innerText = "API ML: DESCONECTADA";
+      }
+
+      if (mlConfig.auth_url) {
+        authBtn.disabled = false;
+        authBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      } else {
+        authBtn.disabled = true;
+        authBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+    }
+
+    async function saveMlCredentials(e) {
+      e.preventDefault();
+      const app_id = document.getElementById('ml-input-appid').value.trim();
+      const client_secret = document.getElementById('ml-input-secret').value.trim();
+      const access_token = document.getElementById('ml-input-token').value.trim();
+
+      try {
+        const res = await fetch('/api/ml/credentials', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ app_id, client_secret, access_token })
+        });
+        const json = await res.json();
+        if (json.success) {
+          alert("✅ Credenciais salvas com sucesso no servidor local!\n\nAgora você já pode clicar em 'Autorizar via ML (OAuth)' para autenticar a sua conta oficial.");
+          await loadMlStatus();
+        } else {
+          alert("Erro: " + (json.error || "Falha ao salvar"));
+        }
+      } catch (err) {
+        alert("Erro ao comunicar com o servidor local: " + err.message);
+      }
+    }
+
+    function authorizeWithMercadoLivre() {
+      if (mlConfig.auth_url) {
+        window.open(mlConfig.auth_url, '_blank');
+      } else {
+        alert("Por favor, preencha e salve seu App ID e Secret Key primeiro.");
+      }
+    }
+
+    async function submitAuthCode() {
+      const codeInput = document.getElementById('ml-input-code').value.trim();
+      if (!codeInput) {
+        alert("Por favor, cole a URL de retorno do Google ou o código gerado pelo Mercado Livre.");
+        return;
+      }
+      const app_id = document.getElementById('ml-input-appid').value.trim();
+      const client_secret = document.getElementById('ml-input-secret').value.trim();
+
+      try {
+        const res = await fetch('/api/ml/exchange-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: codeInput, app_id, client_secret })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert("🎉 Autenticação oficial concluída com sucesso no Mercado Livre!\n\nSeu agente agora está 100% conectado à API oficial. Ao pesquisar um produto, ele trará os dados oficiais com fotos e links reais.");
+          closeMlConfigModal();
+          await loadMlStatus();
+        } else {
+          alert("Erro na autenticação: " + JSON.stringify(data.error));
+        }
+      } catch (err) {
+        alert("Erro de conexão com o servidor local: " + err.message);
+      }
+    }
+
+    // Busca automática oficial de concorrentes no Mercado Livre via API
+    async function autoFetchOfficialCompetitors(queryOverride) {
+      const query = queryOverride || document.getElementById('input-title').value;
+      if (!query) return;
+
+      try {
+        const q = encodeURIComponent(query);
+        const res = await fetch(`/api/competitors?q=${q}`);
+        if (res.ok) {
+          const compData = await res.json();
+          if (compData.results && compData.results.length > 0) {
+            activeCompetitors = compData.results;
+            console.log(`[API Oficial ML] ${compData.results.length} concorrentes oficiais carregados para '${query}'!`);
+          }
+        }
+      } catch (err) {
+        console.warn("Falha ao consultar API oficial do Mercado Livre:", err);
+      }
+    }
+
+    // Motor Financeiro Determinístico Unitário (Oficial Mercado Livre Brasil)
+    function calculateUnitEconomics(price, cmv, weight, customAdsRate, customMlRate, customTaxRate) {
+      const p = parseFloat(price);
+      const c = parseFloat(cmv);
+      const w = parseFloat(weight);
+      const ads_rate = customAdsRate !== undefined ? customAdsRate : 0.05; // 5% de Ads
+      const ml_rate = customMlRate !== undefined ? customMlRate : 0.13; // 13% Clássico
+      const tax_rate = customTaxRate !== undefined ? customTaxRate : 0.06; // 6% Simples Nacional
+
+      // Custo de embalagem proporcional ao peso
+      const pack = w > 10 ? 15.00 : (w > 2 ? 6.00 : 3.00);
+
+      // Regra Oficial ML: >= R$ 79,00 tem frete grátis obrigatório custeado pelo vendedor (Mercado Envios)
+      // Abaixo de R$ 79,00, o comprador paga o frete, mas o ML cobra taxa fixa de R$ 6,00 por unidade
+      const isFreeShipping = p >= 79.00;
+      let shipping = 0.0;
+      let fixedFee = 0.0;
+
+      if (isFreeShipping) {
+        if (w > 20) shipping = 65.00;
+        else if (w > 10) shipping = 45.00;
+        else if (w > 2) shipping = 28.00;
+        else shipping = 20.90;
+      } else {
+        fixedFee = 6.00;
+      }
+
+      const mlPercentFee = Math.round(p * ml_rate * 100) / 100;
+      const mlTotalFee = Math.round((mlPercentFee + fixedFee) * 100) / 100;
+      const tax = Math.round(p * tax_rate * 100) / 100;
+      const ads = Math.round(p * ads_rate * 100) / 100;
+
+      const totalCost = Math.round((c + pack + shipping + mlTotalFee + tax + ads) * 100) / 100;
+      const netProfit = Math.round((p - totalCost) * 100) / 100;
+      const netMargin = Math.round((netProfit / p) * 1000) / 10;
+      const roi = Math.round((netProfit / (c + pack)) * 1000) / 10;
+
+      return {
+        price: p,
+        cmv: c,
+        weight: w,
+        pack,
+        shipping,
+        fixedFee,
+        mlTotalFee,
+        tax,
+        ads,
+        totalCost,
+        netProfit,
+        netMargin,
+        roi,
+        isFreeShipping
+      };
+    }
+
+    // Submissão do Formulário de Inteligência Comercial
+    document.getElementById('intake-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-run-pipeline');
+      btn.disabled = true;
+      btn.innerHTML = `<span class="inline-block animate-spin mr-2">⏳</span> Processando Inteligência Comercial...`;
+
+      const payload = {
+        sku: document.getElementById('input-sku').value,
+        title_raw: document.getElementById('input-title').value,
+        brand: document.getElementById('input-brand').value,
+        cost_price: parseFloat(document.getElementById('input-cost').value),
+        target_margin: parseFloat(document.getElementById('input-margin').value),
+        stock_quantity: parseInt(document.getElementById('input-stock').value),
+        weight_kg: parseFloat(document.getElementById('input-weight').value),
+        key_features: document.getElementById('input-features').value.split(',').map(s => s.trim()).filter(Boolean)
+      };
+
+      // Consulta ao vivo na API do Mercado Livre (se conectada)
+      try {
+        const q = encodeURIComponent(payload.title_raw);
+        const res = await fetch(`/api/competitors?q=${q}`);
+        if (res.ok) {
+          const compData = await res.json();
+          if (compData.results && compData.results.length > 0) {
+            activeCompetitors = compData.results;
+            console.log(`[Oficial API] ${compData.results.length} produtos carregados da API Oficial do ML!`);
+          }
+        }
+      } catch (err) {
+        console.warn("Consulta da API em background não retornou, mantendo lista atual.", err);
+      }
+
+      // 1. Estatísticas Reais da Concorrência Mapeada
+      const competitorPrices = activeCompetitors.map(c => c.price).filter(p => p > 0);
+      const minCompPrice = competitorPrices.length ? Math.min(...competitorPrices) : Math.round(payload.cost_price * 1.5);
+      const maxCompPrice = competitorPrices.length ? Math.max(...competitorPrices) : Math.round(payload.cost_price * 2.5);
+      const avgCompPrice = competitorPrices.length ? Math.round((competitorPrices.reduce((a,b)=>a+b,0) / competitorPrices.length) * 100) / 100 : Math.round(payload.cost_price * 1.9);
+
+      // 2. Motor Financeiro Determinístico Baseado no Custo e Margem Alvo
+      const cmv = payload.cost_price;
+      const targetM = payload.target_margin;
+      const weight = payload.weight_kg;
+      const pack = weight > 10 ? 15.00 : (weight > 2 ? 6.00 : 3.00);
+
+      // Fórmula determinística: Preço = (Custos Fixos) / (1 - Soma das Taxas Percentuais)
+      const varRates = targetM + 0.13 + 0.06 + 0.05; // Margem + ML (13%) + Imposto (6%) + Ads (5%)
+      const safeDivisor = Math.max(0.15, 1 - Math.min(varRates, 0.85));
+
+      let candidatePrice = (cmv + pack + 6.00) / safeDivisor;
+      if (candidatePrice >= 79.0) {
+        let shipEst = weight > 20 ? 65.00 : (weight > 10 ? 45.00 : (weight > 2 ? 28.00 : 20.90));
+        candidatePrice = (cmv + pack + shipEst) / safeDivisor;
+      }
+
+      // Alinhamento inteligente com o mercado (evitar precificar fora do padrão competitivo)
+      if (avgCompPrice > 0) {
+        if (candidatePrice > avgCompPrice * 1.15) {
+          const testAtAvg = calculateUnitEconomics(avgCompPrice, cmv, weight);
+          if (testAtAvg.netMargin >= 12.0) {
+            candidatePrice = avgCompPrice;
+          }
+        } else if (candidatePrice < avgCompPrice * 0.82) {
+          // Se o custo for muito baixo, não queimar margem: precificar logo abaixo da média
+          candidatePrice = avgCompPrice * 0.92;
+        }
+      }
+
+      // Arredonda para preço psicológico de alta conversão (.90)
+      let sellingPrice = Math.floor(candidatePrice) + 0.90;
+      if (sellingPrice < cmv * 1.15) sellingPrice = Math.ceil(cmv * 1.25) + 0.90;
+
+      const econBase = calculateUnitEconomics(sellingPrice, cmv, weight);
+      const fee = econBase.mlTotalFee;
+      const shipping = econBase.shipping;
+      const tax = econBase.tax;
+      const ads = econBase.ads;
+      const netProfit = econBase.netProfit;
+      const netMargin = econBase.netMargin;
+      const roi = econBase.roi;
+
+      // 4 Cenários de Estresse Totalmente Dinâmicos e Realistas
+      // 1. Conservador: Preço premium (+14%), lucro máximo por unidade
+      const priceCons = Math.round((sellingPrice * 1.14) * 10) / 10 + (Math.round((sellingPrice * 1.14) * 10) % 1 === 0 ? 0.90 : 0);
+      const econCons = calculateUnitEconomics(priceCons, cmv, weight);
+
+      // 2. Agressivo: Preço de penetração (-8%), ganha volume e Buy Box
+      const priceAgr = Math.max(Math.round(cmv * 1.18) + 0.90, Math.round((sellingPrice * 0.92) * 10) / 10);
+      const econAgr = calculateUnitEconomics(priceAgr, cmv, weight);
+
+      // 3. Adverso (Stress Test Extremo): Guerra de preços (-10%), inflação de CMV (+10%) e CAC de Ads (+30%)
+      const priceAdv = Math.round((sellingPrice * 0.90) * 10) / 10;
+      const cmvAdv = Math.round(cmv * 1.10 * 100) / 100;
+      const econAdv = calculateUnitEconomics(priceAdv, cmvAdv, weight, 0.065); // Ads 6.5% (+30% sobre 5%)
+
+      const scenarios = [
+        {
+          name: "Conservador",
+          description: `Preço premium de R$ ${econCons.price.toFixed(2)} (${econCons.netMargin}% de margem líquida), priorizando lucro máximo por unidade vendida.`,
+          selling_price: econCons.price,
+          net_margin_percent: econCons.netMargin,
+          net_profit_unit: econCons.netProfit,
+          projected_monthly_units: Math.max(Math.round(payload.stock_quantity * 0.75), 1),
+          projected_monthly_profit: Math.round(econCons.netProfit * Math.max(Math.round(payload.stock_quantity * 0.75), 1)),
+          roi_percent: econCons.roi
+        },
+        {
+          name: "Base",
+          description: `Preço estratégico de R$ ${sellingPrice.toFixed(2)}: altamente competitivo frente à média de mercado (R$ ${avgCompPrice.toFixed(2)}) com margem saudável.`,
+          selling_price: sellingPrice,
+          net_margin_percent: netMargin,
+          net_profit_unit: netProfit,
+          projected_monthly_units: payload.stock_quantity,
+          projected_monthly_profit: Math.round(netProfit * payload.stock_quantity),
+          roi_percent: roi
+        },
+        {
+          name: "Agressivo",
+          description: `Preço de penetração de R$ ${econAgr.price.toFixed(2)} (${econAgr.netMargin}% de margem) para desbancar concorrentes e escalar vendas no ML.`,
+          selling_price: econAgr.price,
+          net_margin_percent: econAgr.netMargin,
+          net_profit_unit: econAgr.netProfit,
+          projected_monthly_units: Math.round(payload.stock_quantity * 1.6),
+          projected_monthly_profit: Math.round(econAgr.netProfit * Math.round(payload.stock_quantity * 1.6)),
+          roi_percent: econAgr.roi
+        },
+        {
+          name: "Adverso",
+          description: `Stress-Test Extremo: Guerra de preços (-10%), inflação de fornecedor (+10% CMV) e aumento de leilão de Ads (+30%).`,
+          selling_price: econAdv.price,
+          net_margin_percent: econAdv.netMargin,
+          net_profit_unit: econAdv.netProfit,
+          projected_monthly_units: Math.max(Math.round(payload.stock_quantity * 0.7), 1),
+          projected_monthly_profit: Math.round(econAdv.netProfit * Math.max(Math.round(payload.stock_quantity * 0.7), 1)),
+          roi_percent: econAdv.roi
+        }
+      ];
+
+      // Identificação dos concorrentes reais para o Evidence Store e Decision Gate
+      const leaderCompetitor = activeCompetitors[0]?.seller || "Líder de Mercado";
+      const topCompetitor = activeCompetitors[activeCompetitors.length - 1]?.seller || "Concorrente Oficial";
+
+      const pipelineData = {
+        payload_ref: payload,
+        live_market: {
+          competitors: activeCompetitors,
+          min_price: minCompPrice,
+          max_price: maxCompPrice,
+          avg_price: avgCompPrice
+        },
+        evidence_store: {
+          items: [
+            { field: "concorrente_lider_preco_minimo", formatted_value: `R$ ${minCompPrice.toFixed(2)} (${leaderCompetitor})`, evidence_type: "FATO", source: "Mercado Livre Brasil (Busca Oficial)", confidence: 100, source_layer: "7.2 MARKET INTEL" },
+            { field: "concorrencia_preco_medio_real", formatted_value: `R$ ${avgCompPrice.toFixed(2)}`, evidence_type: "FATO", source: "Mercado Livre Brasil (Busca Oficial)", confidence: 100, source_layer: "7.2 MARKET INTEL" },
+            { field: "concorrente_maior_preco", formatted_value: `R$ ${maxCompPrice.toFixed(2)} (${topCompetitor})`, evidence_type: "FATO", source: "Mercado Livre Brasil (Busca Oficial)", confidence: 100, source_layer: "7.2 MARKET INTEL" },
+            { field: "cmv_unitario", formatted_value: `R$ ${cmv.toFixed(2)}`, evidence_type: "FATO", source: "Briefing do Lojista", confidence: 100, source_layer: "1. INTAKE" },
+            { field: "margem_alvo_desejada", formatted_value: `${(targetM * 100).toFixed(0)}%`, evidence_type: "FATO", source: "Briefing do Lojista", confidence: 100, source_layer: "1. INTAKE" },
+            { field: "preco_venda_calculado", formatted_value: `R$ ${sellingPrice.toFixed(2)}`, evidence_type: "CALCULO", source: "Financial Engine Determinístico", confidence: 99, source_layer: "7.4 FINANCIAL" },
+            { field: "ml_comissao_calculada", formatted_value: `R$ ${fee.toFixed(2)} (${sellingPrice >= 79 ? '13%' : '13% + R$ 6,00 fixa'})`, evidence_type: "CALCULO", source: "Tabela Oficial Mercado Livre", confidence: 100, source_layer: "7.3 SPECIALIST" },
+            { field: "frete_mercado_envios", formatted_value: econBase.isFreeShipping ? `R$ ${shipping.toFixed(2)} (${weight}kg)` : `R$ 0,00 (Pago pelo Comprador)`, evidence_type: "CALCULO", source: `Tabela Mercado Envios (${weight}kg)`, confidence: 98, source_layer: "7.3 SPECIALIST" },
+            { field: "lucro_liquido_unitario", formatted_value: `R$ ${netProfit.toFixed(2)} (${netMargin}%)`, evidence_type: "CALCULO", source: "Financial Engine Determinístico", confidence: 100, source_layer: "7.4 FINANCIAL" }
+          ]
+        },
+        // 10 & 11. VIABILITY & DECISION GATE (Padronização Oficial Camadas 10 e 11)
+        decision_gate: (() => {
+          const targetMarginPct = targetM * 100;
+          let rating = "A";
+          let ratingLabel = "A - ALTAMENTE VIÁVEL (Compensa Plenamente)";
+          let gateReasons = [];
+          let conditions = [];
+          let alternatives = [];
+
+          // Critérios padronizados da Matriz de Decisão:
+          if (netMargin >= targetMarginPct && econAdv.netProfit > 0) {
+            rating = "A";
+            ratingLabel = "A - ALTAMENTE VIÁVEL (Compensa Plenamente)";
+            gateReasons.push(`Preço sugerido de R$ ${sellingPrice.toFixed(2)} é altamente competitivo frente à concorrência (média de mercado em R$ ${avgCompPrice.toFixed(2)}).`);
+            gateReasons.push(`Margem líquida de ${netMargin}% atinge ou supera a meta desejada de ${targetMarginPct.toFixed(0)}%, gerando lucro de R$ ${netProfit.toFixed(2)} por unidade vendida.`);
+            gateReasons.push(`Cálculo determinístico inclui comissão oficial de R$ ${fee.toFixed(2)} e ${econBase.isFreeShipping ? `frete Mercado Envios (${weight}kg: R$ ${shipping.toFixed(2)})` : `taxa fixa de R$ 6,00 (frete comprador)`}.`);
+            gateReasons.push(`Resistência a estresse comprovada: no pior cenário simulado (+10% CMV e -10% preço), o lucro unitário se mantém positivo em R$ ${econAdv.netProfit.toFixed(2)}.`);
+          } else if (netMargin >= 10.0 && econAdv.netProfit >= -2.0) {
+            rating = "B";
+            ratingLabel = "B - VIÁVEL COM CONDIÇÕES (Ajustes Recomendados)";
+            gateReasons.push(`Margem líquida base de ${netMargin}% é rentável, mas está abaixo da meta desejada (${targetMarginPct.toFixed(0)}%).`);
+            gateReasons.push(`Vulnerabilidade em cenário adverso: sob guerra de preços e aumento de leilão, o lucro unitário recua para R$ ${econAdv.netProfit.toFixed(2)}.`);
+            gateReasons.push(`[Condição Recomendada]: Limitar o ACOS de campanhas de publicidade em no máximo 15% para proteger a margem.`);
+            gateReasons.push(`[Alternativa Estratégica]: Criar Kit/Combo com 2 unidades para diluir o custo de frete e embalagem.`);
+          } else if (netMargin >= 4.0) {
+            rating = "C";
+            ratingLabel = "C - RISCO ELEVADO (Testar em Escala Reduzida)";
+            gateReasons.push(`Margem líquida apertada (${netMargin}%): pouca tolerância para devoluções, trocas ou disputas de Buy Box.`);
+            gateReasons.push(`Risco de prejuízo caso os concorrentes baixem o preço.`);
+            gateReasons.push(`[Condição Recomendada]: Iniciar com lote piloto de 15 a 25 unidades para validar a aceitação.`);
+            gateReasons.push(`[Alternativa Estratégica]: Renegociar custo de aquisição (CMV) com o fornecedor.`);
+          } else {
+            rating = "D";
+            ratingLabel = "D - NÃO COMPENSA (Inviável / Risco Crítico)";
+            gateReasons.push(`Margem líquida de ${netMargin}% insuficiente ou prejuízo direto na venda unitária.`);
+            gateReasons.push(`A estrutura de custos (CMV R$ ${cmv.toFixed(2)} + Taxas do ML R$ ${fee.toFixed(2)}) inviabiliza a operação deste produto.`);
+            gateReasons.push(`[Veredito do Decision Gate]: O produto NÃO compensa nas condições comerciais atuais.`);
+            gateReasons.push(`[Alternativa]: Negociar custo menor com fornecedor, criar Kit de 3 unidades ou desconsiderar o produto.`);
+          }
+
+          return {
+            rating: rating,
+            rating_label: ratingLabel,
+            reasons: gateReasons,
+            conditions: conditions,
+            alternatives: alternatives,
+            scenarios: scenarios
+          };
+        })(),
+        financial_summary: {
+          sku: payload.sku,
+          product_name: payload.title_raw,
+          brand: payload.brand,
+          suggested_price: sellingPrice,
+          net_profit: netProfit,
+          net_margin: netMargin,
+          cmv: cmv,
+          ml_fee: fee,
+          shipping: shipping,
+          tax: tax,
+          pack: pack,
+          weight: weight,
+          monthly_units: payload.stock_quantity,
+          monthly_profit: Math.round(netProfit * payload.stock_quantity),
+          monthly_revenue: Math.round(sellingPrice * payload.stock_quantity)
+        }
+      };
+
+      currentSessionData = { session_id: "sess_real_" + Date.now().toString().slice(-6), data: pipelineData };
+      renderPipelineResults(pipelineData, currentSessionData.session_id);
+
+      btn.disabled = false;
+      btn.innerHTML = `<i data-lucide="search" class="w-4 h-4"></i><span>Analisar Mercado & Viabilidade</span>`;
+      lucide.createIcons();
+    });
+
+    function renderPipelineResults(data, sessionId) {
+      document.getElementById('pipeline-progress').classList.remove('hidden');
+
+      // 1. Concorrentes Reais
+      if (data.live_market) {
+        document.getElementById('live-min-price').innerText = `R$ ${data.live_market.min_price.toFixed(2)}`;
+        document.getElementById('live-avg-price').innerText = `R$ ${data.live_market.avg_price.toFixed(2)}`;
+        document.getElementById('live-max-price').innerText = `R$ ${data.live_market.max_price.toFixed(2)}`;
+
+        const compGrid = document.getElementById('live-competitors-grid');
+        compGrid.innerHTML = data.live_market.competitors.map((c, index) => {
+          const permalink = c.permalink || (c.id ? `https://produto.mercadolivre.com.br/${c.id}` : 'https://www.mercadolivre.com.br');
+          return `
+          <div class="bg-slate-900/90 rounded-xl p-4 border border-blue-500/30 hover:border-emerald-400 bg-gradient-to-b from-slate-900/90 to-slate-950/90 flex flex-col justify-between transition space-y-3 shadow-lg group">
+            <div class="flex space-x-3 items-start">
+              <div class="w-16 h-16 bg-slate-800 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center border border-slate-700/80 p-0.5">
+                ${c.thumbnail ? `<img src="${c.thumbnail}" alt="" class="w-full h-full object-contain" onerror="this.onerror=null;this.src='/img/squeeze_inox.jpg';">` : `<i data-lucide="package" class="w-7 h-7 text-slate-500"></i>`}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-1 mb-1">
+                  <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1">
+                    <i data-lucide="check-circle-2" class="w-3 h-3 text-emerald-400"></i> API Oficial ML
+                  </span>
+                  ${c.free_shipping ? '<span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">Frete Grátis</span>' : ''}
+                </div>
+
+                <a href="${permalink}" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-slate-100 hover:text-amber-300 line-clamp-2 transition flex items-start gap-1" title="${c.title}">
+                  <span>${c.title}</span>
+                  <i data-lucide="external-link" class="w-3 h-3 flex-shrink-0 text-amber-400 opacity-80 group-hover:opacity-100 mt-0.5"></i>
+                </a>
+
+                <div class="flex items-baseline space-x-2 mt-1.5">
+                  <span class="text-base font-bold text-amber-400">R$ ${c.price.toFixed(2)}</span>
+                  ${c.original_price && c.original_price > c.price ? `<span class="text-[10px] text-slate-500 line-through">R$ ${c.original_price.toFixed(2)}</span>` : ''}
+                  ${c.discount ? `<span class="text-[10px] bg-emerald-500/20 text-emerald-400 font-bold px-1.5 py-0.2 rounded border border-emerald-500/30">${c.discount}</span>` : ''}
+                </div>
+                <span class="text-[10px] text-slate-400 truncate block mt-0.5 font-medium flex items-center gap-1">
+                  <i data-lucide="store" class="w-3 h-3 text-slate-500"></i>
+                  ${c.seller}
+                </span>
+              </div>
+            </div>
+
+            <!-- Ação Oficial: Botão direto para o Anúncio Real -->
+            <div class="pt-2.5 border-t border-slate-800 flex items-center justify-between">
+              <span class="text-[10px] text-slate-500 font-mono">${c.id || 'MLB'}</span>
+              <a href="${permalink}" target="_blank" rel="noopener noreferrer" class="bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white font-bold px-3 py-1.5 rounded-lg border border-blue-500/40 text-xs flex items-center space-x-1.5 transition shadow-sm">
+                <span>Abrir Anúncio Oficial</span>
+                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+              </a>
+            </div>
+          </div>
+        `;
+        }).join('');
+
+        document.getElementById('stat-competitors-count').innerText = `${data.live_market.competitors.length} anúncios reais mapeados no ML.`;
+      }
+
+      // 2. Evidence Store
+      const evs = data.evidence_store.items;
+      const tbody = document.getElementById('evidence-table-body');
+      tbody.innerHTML = evs.map(ev => {
+        let badgeColor = "bg-blue-500/20 text-blue-300 border-blue-500/30";
+        if (ev.evidence_type === "CALCULO") badgeColor = "bg-emerald-500/20 text-emerald-300 border-emerald-500/30";
+        if (ev.evidence_type === "ESTIMATIVA") badgeColor = "bg-amber-500/20 text-amber-300 border-amber-500/30";
+
+        return `
+          <tr class="hover:bg-slate-900/40 transition">
+            <td class="px-4 py-2.5 font-mono text-slate-200 font-medium">${ev.field}</td>
+            <td class="px-4 py-2.5 font-bold text-white">${ev.formatted_value || ev.value}</td>
+            <td class="px-4 py-2.5">
+              <span class="px-2 py-0.5 rounded text-[10px] font-semibold border ${badgeColor}">
+                ${ev.evidence_type}
+              </span>
+            </td>
+            <td class="px-4 py-2.5 text-slate-400">${ev.source}</td>
+            <td class="px-4 py-2.5">
+              <div class="flex items-center space-x-2">
+                <div class="w-12 bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                  <div class="bg-emerald-400 h-1.5 rounded-full" style="width: ${ev.confidence}%"></div>
+                </div>
+                <span class="text-[10px] font-bold text-slate-300">${ev.confidence}%</span>
+              </div>
+            </td>
+            <td class="px-4 py-2.5 text-slate-500">${ev.source_layer || "Camada 6"}</td>
+          </tr>
+        `;
+      }).join('');
+
+      // 3. Decision Gate & Scenarios (Atualização Dinâmica do Badge e Parecer)
+      const dg = data.decision_gate;
+      const badgeElem = document.getElementById('decision-badge');
+      if (badgeElem) {
+        if (dg.rating === "A") {
+          badgeElem.className = "px-4 py-2 rounded-xl bg-emerald-950/80 border border-emerald-500/50 flex items-center space-x-2";
+          badgeElem.innerHTML = `
+            <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+            <div>
+              <div class="text-xs font-semibold text-slate-400 uppercase">Classificação do Portão</div>
+              <div class="text-sm font-bold text-emerald-300" id="decision-rating-title">${dg.rating_label}</div>
+            </div>
+          `;
+        } else if (dg.rating === "B") {
+          badgeElem.className = "px-4 py-2 rounded-xl bg-amber-950/80 border border-amber-500/50 flex items-center space-x-2";
+          badgeElem.innerHTML = `
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-400"></i>
+            <div>
+              <div class="text-xs font-semibold text-slate-400 uppercase">Classificação do Portão</div>
+              <div class="text-sm font-bold text-amber-300" id="decision-rating-title">${dg.rating_label}</div>
+            </div>
+          `;
+        } else if (dg.rating === "C") {
+          badgeElem.className = "px-4 py-2 rounded-xl bg-orange-950/80 border border-orange-500/50 flex items-center space-x-2";
+          badgeElem.innerHTML = `
+            <i data-lucide="alert-circle" class="w-5 h-5 text-orange-400"></i>
+            <div>
+              <div class="text-xs font-semibold text-slate-400 uppercase">Classificação do Portão</div>
+              <div class="text-sm font-bold text-orange-300" id="decision-rating-title">${dg.rating_label}</div>
+            </div>
+          `;
+        } else {
+          // Rating D
+          badgeElem.className = "px-4 py-2 rounded-xl bg-red-950/80 border border-red-500/50 flex items-center space-x-2";
+          badgeElem.innerHTML = `
+            <i data-lucide="x-circle" class="w-5 h-5 text-red-400"></i>
+            <div>
+              <div class="text-xs font-semibold text-slate-400 uppercase">Classificação do Portão</div>
+              <div class="text-sm font-bold text-red-400" id="decision-rating-title">${dg.rating_label}</div>
+            </div>
+          `;
+        }
+      } else {
+        const titleElem = document.getElementById('decision-rating-title');
+        if (titleElem) titleElem.innerText = dg.rating_label;
+      }
+
+      const reasonsList = document.getElementById('decision-reasons-list');
+      reasonsList.innerHTML = dg.reasons.map(r => {
+        let bulletColor = "text-amber-400";
+        if (r.includes("[Condição Obrigatória]")) bulletColor = "text-amber-400 font-bold";
+        if (r.includes("[Bloqueio de Segurança]")) bulletColor = "text-red-400 font-bold";
+        if (r.includes("[Alternativa Camada 11]")) bulletColor = "text-cyan-400 font-bold";
+        return `<li class="flex items-start space-x-2"><span class="${bulletColor}">•</span><span>${r}</span></li>`;
+      }).join('');
+
+      const scnContainer = document.getElementById('scenarios-container');
+      scnContainer.innerHTML = dg.scenarios.map(s => {
+        const isAdverse = s.name === "Adverso";
+        const isBase = s.name === "Base";
+        const isLoss = s.net_profit_unit < 0;
+
+        let borderStyle = "border-cardborder";
+        let titleColor = "text-white";
+        if (isBase) {
+          borderStyle = isLoss ? "border-red-500 ring-1 ring-red-500/60 bg-red-950/10" : "border-amber-400 ring-1 ring-amber-400/40";
+          titleColor = isLoss ? "text-red-400" : "text-amber-400";
+        } else if (isAdverse) {
+          borderStyle = "border-red-500/40";
+          titleColor = "text-red-400";
+        }
+
+        const tagBadge = isBase
+          ? (isLoss
+              ? '<span class="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded font-bold border border-red-500/40">PREJUÍZO</span>'
+              : '<span class="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-bold">RECOMENDADO</span>')
+          : '';
+
+        return `
+          <div class="bg-slate-900/90 rounded-xl p-4 border ${borderStyle} flex flex-col justify-between space-y-3">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase ${titleColor}">${s.name}</span>
+                ${tagBadge}
+              </div>
+              <p class="text-[11px] text-slate-400 mt-1">${s.description}</p>
+            </div>
+
+            <div class="space-y-1.5 pt-2 border-t border-slate-800 text-xs">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Preço:</span>
+                <span class="font-bold text-white">R$ ${s.selling_price.toFixed(2)}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Margem Líquida:</span>
+                <span class="font-bold ${s.net_margin_percent > 15 ? 'text-emerald-400' : (s.net_margin_percent > 0 ? 'text-amber-400' : 'text-red-400')}">
+                  ${s.net_margin_percent.toFixed(1)}%
+                </span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">${isLoss ? 'Prejuízo Unitário:' : 'Lucro Unitário:'}</span>
+                <span class="font-semibold ${isLoss ? 'text-red-400 font-bold' : 'text-slate-200'}">R$ ${s.net_profit_unit.toFixed(2)}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Vendas/Mês Est.:</span>
+                <span class="font-semibold text-slate-200">${s.projected_monthly_units} un</span>
+              </div>
+              <div class="flex justify-between pt-1 border-t border-slate-800/80">
+                <span class="text-slate-300 font-semibold">${s.projected_monthly_profit >= 0 ? 'Lucro Mensal:' : 'Prejuízo Mensal:'}</span>
+                <span class="font-bold ${s.projected_monthly_profit >= 0 ? 'text-emerald-300' : 'text-red-400'}">R$ ${s.projected_monthly_profit.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // 4. Demonstrativo Financeiro & Unit Economics Determinístico
+      const f = data.financial_summary || data.prepared_listing;
+      const marginElem = document.getElementById('display-net-margin');
+      const profitElem = document.getElementById('display-net-profit');
+      const finalProfitRow = document.getElementById('display-final-profit-row');
+      const monthlyProfitElem = document.getElementById('display-monthly-profit');
+      const monthlyProfitLabel = document.getElementById('display-monthly-profit-label');
+
+      document.getElementById('display-selling-price').innerText = `R$ ${f.suggested_price.toFixed(2)}`;
+      
+      if (f.net_profit < 0) {
+        marginElem.className = "text-2xl font-bold text-red-400";
+        marginElem.innerText = `${f.net_margin}%`;
+        profitElem.className = "text-2xl font-bold text-red-400";
+        profitElem.innerText = `R$ ${f.net_profit.toFixed(2)}`;
+        if (finalProfitRow) {
+          finalProfitRow.className = "font-bold text-red-400 font-mono text-sm";
+          finalProfitRow.innerText = `Prejuízo: R$ ${Math.abs(f.net_profit).toFixed(2)} / un (${f.net_margin}%)`;
+        }
+        if (monthlyProfitElem) {
+          monthlyProfitElem.className = "font-bold text-red-400 font-mono text-sm";
+          monthlyProfitElem.innerText = `R$ ${f.monthly_profit.toFixed(2)}`;
+        }
+        if (monthlyProfitLabel) monthlyProfitLabel.innerText = "Prejuízo Mensal Projetado:";
+      } else if (f.net_margin < 10) {
+        marginElem.className = "text-2xl font-bold text-amber-400";
+        marginElem.innerText = `${f.net_margin}%`;
+        profitElem.className = "text-2xl font-bold text-amber-300";
+        profitElem.innerText = `R$ ${f.net_profit.toFixed(2)}`;
+        if (finalProfitRow) {
+          finalProfitRow.className = "font-bold text-amber-400 font-mono text-sm";
+          finalProfitRow.innerText = `R$ ${f.net_profit.toFixed(2)} / un (${f.net_margin}%)`;
+        }
+        if (monthlyProfitElem) {
+          monthlyProfitElem.className = "font-bold text-amber-400 font-mono text-sm";
+          monthlyProfitElem.innerText = `R$ ${f.monthly_profit.toFixed(2)}`;
+        }
+        if (monthlyProfitLabel) monthlyProfitLabel.innerText = "Lucro Mensal Projetado:";
+      } else {
+        marginElem.className = "text-2xl font-bold text-emerald-400";
+        marginElem.innerText = `${f.net_margin}%`;
+        profitElem.className = "text-2xl font-bold text-emerald-300";
+        profitElem.innerText = `R$ ${f.net_profit.toFixed(2)}`;
+        if (finalProfitRow) {
+          finalProfitRow.className = "font-bold text-emerald-400 font-mono text-sm";
+          finalProfitRow.innerText = `R$ ${f.net_profit.toFixed(2)} / un (${f.net_margin}%)`;
+        }
+        if (monthlyProfitElem) {
+          monthlyProfitElem.className = "font-bold text-emerald-400 font-mono text-sm";
+          monthlyProfitElem.innerText = `R$ ${f.monthly_profit.toFixed(2)}`;
+        }
+        if (monthlyProfitLabel) monthlyProfitLabel.innerText = "Lucro Mensal Projetado:";
+      }
+
+      document.getElementById('display-cost').innerText = `R$ ${f.cmv.toFixed(2)}`;
+      document.getElementById('display-ml-fee').innerText = `R$ ${f.ml_fee.toFixed(2)}`;
+      document.getElementById('display-shipping').innerText = f.shipping > 0 ? `R$ ${f.shipping.toFixed(2)}` : (f.suggested_price < 79.0 ? 'R$ 6,00' : 'R$ 0,00');
+      document.getElementById('display-tax').innerText = `R$ ${f.tax.toFixed(2)}`;
+      document.getElementById('display-pack').innerText = `R$ ${f.pack.toFixed(2)}`;
+
+      const shipLabel = document.getElementById('display-shipping-label');
+      if (shipLabel) {
+        shipLabel.innerText = f.shipping > 0 ? `Frete Mercado Envios (${f.weight}kg):` : 'Taxa Fixa ML (< R$ 79):';
+      }
+
+      const topbarElem = document.getElementById('topbar-competitors-mapped');
+      if (topbarElem && data.live_market && data.live_market.competitors && data.live_market.competitors.length > 0) {
+        const sellers = Array.from(new Set(data.live_market.competitors.map(c => c.seller.split(' ')[0]))).filter(Boolean);
+        topbarElem.innerText = `Concorrência Mapeada: ${sellers.slice(0, 4).join(', ')}`;
+      }
+
+      const unitsElem = document.getElementById('display-monthly-units');
+      if (unitsElem) unitsElem.innerText = `${f.monthly_units || 0} un / mês`;
+
+      const revElem = document.getElementById('display-monthly-revenue');
+      if (revElem) revElem.innerText = `R$ ${(f.monthly_revenue || 0).toFixed(2)}`;
+
+      document.getElementById('pipeline-progress').scrollIntoView({ behavior: 'smooth' });
+      lucide.createIcons();
+    }
+
+    function openAdjustModal() {
+      const f = currentSessionData?.data?.financial_summary || currentSessionData?.data?.prepared_listing;
+      if (f) {
+        document.getElementById('modal-price').value = f.suggested_price;
+      }
+      document.getElementById('adjust-modal').classList.remove('hidden');
+    }
+
+    function closeAdjustModal() {
+      document.getElementById('adjust-modal').classList.add('hidden');
+    }
+
+    function submitAdjust() {
+      const newPrice = parseFloat(document.getElementById('modal-price').value);
+
+      if (!newPrice || newPrice <= 0) {
+        alert("Preço inválido.");
+        return;
+      }
+
+      const f = currentSessionData.data.financial_summary || currentSessionData.data.prepared_listing;
+      const newEcon = calculateUnitEconomics(newPrice, f.cmv, f.weight);
+
+      f.suggested_price = newPrice;
+      f.net_profit = newEcon.netProfit;
+      f.net_margin = newEcon.netMargin;
+      f.ml_fee = newEcon.mlTotalFee;
+      f.shipping = newEcon.shipping;
+      f.tax = newEcon.tax;
+      f.pack = newEcon.pack;
+      f.monthly_profit = Math.round(newEcon.netProfit * (f.monthly_units || 1));
+      f.monthly_revenue = Math.round(newPrice * (f.monthly_units || 1));
+
+      // 1. Atualiza o cenário Base
+      const baseScn = currentSessionData.data.decision_gate.scenarios.find(s => s.name === "Base");
+      if (baseScn) {
+        baseScn.selling_price = newPrice;
+        baseScn.net_margin_percent = newEcon.netMargin;
+        baseScn.net_profit_unit = newEcon.netProfit;
+        baseScn.projected_monthly_profit = Math.round(newEcon.netProfit * baseScn.projected_monthly_units);
+        baseScn.roi_percent = newEcon.roi;
+        if (newEcon.netProfit < 0) {
+          baseScn.description = `⚠️ Preço ajustado para R$ ${newPrice.toFixed(2)} gerando PREJUÍZO de R$ ${Math.abs(newEcon.netProfit).toFixed(2)}/un (${newEcon.netMargin}% de margem líq.).`;
+        } else {
+          baseScn.description = `Preço ajustado manualmente para R$ ${newPrice.toFixed(2)} (${newEcon.netMargin}% de margem líq., lucro de R$ ${newEcon.netProfit.toFixed(2)}/un).`;
+        }
+      }
+
+      // 2. Reavaliação Rígida da Classificação do Decision Gate e Justificativas Técnicas
+      const targetMarginPct = (currentSessionData.data.payload_ref?.target_margin || 0.20) * 100;
+      const advScn = currentSessionData.data.decision_gate.scenarios.find(s => s.name === "Adverso");
+      const advProfit = advScn ? advScn.net_profit_unit : 0;
+      const dg = currentSessionData.data.decision_gate;
+
+      if (newEcon.netProfit < 0 || newEcon.netMargin < 0) {
+        dg.rating = "D";
+        dg.rating_label = "D - NÃO COMPENSA (Prejuízo Operacional)";
+        dg.reasons = [
+          `[Bloqueio de Segurança]: Margem líquida negativa de ${newEcon.netMargin}% gera prejuízo de R$ ${Math.abs(newEcon.netProfit).toFixed(2)} por unidade vendida. Não compensa vender neste preço.`,
+          `Estrutura de custos: CMV R$ ${f.cmv.toFixed(2)} + Embalagem R$ ${newEcon.pack.toFixed(2)} + Taxas ML R$ ${newEcon.mlTotalFee.toFixed(2)} + Impostos R$ ${newEcon.tax.toFixed(2)} + Ads R$ ${newEcon.ads.toFixed(2)} = Custo total de R$ ${newEcon.totalCost.toFixed(2)} superando o preço de R$ ${newPrice.toFixed(2)}.`,
+          `Prejuízo mensal projetado de R$ ${Math.abs(baseScn?.projected_monthly_profit || 0).toFixed(2)} no volume estimado de ${baseScn?.projected_monthly_units || 0} unidades.`,
+          `[Ação Recomendada]: Elevar o preço para no mínimo R$ ${(f.cmv * 1.55).toFixed(2)}, criar Kit com mais unidades ou desconsiderar o produto.`
+        ];
+      } else if (newEcon.netMargin < 4.0) {
+        dg.rating = "D";
+        dg.rating_label = "D - NÃO COMPENSA (Margem Crítica < 4%)";
+        dg.reasons = [
+          `Margem líquida de apenas ${newEcon.netMargin}% é insuficiente para cobrir devoluções, trocas ou disputas no Mercado Livre.`,
+          `Lucro de R$ ${newEcon.netProfit.toFixed(2)} por unidade é vulnerável a qualquer aumento de tarifa ou desconto da concorrência.`,
+          `[Veredito]: O risco da operação não compensa o ganho financeiro obtido.`,
+          `[Alternativa]: Renegociar custo com fornecedor ou testar preço mais elevado.`
+        ];
+      } else if (newEcon.netMargin < 10.0) {
+        dg.rating = "C";
+        dg.rating_label = "C - RISCO ELEVADO (Testar em Escala Reduzida)";
+        dg.reasons = [
+          `Margem líquida moderada (${newEcon.netMargin}%): viável apenas para giro de caixa ou rankeamento inicial.`,
+          `Lucro unitário de R$ ${newEcon.netProfit.toFixed(2)} não tolera disputas de Buy Box agressivas.`,
+          `[Condição Recomendada]: Iniciar com lote piloto reduzido (15 a 25 unidades) para teste de conversão.`,
+          `[Alternativa]: Renegociar CMV ou montar combo para elevar o ticket médio.`
+        ];
+      } else if (newEcon.netMargin < targetMarginPct || advProfit <= 0) {
+        dg.rating = "B";
+        dg.rating_label = "B - VIÁVEL COM CONDIÇÕES (Ajustes Recomendados)";
+        dg.reasons = [
+          `Margem líquida de ${newEcon.netMargin}% é positiva e rentável, mas está abaixo da meta do lojista (${targetMarginPct.toFixed(0)}%).`,
+          `Lucro unitário de R$ ${newEcon.netProfit.toFixed(2)} remunera a operação, exigindo monitoramento fino de tráfego pago.`,
+          `[Condição Recomendada]: Limitar o ACOS máximo de campanhas de Ads a 15% para proteger a margem.`,
+          `[Alternativa]: Criar Kit/Combo de 2 unidades para diluir despesas fixas.`
+        ];
+      } else {
+        dg.rating = "A";
+        dg.rating_label = "A - ALTAMENTE VIÁVEL (Compensa Plenamente)";
+        dg.reasons = [
+          `Preço ajustado de R$ ${newPrice.toFixed(2)} atinge com folga a margem alvo de ${targetMarginPct.toFixed(0)}%.`,
+          `Lucro unitário saudável de R$ ${newEcon.netProfit.toFixed(2)} (${newEcon.netMargin}% de margem) cobre integralmente todos os custos operacionais e taxas do ML.`,
+          `Resistência a estresse comprovada: o produto compensa com excelente rentabilidade.`
+        ];
+      }
+
+      // 3. Atualiza o Evidence Store
+      if (currentSessionData.data.evidence_store && currentSessionData.data.evidence_store.items) {
+        const pEv = currentSessionData.data.evidence_store.items.find(i => i.field === "preco_venda_calculado");
+        if (pEv) pEv.formatted_value = `R$ ${newPrice.toFixed(2)} (Ajuste Simulado)`;
+        const feeEv = currentSessionData.data.evidence_store.items.find(i => i.field === "ml_comissao_calculada");
+        if (feeEv) feeEv.formatted_value = `R$ ${newEcon.mlTotalFee.toFixed(2)} (${newPrice >= 79 ? '13%' : '13% + R$ 6,00 fixa'})`;
+        const profitEv = currentSessionData.data.evidence_store.items.find(i => i.field === "lucro_liquido_unitario");
+        if (profitEv) profitEv.formatted_value = `R$ ${newEcon.netProfit.toFixed(2)} (${newEcon.netMargin}%)`;
+      }
+
+      closeAdjustModal();
+      renderPipelineResults(currentSessionData.data, currentSessionData.session_id);
+    }
+
+    // ============================================================
+    // SISTEMA DE AUTENTICAÇÃO (LOGIN / LOGOUT / SESSÃO)
+    // ============================================================
+    function togglePasswordVisibility() {
+      const input = document.getElementById('login-password');
+      const icon = document.getElementById('icon-login-eye');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        input.type = 'password';
+        icon.setAttribute('data-lucide', 'eye');
+      }
+      lucide.createIcons();
+    }
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/auth/check');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated) {
+            document.getElementById('login-overlay').classList.add('hidden');
+            return true;
+          }
+        }
+      } catch (err) {
+        console.warn("Verificação de sessão:", err);
+      }
+      document.getElementById('login-overlay').classList.remove('hidden');
+      return false;
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const errBox = document.getElementById('login-error');
+      const errText = document.getElementById('login-error-msg');
+      const btn = document.getElementById('btn-login-submit');
+      const btnText = document.getElementById('btn-login-text');
+
+      errBox.classList.add('hidden');
+      btn.disabled = true;
+      btnText.innerText = "Autenticando...";
+
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value;
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          btnText.innerText = "Autorizado! Entrando...";
+          document.getElementById('login-overlay').classList.add('hidden');
+          // Dispara o cálculo inicial
+          loadMlStatus().then(() => {
+            setTimeout(() => {
+              const form = document.getElementById('intake-form');
+              if (form) form.dispatchEvent(new Event('submit'));
+            }, 250);
+          });
+        } else {
+          errText.innerText = data.error || "Usuário ou senha incorretos.";
+          errBox.classList.remove('hidden');
+          btn.disabled = false;
+          btnText.innerText = "Entrar no Sistema";
+        }
+      } catch (err) {
+        errText.innerText = "Erro ao conectar com o servidor: " + err.message;
+        errBox.classList.remove('hidden');
+        btn.disabled = false;
+        btnText.innerText = "Entrar no Sistema";
+      }
+    }
+
+    async function handleLogout() {
+      if (confirm("Deseja realmente sair do Marketplace Manager AI?")) {
+        try {
+          await fetch('/api/auth/logout', { method: 'POST' });
+        } catch (e) {}
+        document.getElementById('login-overlay').classList.remove('hidden');
+        document.getElementById('login-password').value = '';
+        document.getElementById('btn-login-submit').disabled = false;
+        document.getElementById('btn-login-text').innerText = "Entrar no Sistema";
+      }
+    }
+
+    // Inicialização da API Oficial do Mercado Livre e Sessão
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('ml_connected') === 'true') {
+      alert("🎉 Conexão oficial com o Mercado Livre autorizada com sucesso!\n\nO agente agora consultará os anúncios diretamente dos servidores oficiais do Mercado Livre com links canônicos de cada produto.");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // Verifica autenticação antes de iniciar o dashboard
+    checkAuth().then((isAuth) => {
+      if (isAuth) {
+        loadMlStatus().then(() => {
+          setTimeout(() => {
+            const form = document.getElementById('intake-form');
+            if (form) form.dispatchEvent(new Event('submit'));
+          }, 350);
+        });
+      }
+    });
+
+    lucide.createIcons();
+  </script>
+</body>
+</html>

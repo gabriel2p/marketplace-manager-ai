@@ -25,23 +25,34 @@ CONFIG_FILE = os.path.join(BASE_DIR, "ml_credentials.json")
 
 
 def load_ml_config():
-    env_cfg = {
-        "app_id": os.environ.get("ML_APP_ID", ""),
-        "client_secret": os.environ.get("ML_CLIENT_SECRET", ""),
-        "access_token": os.environ.get("ML_ACCESS_TOKEN", ""),
-        "refresh_token": os.environ.get("ML_REFRESH_TOKEN", ""),
-        "user_id": os.environ.get("ML_USER_ID", None)
+    cfg = {
+        "app_id": "",
+        "client_secret": "",
+        "access_token": "",
+        "refresh_token": "",
+        "user_id": None
     }
-    if env_cfg["app_id"] and env_cfg["client_secret"]:
-        return env_cfg
-
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                saved = json.load(f)
+                if isinstance(saved, dict):
+                    cfg.update(saved)
         except Exception:
             pass
-    return env_cfg
+
+    for k, env_name in [
+        ("app_id", "ML_APP_ID"),
+        ("client_secret", "ML_CLIENT_SECRET"),
+        ("access_token", "ML_ACCESS_TOKEN"),
+        ("refresh_token", "ML_REFRESH_TOKEN"),
+        ("user_id", "ML_USER_ID")
+    ]:
+        val = os.environ.get(env_name)
+        if val:
+            cfg[k] = val.strip()
+
+    return cfg
 
 
 def save_ml_config(config):
@@ -742,6 +753,22 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
             try:
                 data = json.loads(body)
                 raw_code = data.get("code", "").strip()
+
+                # Se o usuário colou diretamente um Access Token (ex: APP_USR-...)
+                if raw_code.startswith("APP_USR-") or raw_code.startswith("APP_"):
+                    cfg = load_ml_config()
+                    cfg["access_token"] = raw_code
+                    if data.get("app_id"):
+                        cfg["app_id"] = str(data["app_id"]).strip()
+                    if data.get("client_secret"):
+                        cfg["client_secret"] = str(data["client_secret"]).strip()
+                    save_ml_config(cfg)
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"success": True, "message": "Access Token salvo e conectado com sucesso!"}).encode('utf-8'))
+                    return
+
                 if "code=" in raw_code:
                     code_match = re.search(r'code=([^&]+)', raw_code)
                     if code_match:
@@ -750,7 +777,10 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                 cfg = load_ml_config()
                 app_id = str(data.get("app_id") or cfg.get("app_id", "")).strip()
                 client_secret = str(data.get("client_secret") or cfg.get("client_secret", "")).strip()
-                redirect_uri = "https://google.com"
+
+                host = self.headers.get('Host', 'localhost:8000')
+                proto = self.headers.get('X-Forwarded-Proto', 'https' if ('onrender.com' in host or not host.startswith('localhost')) else 'http')
+                redirect_uri = data.get("redirect_uri") or f"{proto}://{host}/api/auth/callback"
 
                 token_res = exchange_code_for_token(raw_code, app_id, client_secret, redirect_uri)
                 if "access_token" in token_res:
@@ -802,12 +832,19 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
             has_secret = bool(cfg.get("client_secret"))
             has_token = bool(cfg.get("access_token"))
 
+            host = self.headers.get('Host', 'localhost:8000')
+            proto = self.headers.get('X-Forwarded-Proto', 'https' if ('onrender.com' in host or not host.startswith('localhost')) else 'http')
+            redirect_uri = f"{proto}://{host}/api/auth/callback"
+            encoded_redirect = urllib.parse.quote(redirect_uri, safe='')
+
             masked_app = cfg["app_id"][:4] + "****" if len(cfg.get("app_id", "")) > 4 else ""
             res = {
                 "connected": has_token,
                 "has_credentials": has_app_id and has_secret,
+                "app_id": cfg.get("app_id", ""),
                 "app_id_masked": masked_app,
-                "auth_url": f"https://auth.mercadolivre.com.br/authorization?response_type=code&client_id={cfg.get('app_id', '')}&redirect_uri=https://google.com" if has_app_id else None
+                "redirect_uri": redirect_uri,
+                "auth_url": f"https://auth.mercadolivre.com.br/authorization?response_type=code&client_id={cfg.get('app_id', '')}&redirect_uri={encoded_redirect}" if has_app_id else None
             }
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -819,6 +856,19 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/auth/callback":
             query_params = urllib.parse.parse_qs(parsed.query)
             code = query_params.get("code", [""])[0]
+            error_param = query_params.get("error", [""])[0]
+            error_desc = query_params.get("error_description", [""])[0]
+
+            if error_param:
+                self.send_response(400)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.end_headers()
+                html = f"""<!DOCTYPE html><html><body style="font-family:sans-serif;background:#0f172a;color:#fff;padding:40px;text-align:center;">
+                <h2 style="color:#f43f5e;">Erro retornado pelo Mercado Livre: {error_param}</h2>
+                <p>{error_desc}</p>
+                <p><a href="/" style="color:#38bdf8;">Voltar ao Painel</a></p></body></html>"""
+                self.wfile.write(html.encode('utf-8'))
+                return
 
             if not code:
                 self.send_response(400)
@@ -827,8 +877,11 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                 return
 
             cfg = load_ml_config()
-            redirect_uri = "http://localhost:8000/api/auth/callback"
-            token_res = exchange_code_for_token(code, cfg["app_id"], cfg["client_secret"], redirect_uri)
+            host = self.headers.get('Host', 'localhost:8000')
+            proto = self.headers.get('X-Forwarded-Proto', 'https' if ('onrender.com' in host or not host.startswith('localhost')) else 'http')
+            redirect_uri = f"{proto}://{host}/api/auth/callback"
+
+            token_res = exchange_code_for_token(code, cfg.get("app_id", ""), cfg.get("client_secret", ""), redirect_uri)
 
             if "access_token" in token_res:
                 cfg["access_token"] = token_res["access_token"]
@@ -846,7 +899,18 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                 self.send_response(500)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.end_headers()
-                self.wfile.write(f"<h2>Erro na Autenticação com o Mercado Livre</h2><pre>{json.dumps(token_res, indent=2)}</pre><p><a href='/'>Voltar ao Painel</a></p>".encode('utf-8'))
+                err_json = json.dumps(token_res, indent=2, ensure_ascii=False)
+                html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>Erro na Autenticação</title></head>
+                <body style="font-family:sans-serif;background:#0f172a;color:#e2e8f0;padding:40px;max-width:600px;margin:0 auto;">
+                <h2 style="color:#f43f5e;">⚠️ Erro na Troca do Token do Mercado Livre</h2>
+                <p>O Mercado Livre respondeu com erro:</p>
+                <pre style="background:#1e293b;padding:15px;border-radius:8px;overflow-x:auto;color:#f87171;">{err_json}</pre>
+                <div style="background:#1e293b;padding:15px;border-radius:8px;margin-top:20px;">
+                  <p><strong>Dica Rápida:</strong> Se preferir, acesse seu aplicativo em <a href="https://developers.mercadolivre.com.br" target="_blank" style="color:#38bdf8;">developers.mercadolivre.com.br</a>, copie o seu <strong>Access Token</strong> diretamente na aba "Credenciais" ou "Testar aplicativo" e cole no painel.</p>
+                </div>
+                <p style="margin-top:25px;"><a href="/" style="background:#3b82f6;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">← Voltar ao Painel</a></p>
+                </body></html>"""
+                self.wfile.write(html.encode('utf-8'))
                 return
 
         # 3. Busca de Concorrentes via API Oficial

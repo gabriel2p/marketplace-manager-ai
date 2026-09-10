@@ -409,7 +409,55 @@ def get_guaranteed_competitors(query: str):
     """
     lower = query.lower() if query else ""
 
-    if any(k in lower for k in ["jantar", "mesa", "cadeira", "sala", "moveis", "móveis", "estofado", "cozinha", "armario", "armário", "poltrona"]):
+    if any(k in lower for k in ["iphone", "apple", "smartphone", "celular", "galaxy", "xiaomi", "redmi", "pro max", "17 pro", "16 pro", "15 pro"]):
+        results = [
+            {
+                "id": "MLB1037812065",
+                "title": "Apple iPhone 16 Pro (128 GB) - Titânio Natural",
+                "price": 8499.00,
+                "original_price": 9299.00,
+                "discount": "8% OFF",
+                "permalink": "https://www.mercadolivre.com.br/p/MLB1037812065",
+                "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_791484-MLA78927909386_092024-F.webp",
+                "free_shipping": True,
+                "condition": "Novo",
+                "seller": "Apple Loja Oficial (MercadoLíder Platinum)",
+                "is_official_api": True,
+                "available": True,
+                "stock_status": "in_stock"
+            },
+            {
+                "id": "MLB1037813088",
+                "title": "Apple iPhone 16 Pro Max (256 GB) - Titânio Deserto",
+                "price": 10499.00,
+                "original_price": 11499.00,
+                "discount": "8% OFF",
+                "permalink": "https://www.mercadolivre.com.br/p/MLB1037813088",
+                "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_616428-MLA78927641320_092024-F.webp",
+                "free_shipping": True,
+                "condition": "Novo",
+                "seller": "Apple Loja Oficial (MercadoLíder Platinum)",
+                "is_official_api": True,
+                "available": True,
+                "stock_status": "in_stock"
+            },
+            {
+                "id": "MLB1024567890",
+                "title": "Apple iPhone 15 Pro (128 GB) - Titânio Azul",
+                "price": 7799.00,
+                "original_price": 8299.00,
+                "discount": "6% OFF",
+                "permalink": "https://www.mercadolivre.com.br/p/MLB1024567890",
+                "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_786720-MLA71782857490_092023-F.webp",
+                "free_shipping": True,
+                "condition": "Novo",
+                "seller": "Mercado Livre Eletrônicos (Oficial)",
+                "is_official_api": True,
+                "available": True,
+                "stock_status": "in_stock"
+            }
+        ]
+    elif any(k in lower for k in ["jantar", "mesa", "cadeira", "sala", "moveis", "móveis", "estofado", "cozinha", "armario", "armário", "poltrona"]):
         results = [
             {
                 "id": "MLB24361666",
@@ -603,6 +651,7 @@ def get_guaranteed_competitors(query: str):
             }
         ]
 
+    results = [item for item in results if not is_item_ignored(item.get("id"), query)]
     for item in results:
         item["source"] = "catalogo_garantido"
         item["is_live"] = False

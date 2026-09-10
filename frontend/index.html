@@ -243,10 +243,15 @@
           </div>
           <p class="text-xs sm:text-sm text-slate-400 mt-1">Configure o seu produto e clique em <strong>"Analisar Mercado & Viabilidade"</strong>.</p>
         </div>
-        <div class="flex items-center gap-2">
-          <button type="button" onclick="clearIntakeForm()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3.5 py-2 rounded-xl border border-cardborder text-xs font-semibold flex items-center space-x-1.5 transition shadow-sm min-h-[40px]" title="Limpar o exemplo para cadastrar outro produto">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
-            <span>Novo Produto / Limpar Campos</span>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs text-slate-400 font-medium hidden lg:inline">Exemplos Prontos:</span>
+          <button type="button" onclick="loadPreset('garrafa')" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white px-2.5 py-1.5 rounded-lg border border-cardborder text-xs transition">🧴 Garrafa Térmica</button>
+          <button type="button" onclick="loadPreset('fone')" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white px-2.5 py-1.5 rounded-lg border border-cardborder text-xs transition">🎧 Fone TWS</button>
+          <button type="button" onclick="loadPreset('mesa')" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white px-2.5 py-1.5 rounded-lg border border-cardborder text-xs transition">🪑 Mesa Jantar</button>
+          <button type="button" onclick="loadPreset('praia')" class="bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 hover:text-amber-200 px-2.5 py-1.5 rounded-lg border border-amber-500/30 text-xs transition font-semibold">🏖️ Cadeira de Praia</button>
+          <button type="button" onclick="clearIntakeForm()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3.5 py-1.5 rounded-xl border border-cardborder text-xs font-semibold flex items-center space-x-1.5 transition shadow-sm" title="Limpar todos os campos para cadastrar seu próprio produto">
+            <i data-lucide="eraser" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Limpar Campos</span>
           </button>
         </div>
       </div>
@@ -989,6 +994,57 @@
             thumbnail: "/img/mesa_madesa.webp",
             free_shipping: true,
             seller: "Madesa Móveis (Loja Oficial • +50.000 vendidos)",
+            available: true,
+            stock_status: "in_stock"
+          }
+        ]
+      },
+      praia: {
+        sku: "CAD-PRAIA-01",
+        title: "Cadeira de Praia Alumínio Reclinável 8 Posições",
+        brand: "Mor",
+        cost: 39.90,
+        margin: "0.22",
+        stock: 50,
+        weight: 2.0,
+        features: "Estrutura 100% Alumínio resistente à maresia, Reclinável em 8 posições anatômicas, Dobrável e super leve, Tecido Poliéster reforçado",
+        competitors: [
+          {
+            id: "MLB28419203",
+            title: "Cadeira De Praia Alta Alumínio Dobrável Mor",
+            price: 89.90,
+            original_price: 109.90,
+            discount: "18% OFF",
+            permalink: "https://www.mercadolivre.com.br/p/MLB28419203",
+            thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_917343-MLA72803134989_112023-F.webp",
+            free_shipping: true,
+            seller: "Mor Loja Oficial (MercadoLíder Platinum)",
+            available: true,
+            stock_status: "in_stock"
+          },
+          {
+            id: "MLB18920441",
+            title: "Cadeira De Praia Reclinável 8 Posições Alumínio Mor Conforto",
+            price: 139.90,
+            original_price: 169.90,
+            discount: "17% OFF",
+            permalink: "https://www.mercadolivre.com.br/p/MLB18920441",
+            thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_792341-MLA72803134991_112023-F.webp",
+            free_shipping: true,
+            seller: "Casa & Praia Store (MercadoLíder Platinum)",
+            available: true,
+            stock_status: "in_stock"
+          },
+          {
+            id: "MLB29817203",
+            title: "Kit 2 Cadeiras De Praia Alumínio Dobrável Portátil Belfix",
+            price: 159.90,
+            original_price: 189.90,
+            discount: "15% OFF",
+            permalink: "https://www.mercadolivre.com.br/p/MLB29817203",
+            thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_891234-MLA72803134992_112023-F.webp",
+            free_shipping: true,
+            seller: "Belfix Oficial (+10.000 vendidos)",
             available: true,
             stock_status: "in_stock"
           }

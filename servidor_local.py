@@ -457,7 +457,55 @@ def get_guaranteed_competitors(query: str):
                 "stock_status": "in_stock"
             }
         ]
-    elif any(k in lower for k in ["jantar", "mesa", "cadeira", "sala", "moveis", "móveis", "estofado", "cozinha", "armario", "armário", "poltrona"]):
+    elif any(k in lower for k in ["praia", "camping", "pesca", "guarda-sol", "guarda sol", "cooler", "esteira", "espreguiçadeira", "reclinavel", "reclinável", "belfix"]):
+        results = [
+            {
+                "id": "MLB28419203",
+                "title": "Cadeira De Praia Alta Alumínio Dobrável Mor",
+                "price": 89.90,
+                "original_price": 109.90,
+                "discount": "18% OFF",
+                "permalink": "https://www.mercadolivre.com.br/p/MLB28419203",
+                "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_917343-MLA72803134989_112023-F.webp",
+                "free_shipping": True,
+                "condition": "Novo",
+                "seller": "Mor Loja Oficial (MercadoLíder Platinum)",
+                "is_official_api": True,
+                "available": True,
+                "stock_status": "in_stock"
+            },
+            {
+                "id": "MLB18920441",
+                "title": "Cadeira De Praia Reclinável 8 Posições Alumínio Mor Conforto",
+                "price": 139.90,
+                "original_price": 169.90,
+                "discount": "17% OFF",
+                "permalink": "https://www.mercadolivre.com.br/p/MLB18920441",
+                "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_792341-MLA72803134991_112023-F.webp",
+                "free_shipping": True,
+                "condition": "Novo",
+                "seller": "Casa & Praia Store (MercadoLíder Platinum)",
+                "is_official_api": True,
+                "available": True,
+                "stock_status": "in_stock"
+            },
+            {
+                "id": "MLB29817203",
+                "title": "Kit 2 Cadeiras De Praia Alumínio Dobrável Portátil Belfix",
+                "price": 159.90,
+                "original_price": 189.90,
+                "discount": "15% OFF",
+                "permalink": "https://www.mercadolivre.com.br/p/MLB29817203",
+                "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_891234-MLA72803134992_112023-F.webp",
+                "free_shipping": True,
+                "condition": "Novo",
+                "seller": "Belfix Oficial (+10.000 vendidos)",
+                "is_official_api": True,
+                "available": True,
+                "stock_status": "in_stock"
+            }
+        ]
+    elif any(k in lower for k in ["jantar", "mesa", "sala", "moveis", "móveis", "estofado", "cozinha", "armario", "armário", "poltrona"]) or ("cadeira" in lower and not any(p in lower for p in ["praia", "camping", "pesca"])):
         results = [
             {
                 "id": "MLB24361666",

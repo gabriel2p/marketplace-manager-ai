@@ -27,6 +27,10 @@ class ProductIntakeRequest(BaseModel):
         default_factory=lambda: {"height": 10, "width": 15, "length": 20},
         description="Dimensões da embalagem (altura, largura, comprimento em cm)"
     )
+    reputation: str = Field(
+        default="green",
+        description="Reputação no Mercado Livre: 'green' (MercadoLíder/Verde), 'yellow' (Amarela), 'orange' (Laranja/Sem reputação)"
+    )
     
     # Objetivos e Estratégia
     objective: str = Field(

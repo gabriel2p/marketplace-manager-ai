@@ -48,6 +48,48 @@ class TestMarketplaceManagerAI(unittest.TestCase):
         self.assertGreater(econ["shipping_cost"], 0.00)
         self.assertTrue(econ["is_profitable"])
 
+    def test_mercado_livre_official_shipping_table_ajuda_40538(self):
+        """Valida a matriz oficial ajuda/40538 do Mercado Livre com descontos por reputação."""
+        # 1. iPhone 17 Pro (0.95 kg, preço R$ 8726.90 >= R$ 200, MercadoLíder) -> Frete R$ 24,45
+        cost_lider = FinancialEngine.calculate_shipping_cost(
+            price=Decimal("8726.90"),
+            weight_kg=Decimal("0.95"),
+            reputation="green"
+        )
+        self.assertEqual(cost_lider, Decimal("24.45"))
+
+        # 2. Mesma faixa de peso com reputação Amarela (fator 1.20) -> 24.45 * 1.20 = 29.34
+        cost_yellow = FinancialEngine.calculate_shipping_cost(
+            price=Decimal("8726.90"),
+            weight_kg=Decimal("0.95"),
+            reputation="yellow"
+        )
+        self.assertEqual(cost_yellow, Decimal("29.34"))
+
+        # 3. Mesma faixa de peso sem reputação (fator 2.00, tabela cheia) -> 24.45 * 2.00 = 48.90
+        cost_orange = FinancialEngine.calculate_shipping_cost(
+            price=Decimal("8726.90"),
+            weight_kg=Decimal("0.95"),
+            reputation="orange"
+        )
+        self.assertEqual(cost_orange, Decimal("48.90"))
+
+        # 4. Garrafa Térmica (0.45 kg, R$ 139.90, faixa 120 a 149.99, MercadoLíder) -> R$ 18,15
+        cost_garrafa = FinancialEngine.calculate_shipping_cost(
+            price=Decimal("139.90"),
+            weight_kg=Decimal("0.45"),
+            reputation="green"
+        )
+        self.assertEqual(cost_garrafa, Decimal("18.15"))
+
+        # 5. Produto abaixo de R$ 79,00 -> Frete vendedor R$ 0,00 (pago pelo comprador)
+        cost_under_79 = FinancialEngine.calculate_shipping_cost(
+            price=Decimal("49.90"),
+            weight_kg=Decimal("0.30"),
+            reputation="green"
+        )
+        self.assertEqual(cost_under_79, Decimal("0.00"))
+
     def test_stress_test_generates_4_scenarios(self):
         scenarios = StressTestEngine.generate_all_scenarios(
             base_price=99.90,

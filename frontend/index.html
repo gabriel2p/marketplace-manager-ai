@@ -22,6 +22,11 @@
               navy: '#2D3277',
               blue: '#3483FA'
             },
+            shopee: {
+              orange: '#EE4D2D',
+              darkorange: '#D03B1E',
+              lightorange: '#FFF1EE'
+            },
             darkbg: '#0F172A',
             cardbg: '#1E293B',
             cardborder: '#334155'
@@ -172,12 +177,30 @@
         </div>
       </div>
 
-      <!-- Indicadores de Segurança e Conexão -->
+      <!-- Indicadores de Segurança, Conexão e Seleção de Plataforma -->
       <div class="flex items-center space-x-1.5 sm:space-x-2.5 flex-shrink-0">
-        <button onclick="openMlConfigModal()" class="flex items-center space-x-1 sm:space-x-1.5 bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500/50 px-2.5 sm:px-3 py-1.5 rounded-lg text-blue-300 text-xs font-semibold transition shadow-sm min-h-[36px] sm:min-h-[38px]" title="Configurar API Oficial ML">
+        <!-- BOTÃO DE TROCA DE PLATAFORMA (HUB) -->
+        <button onclick="openPlatformModal()" id="btn-active-platform" class="flex items-center space-x-1.5 sm:space-x-2 bg-slate-800 hover:bg-slate-750 border border-cardborder px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm min-h-[36px] sm:min-h-[38px]" title="Alternar entre Mercado Livre e Shopee">
+          <span id="platform-badge-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0"></span>
+          <span id="platform-badge-text" class="text-amber-300 hidden xs:inline">Mercado Livre</span>
+          <span class="text-[10px] text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-cardborder flex items-center gap-1">
+            <span>Trocar</span>
+            <i data-lucide="chevron-down" class="w-3 h-3"></i>
+          </span>
+        </button>
+
+        <!-- Botão Config API ML (visível no workspace Mercado Livre) -->
+        <button id="btn-ml-config" onclick="openMlConfigModal()" class="flex items-center space-x-1 sm:space-x-1.5 bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500/50 px-2.5 sm:px-3 py-1.5 rounded-lg text-blue-300 text-xs font-semibold transition shadow-sm min-h-[36px] sm:min-h-[38px]" title="Configurar API Oficial ML">
           <i data-lucide="key" class="w-3.5 h-3.5 flex-shrink-0"></i>
           <span id="btn-ml-api-status" class="hidden sm:inline">Conectar API Oficial ML</span>
           <span class="sm:hidden text-[11px] font-bold">API ML</span>
+        </button>
+
+        <!-- Botão Config API Shopee (visível no workspace Shopee) -->
+        <button id="btn-shopee-config" onclick="openShopeeConfigModal()" class="hidden items-center space-x-1 sm:space-x-1.5 bg-orange-600/30 hover:bg-orange-600/50 border border-orange-500/50 px-2.5 sm:px-3 py-1.5 rounded-lg text-orange-300 text-xs font-semibold transition shadow-sm min-h-[36px] sm:min-h-[38px]" title="Configurar API Shopee Open Platform">
+          <i data-lucide="key" class="w-3.5 h-3.5 flex-shrink-0"></i>
+          <span id="btn-shopee-api-status" class="hidden sm:inline">Conectar API Shopee</span>
+          <span class="sm:hidden text-[11px] font-bold">API Shopee</span>
         </button>
 
         <div id="connection-status-badge" class="flex items-center space-x-1.5 bg-slate-800 border border-cardborder px-2 sm:px-2.5 py-1.5 rounded-lg text-slate-300 min-h-[36px] sm:min-h-[38px]">
@@ -204,30 +227,35 @@
   <!-- ============================================================ -->
   <div class="bg-slate-900/90 border-b border-cardborder px-3 sm:px-4 py-2 text-xs text-slate-400">
     <div class="max-w-7xl mx-auto flex items-center justify-between gap-3 overflow-x-auto no-scrollbar whitespace-nowrap">
-      <div class="flex items-center space-x-3 text-[11px] sm:text-xs">
+      <div id="topbar-principles-container" class="flex items-center space-x-3 text-[11px] sm:text-xs">
         <span class="flex items-center space-x-1 text-blue-400 font-medium">
           <i data-lucide="search" class="w-3.5 h-3.5 flex-shrink-0"></i>
-          <span id="topbar-competitors-mapped">Concorrência Mapeada via Mercado Livre</span>
+          <span id="topbar-principle-1">Concorrência Mapeada via Mercado Livre</span>
         </span>
         <span class="text-slate-600">•</span>
         <span class="flex items-center space-x-1 text-cyan-400 font-medium">
           <i data-lucide="calculator" class="w-3.5 h-3.5 flex-shrink-0"></i>
-          <span>Cálculo Determinístico de Taxas e Frete ME</span>
+          <span id="topbar-principle-2">Cálculo Determinístico de Taxas e Frete ME</span>
         </span>
         <span class="text-slate-600">•</span>
         <span class="flex items-center space-x-1 text-emerald-400 font-medium">
           <i data-lucide="scale" class="w-3.5 h-3.5 flex-shrink-0"></i>
-          <span>Matriz de Viabilidade (Compensa ou Não)</span>
+          <span id="topbar-principle-3">Matriz de Viabilidade (Compensa ou Não)</span>
         </span>
       </div>
-      <div class="hidden sm:block text-slate-500 font-mono text-[11px] flex-shrink-0">
-        Rastreabilidade Total
+      <div class="hidden sm:block text-slate-500 font-mono text-[11px] flex-shrink-0" id="topbar-platform-indicator">
+        Workspace: Mercado Livre
       </div>
     </div>
   </div>
 
   <!-- CONTEÚDO PRINCIPAL -->
   <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 flex-1 space-y-6 sm:space-y-8 w-full">
+    <!-- ============================================================ -->
+    <!-- ABA: MERCADO LIVRE (WORKSPACE ORIGINAL COMPLETO)           -->
+    <!-- ============================================================ -->
+    <div id="view-mercadolivre" class="space-y-6 sm:space-y-8">
+
 
     <!-- ============================================================ -->
     <!-- 1. INTAKE / BRIEFING (CAMADA 1 & 3)                          -->
@@ -663,11 +691,561 @@
 
     </div>
 
-  </main>
+  
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- ABA: SHOPEE BRASIL (WORKSPACE DEDICADO)                      -->
+    <!-- ============================================================ -->
+    <div id="view-shopee" class="space-y-6 sm:space-y-8 hidden">
+
+      <!-- ============================================================ -->
+      <!-- 1. INTAKE / BRIEFING SHOPEE BRASIL                           -->
+      <!-- ============================================================ -->
+      <section class="bg-cardbg rounded-2xl border border-cardborder p-4 sm:p-6 shadow-xl relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-orange-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-5 mb-5 border-b border-cardborder gap-3 sm:gap-4">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-bold text-orange-400 tracking-wider uppercase bg-orange-500/10 px-2.5 py-1 rounded-md border border-orange-500/20">Shopee Brasil</span>
+              <h2 class="text-lg sm:text-xl font-bold text-white">Intake & Viabilidade Comercial Shopee</h2>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1">Preencha os dados do seu produto e clique em <strong>"Analisar Mercado na Shopee"</strong>.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="clearShopeeIntakeForm()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3.5 py-1.5 rounded-xl border border-cardborder text-xs font-semibold flex items-center space-x-1.5 transition shadow-sm" title="Limpar todos os campos">
+              <i data-lucide="eraser" class="w-3.5 h-3.5 text-slate-400"></i>
+              <span>Limpar Formulário</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Formulário Shopee -->
+        <form id="shopee-intake-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">SKU / Código do Produto *</label>
+            <input type="text" id="shopee-input-sku" value="" required placeholder="Ex: SHP-SEU-01" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-orange-400 min-h-[44px]">
+          </div>
+
+          <div class="col-span-1 sm:col-span-2 lg:col-span-2">
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Nome do Produto na Shopee *</label>
+            <input type="text" id="shopee-input-title" value="" required placeholder="Ex: Conjunto Sala de Jantar Vivi 4 Cadeiras Mel Off" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-orange-400 min-h-[44px]">
+          </div>
+
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Marca / Fabricante</label>
+            <input type="text" id="shopee-input-brand" value="" placeholder="Ex: Mor, Tramontina ou Própria" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-orange-400 min-h-[44px]">
+          </div>
+
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Custo CMV Unitário (R$) *</label>
+            <div class="relative">
+              <span class="absolute left-3 top-3 text-sm text-slate-500">R$</span>
+              <input type="number" step="any" min="0.01" id="shopee-input-cost" value="" required placeholder="Ex: 39.90" class="w-full bg-slate-900 border border-cardborder rounded-lg pl-9 pr-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-orange-400 min-h-[44px]">
+            </div>
+          </div>
+
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Margem Líquida Alvo Desejada</label>
+            <select id="shopee-input-margin" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-orange-400 min-h-[44px]">
+              <option value="0.15">15% (Competitivo / Giro Rápido)</option>
+              <option value="0.20" selected>20% (Equilibrado)</option>
+              <option value="0.25">25% (Alta Margem)</option>
+              <option value="0.30">30% (Excelente Retorno)</option>
+            </select>
+          </div>
+
+          <div class="col-span-1 sm:col-span-2">
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Programa de Frete Shopee Oficial *</label>
+            <select id="shopee-input-fgp" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-orange-400 min-h-[44px]">
+              <option value="true" selected>⭐ Frete Grátis Extra (FGP) - 20% comissão (Frete R$ 0 pro vendedor + cupom comprador)</option>
+              <option value="false">Padrão sem FGP - 14% comissão (Sem cupom de frete grátis da Shopee)</option>
+            </select>
+          </div>
+
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Embalagem / Dropshipping (R$)</label>
+            <div class="relative">
+              <span class="absolute left-3 top-3 text-sm text-slate-500">R$</span>
+              <input type="number" step="any" min="0" id="shopee-input-packaging" value="0.00" placeholder="0.00 para Dropshipping" class="w-full bg-slate-900 border border-cardborder rounded-lg pl-9 pr-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-orange-400 min-h-[44px]">
+            </div>
+          </div>
+
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Estoque Disponível (Unidades)</label>
+            <input type="number" step="1" min="1" id="shopee-input-stock" value="50" placeholder="Ex: 50" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-orange-400 min-h-[44px]">
+          </div>
+
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Imposto (Simples Nacional)</label>
+            <select id="shopee-input-tax" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-orange-400 min-h-[44px]">
+              <option value="0.04">4.0% (Faixa 1 Simples)</option>
+              <option value="0.06" selected>6.0% (Padrão Simples Nacional)</option>
+              <option value="0.08">8.0% (Faixa 3)</option>
+              <option value="0.10">10.0% (Faixa 4)</option>
+              <option value="0.00">0.0% (MEI Isento)</option>
+            </select>
+          </div>
+
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Investimento Shopee Ads</label>
+            <select id="shopee-input-ads" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-orange-400 min-h-[44px]">
+              <option value="0.00">0% (Sem Ads)</option>
+              <option value="0.02">2% (Ads Leve)</option>
+              <option value="0.04" selected>4% (Ads Recomendado Shopee)</option>
+              <option value="0.06">6% (Ads Agressivo / Escala)</option>
+            </select>
+          </div>
+
+          <div class="col-span-1 sm:col-span-2 lg:col-span-3">
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Diferenciais e Palavras-chave de Busca Shopee</label>
+            <input type="text" id="shopee-input-features" value="" placeholder="Ex: frete rápido, pronta entrega, envio 24h, alta durabilidade" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-orange-400 min-h-[44px]">
+          </div>
+
+          <div class="col-span-1 sm:col-span-2 lg:col-span-1 flex items-end">
+            <button type="submit" id="btn-run-shopee-pipeline" class="w-full bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-orange-500/20 flex items-center justify-center space-x-2 transition transform active:scale-95 min-h-[46px] text-sm sm:text-base">
+              <i data-lucide="calculator" class="w-4 h-4"></i>
+              <span>Analisar Mercado na Shopee</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- ESTADO INICIAL SHOPEE (AGUARDANDO PRODUTO)                   -->
+      <!-- ============================================================ -->
+      <div id="shopee-empty-state" class="bg-cardbg rounded-2xl border border-cardborder p-8 sm:p-12 text-center shadow-xl space-y-3">
+        <div class="w-14 h-14 bg-orange-500/10 text-orange-400 rounded-2xl flex items-center justify-center mx-auto border border-orange-500/20">
+          <i data-lucide="shopping-bag" class="w-7 h-7"></i>
+        </div>
+        <h3 class="text-base sm:text-lg font-bold text-white">Nenhum produto em análise na Shopee no momento</h3>
+        <p class="text-xs sm:text-sm text-slate-400 max-w-lg mx-auto">
+          Preencha os campos do seu produto no formulário acima (Nome, Custo CMV, etc.) e clique em <strong>"Analisar Mercado na Shopee"</strong> para mapear concorrentes, calcular as taxas oficiais (14% ou 20% + R$ 4,00) e a viabilidade líquida real.
+        </p>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- PIPELINE SHOPEE RESULTADOS                                   -->
+      <!-- ============================================================ -->
+      <div id="shopee-pipeline-progress" class="hidden space-y-6 sm:space-y-8">
+
+        <!-- 2.1 CONCORRENTES REAIS NA SHOPEE -->
+        <section class="bg-gradient-to-b from-orange-950/30 to-cardbg rounded-2xl border-2 border-orange-500/40 p-4 sm:p-6 shadow-2xl relative">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-cardborder gap-3">
+            <div>
+              <div class="flex items-center space-x-2">
+                <span class="text-xs font-bold text-orange-400 tracking-wider uppercase bg-orange-500/10 px-2.5 py-1 rounded-md border border-orange-500/20">Shopee Brasil</span>
+                <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                  <span>Concorrentes Mapeados na Shopee</span>
+                  <span id="shopee-competitors-count" class="bg-orange-500/20 text-orange-300 text-xs px-2 py-0.5 rounded-full border border-orange-500/30">0 encontrados</span>
+                </h3>
+              </div>
+              <p class="text-xs text-slate-400 mt-1">Anúncios reais na Shopee Brasil com contagem de vendas, reputação do vendedor e selo Frete Grátis FGP.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 font-mono" id="shopee-competitors-source">Catálogo Shopee Brasil</span>
+            </div>
+          </div>
+
+          <!-- Cards de Métricas da Concorrência Shopee -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+            <div class="bg-slate-900/80 border border-cardborder p-3 rounded-xl">
+              <span class="text-[11px] text-slate-400 block font-medium">Menor Preço Shopee</span>
+              <span id="shopee-stat-min-price" class="text-base sm:text-lg font-bold text-emerald-400">R$ 0,00</span>
+            </div>
+            <div class="bg-slate-900/80 border border-cardborder p-3 rounded-xl">
+              <span class="text-[11px] text-slate-400 block font-medium">Preço Médio Shopee</span>
+              <span id="shopee-stat-avg-price" class="text-base sm:text-lg font-bold text-amber-400">R$ 0,00</span>
+            </div>
+            <div class="bg-slate-900/80 border border-cardborder p-3 rounded-xl">
+              <span class="text-[11px] text-slate-400 block font-medium">Maior Preço Shopee</span>
+              <span id="shopee-stat-max-price" class="text-base sm:text-lg font-bold text-purple-400">R$ 0,00</span>
+            </div>
+            <div class="bg-slate-900/80 border border-cardborder p-3 rounded-xl">
+              <span class="text-[11px] text-slate-400 block font-medium">Volume Estimado</span>
+              <span id="shopee-stat-sales" class="text-base sm:text-lg font-bold text-orange-400">+500/mês</span>
+            </div>
+          </div>
+
+          <!-- Tabela de Concorrentes Shopee -->
+          <div class="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+            <table class="w-full text-left text-xs text-slate-300 min-w-[700px]">
+              <thead class="text-[11px] uppercase bg-slate-900/80 text-slate-400 border-b border-cardborder">
+                <tr>
+                  <th class="px-3 py-3">Produto / Anúncio Shopee</th>
+                  <th class="px-3 py-3">Preço</th>
+                  <th class="px-3 py-3">Vendas</th>
+                  <th class="px-3 py-3">Avaliação</th>
+                  <th class="px-3 py-3">Vendedor</th>
+                  <th class="px-3 py-3">Frete</th>
+                  <th class="px-3 py-3 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="shopee-competitors-tbody" class="divide-y divide-cardborder/60"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 2.2 MATRIZ DE VIABILIDADE & VEREDITO SHOPEE -->
+        <section class="bg-cardbg rounded-2xl border border-cardborder p-4 sm:p-6 shadow-xl">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-5 border-b border-cardborder gap-3">
+            <div>
+              <div class="flex items-center space-x-2">
+                <span class="text-xs font-bold text-emerald-400 tracking-wider uppercase bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">Economia Unitária Determinística</span>
+                <h3 class="text-base sm:text-lg font-bold text-white">Matriz de Viabilidade & Veredito Final Shopee</h3>
+              </div>
+              <p class="text-xs text-slate-400 mt-1">Cálculo exato com regras oficiais Shopee: 14% ou 20% (FGP), teto R$ 100 e taxa fixa R$ 4,00.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="openShopeeAdjustModal()" class="bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/40 px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition shadow-sm min-h-[36px]">
+                <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+                <span>Simular Outro Preço</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Banner de Veredito Shopee -->
+          <div id="shopee-verdict-banner" class="mb-5 p-4 rounded-xl border flex items-center justify-between gap-3 bg-emerald-950/40 border-emerald-500/40 text-emerald-300">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                <i data-lucide="check-circle-2" class="w-6 h-6 text-emerald-400"></i>
+              </div>
+              <div>
+                <h4 id="shopee-verdict-title" class="font-bold text-base text-white">OPERAÇÃO ALTAMENTE VIÁVEL NA SHOPEE</h4>
+                <p id="shopee-verdict-desc" class="text-xs text-slate-300">O produto atinge ou supera a margem alvo de 20%, gerando lucro líquido sustentável com frete subsidiado FGP.</p>
+              </div>
+            </div>
+            <span id="shopee-verdict-tag" class="px-3 py-1 rounded-lg font-bold text-xs bg-emerald-500/30 text-emerald-200 border border-emerald-500/40 whitespace-nowrap">
+              COMPENSA VENDER
+            </span>
+          </div>
+
+          <!-- 4 Indicadores Chave de Performance (KPIs) -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-6">
+            <div class="bg-slate-900/90 border border-cardborder rounded-xl p-4">
+              <span class="text-xs text-slate-400 block font-medium">Preço Sugerido Shopee</span>
+              <span id="shopee-kpi-price" class="text-xl sm:text-2xl font-black text-white block mt-1">R$ 0,00</span>
+              <span class="text-[11px] text-orange-400 font-medium mt-1 block">Posicionado para Giro</span>
+            </div>
+            <div class="bg-slate-900/90 border border-cardborder rounded-xl p-4">
+              <span class="text-xs text-slate-400 block font-medium">Lucro Líquido Real</span>
+              <span id="shopee-kpi-profit" class="text-xl sm:text-2xl font-black text-emerald-400 block mt-1">R$ 0,00</span>
+              <span class="text-[11px] text-slate-400 font-medium mt-1 block">Líquido na sua conta</span>
+            </div>
+            <div class="bg-slate-900/90 border border-cardborder rounded-xl p-4">
+              <span class="text-xs text-slate-400 block font-medium">Margem Líquida Real</span>
+              <span id="shopee-kpi-margin" class="text-xl sm:text-2xl font-black text-cyan-400 block mt-1">0.0%</span>
+              <span id="shopee-kpi-margin-sub" class="text-[11px] text-emerald-400 font-medium mt-1 block">Acima da meta</span>
+            </div>
+            <div class="bg-slate-900/90 border border-cardborder rounded-xl p-4">
+              <span class="text-xs text-slate-400 block font-medium">ROI Operacional</span>
+              <span id="shopee-kpi-roi" class="text-xl sm:text-2xl font-black text-purple-400 block mt-1">0.0%</span>
+              <span class="text-[11px] text-slate-400 font-medium mt-1 block">Retorno s/ Custo</span>
+            </div>
+          </div>
+
+          <!-- Breakdown de Custos e Tarifas Shopee -->
+          <div class="bg-slate-900/80 border border-cardborder rounded-xl p-4 sm:p-5 space-y-4">
+            <h4 class="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="pie-chart" class="w-4 h-4 text-orange-400"></i>
+              <span>Composição Determinística de Custos e Repasses Shopee</span>
+            </h4>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-300">
+                <thead class="text-[11px] uppercase bg-slate-800/80 text-slate-400 border-b border-cardborder">
+                  <tr>
+                    <th class="px-3 py-2.5">Item de Custo / Tarifa</th>
+                    <th class="px-3 py-2.5">Regra Shopee Brasil</th>
+                    <th class="px-3 py-2.5">Percentual / Base</th>
+                    <th class="px-3 py-2.5 text-right">Valor em R$</th>
+                  </tr>
+                </thead>
+                <tbody id="shopee-cost-breakdown-tbody" class="divide-y divide-cardborder/40 font-mono text-xs">
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2.3 ANÁLISE DE ESTRESSE & SENSIBILIDADE SHOPEE -->
+        <section class="bg-cardbg rounded-2xl border border-cardborder p-4 sm:p-6 shadow-xl space-y-4">
+          <div class="flex items-center space-x-2">
+            <span class="text-xs font-bold text-amber-400 tracking-wider uppercase bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20">Resiliência Operacional</span>
+            <h3 class="text-base sm:text-lg font-bold text-white">Análise de Estresse & Cenários Shopee</h3>
+          </div>
+          <p class="text-xs text-slate-400">Simulação de rentabilidade em cenários conservador, competitivo, Promoção Relâmpago e adversidade.</p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5" id="shopee-stress-cards">
+          </div>
+        </section>
+
+        <!-- 2.4 SEO & COPYWRITING SHOPEE -->
+        <section class="bg-cardbg rounded-2xl border border-cardborder p-4 sm:p-6 shadow-xl space-y-5">
+          <div class="flex items-center justify-between pb-3 border-b border-cardborder">
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-bold text-orange-400 tracking-wider uppercase bg-orange-500/10 px-2.5 py-1 rounded-md border border-orange-500/20">Conversão Shopee</span>
+              <h3 class="text-base sm:text-lg font-bold text-white">SEO & Copywriting de Alta Conversão Shopee</h3>
+            </div>
+            <span class="text-[11px] text-slate-400 font-mono">Algoritmo Shopee Search</span>
+          </div>
+
+          <div class="space-y-4">
+            <!-- Título Shopee -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                  <i data-lucide="type" class="w-3.5 h-3.5 text-orange-400"></i>
+                  <span>Título Otimizado para Shopee (até 120 caracteres)</span>
+                </label>
+                <button type="button" onclick="copyShopeeTitle()" class="text-xs text-orange-400 hover:text-orange-300 font-semibold flex items-center gap-1">
+                  <i data-lucide="copy" class="w-3 h-3"></i>
+                  <span id="copy-shopee-title-text">Copiar Título</span>
+                </button>
+              </div>
+              <div class="bg-slate-900 border border-cardborder rounded-lg p-3 text-sm text-white font-medium" id="shopee-copy-title">
+                Carregando título...
+              </div>
+            </div>
+
+            <!-- Hashtags Shopee -->
+            <div>
+              <label class="text-xs font-semibold text-slate-300 mb-1.5 block flex items-center gap-1.5">
+                <i data-lucide="hash" class="w-3.5 h-3.5 text-orange-400"></i>
+                <span>Hashtags Recomendadas Shopee</span>
+              </label>
+              <div class="bg-slate-900 border border-cardborder rounded-lg p-3 text-xs text-orange-300 font-mono flex flex-wrap gap-2" id="shopee-copy-tags">
+                #shopeebr #promocao #oferta
+              </div>
+            </div>
+
+            <!-- Descrição Shopee -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                  <i data-lucide="file-text" class="w-3.5 h-3.5 text-orange-400"></i>
+                  <span>Descrição Persuasiva com Emojis de Conversão</span>
+                </label>
+                <button type="button" onclick="copyShopeeDesc()" class="text-xs text-orange-400 hover:text-orange-300 font-semibold flex items-center gap-1">
+                  <i data-lucide="copy" class="w-3 h-3"></i>
+                  <span id="copy-shopee-desc-text">Copiar Descrição</span>
+                </button>
+              </div>
+              <textarea id="shopee-copy-description" rows="8" readonly class="w-full bg-slate-900 border border-cardborder rounded-lg p-3 text-xs text-slate-200 font-mono focus:outline-none leading-relaxed"></textarea>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2.5 RASTREABILIDADE & EVIDÊNCIAS SHOPEE -->
+        <section class="bg-cardbg rounded-2xl border border-cardborder p-4 sm:p-6 shadow-xl space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-cardborder">
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-bold text-cyan-400 tracking-wider uppercase bg-cyan-500/10 px-2.5 py-1 rounded-md border border-cyan-500/20">Rastreabilidade</span>
+              <h3 class="text-base sm:text-lg font-bold text-white">Tabela de Evidências & Auditoria Shopee</h3>
+            </div>
+            <span class="text-xs text-slate-400 font-mono">100% Determinístico</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="text-[11px] uppercase bg-slate-900/80 text-slate-400 border-b border-cardborder">
+                <tr>
+                  <th class="px-4 py-2.5">Campo / Métrica</th>
+                  <th class="px-4 py-2.5">Valor</th>
+                  <th class="px-4 py-2.5">Metodologia</th>
+                  <th class="px-4 py-2.5">Origem</th>
+                  <th class="px-4 py-2.5">Confiança</th>
+                </tr>
+              </thead>
+              <tbody id="shopee-evidence-tbody" class="divide-y divide-cardborder/60"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+</main>
 
   <!-- ============================================================ -->
   <!-- MODAL: CONEXÃO COM API OFICIAL MERCADO LIVRE DEVELOPERS     -->
   <!-- ============================================================ -->
+  
+  <!-- ============================================================ -->
+  <!-- MODAL: SELEÇÃO DE PLATAFORMA (MERCADO LIVRE vs SHOPEE)        -->
+  <!-- ============================================================ -->
+  <div id="platform-modal" class="fixed inset-0 z-[9998] bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+    <div class="bg-cardbg border border-cardborder rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-6 my-auto relative">
+      <div class="text-center space-y-2">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-400 via-amber-500 to-orange-500 shadow-lg shadow-orange-500/20 mb-1">
+          <i data-lucide="layers" class="w-6 h-6 text-slate-900"></i>
+        </div>
+        <h2 class="text-xl sm:text-2xl font-bold text-white tracking-tight">Selecione o Marketplace para Análise</h2>
+        <p class="text-xs sm:text-sm text-slate-400 max-w-md mx-auto">
+          Escolha o canal comercial onde deseja mapear concorrentes, calcular taxas oficiais e avaliar a viabilidade econômica do seu produto.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 pt-2">
+        <!-- CARD MERCADO LIVRE -->
+        <div onclick="selectPlatform('mercadolivre')" class="group cursor-pointer bg-gradient-to-b from-slate-900/90 to-amber-950/20 hover:to-amber-950/40 border-2 border-cardborder hover:border-amber-400 rounded-2xl p-5 sm:p-6 transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-amber-500/10 flex flex-col justify-between">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="w-12 h-12 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center">
+                <span class="text-2xl">🟡</span>
+              </div>
+              <span class="text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                Oficial ML
+              </span>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-white group-hover:text-amber-400 transition">Mercado Livre</h3>
+              <p class="text-xs text-slate-400 mt-1">Ecossistema Mercado Envios, Catálogo e Buy Box</p>
+            </div>
+            <ul class="text-xs text-slate-300 space-y-1.5 border-t border-cardborder pt-3">
+              <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-3.5 h-3.5 text-amber-400 flex-shrink-0"></i> <span>Comissões Clássico (13%) e Premium (18%)</span></li>
+              <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-3.5 h-3.5 text-amber-400 flex-shrink-0"></i> <span>Frete Mercado Envios (≥ R$ 79)</span></li>
+              <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-3.5 h-3.5 text-amber-400 flex-shrink-0"></i> <span>Desconto por Reputação MercadoLíder</span></li>
+              <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-3.5 h-3.5 text-amber-400 flex-shrink-0"></i> <span>API Oficial ML & Catálogo Buy Box</span></li>
+            </ul>
+          </div>
+          <div class="pt-5">
+            <button type="button" class="w-full bg-amber-500 group-hover:bg-amber-400 text-slate-950 font-bold py-2.5 px-4 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 transition shadow-md shadow-amber-500/20">
+              <span>Acessar Mercado Livre</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- CARD SHOPEE -->
+        <div onclick="selectPlatform('shopee')" class="group cursor-pointer bg-gradient-to-b from-slate-900/90 to-orange-950/20 hover:to-orange-950/40 border-2 border-cardborder hover:border-orange-500 rounded-2xl p-5 sm:p-6 transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-orange-500/10 flex flex-col justify-between">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="w-12 h-12 rounded-xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
+                <span class="text-2xl">🟠</span>
+              </div>
+              <span class="text-[10px] font-bold uppercase tracking-wider bg-orange-500/20 text-orange-300 border border-orange-500/30 px-2 py-0.5 rounded-full">
+                Shopee Brasil
+              </span>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-white group-hover:text-orange-400 transition">Shopee Brasil</h3>
+              <p class="text-xs text-slate-400 mt-1">Programa Frete Grátis Extra (FGP) & Alto Giro</p>
+            </div>
+            <ul class="text-xs text-slate-300 space-y-1.5 border-t border-cardborder pt-3">
+              <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-3.5 h-3.5 text-orange-400 flex-shrink-0"></i> <span>Comissão FGP (20%) ou Padrão (14%)</span></li>
+              <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-3.5 h-3.5 text-orange-400 flex-shrink-0"></i> <span>Teto Máximo de R$ 100 por item</span></li>
+              <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-3.5 h-3.5 text-orange-400 flex-shrink-0"></i> <span>Taxa Fixa R$ 4,00 por item</span></li>
+              <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-3.5 h-3.5 text-orange-400 flex-shrink-0"></i> <span>Frete Subsidiado (R$ 0 pro Vendedor no FGP)</span></li>
+            </ul>
+          </div>
+          <div class="pt-5">
+            <button type="button" class="w-full bg-[#EE4D2D] group-hover:bg-[#FF5722] text-white font-bold py-2.5 px-4 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 transition shadow-md shadow-orange-500/20">
+              <span>Acessar Shopee Brasil</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center pt-2">
+        <p class="text-[11px] text-slate-500">
+          Você pode alternar entre os canais a qualquer momento pelo botão no menu superior.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: CONEXÃO COM API OFICIAL SHOPEE OPEN PLATFORM          -->
+  <!-- ============================================================ -->
+  <div id="shopee-config-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-cardbg border border-orange-500/40 rounded-2xl max-w-lg w-full max-h-[92vh] flex flex-col p-4 sm:p-6 shadow-2xl space-y-4 my-auto overflow-hidden">
+      <div class="flex items-center justify-between pb-3 border-b border-cardborder flex-shrink-0">
+        <h4 class="text-sm sm:text-base font-bold text-white flex items-center space-x-2">
+          <div class="w-7 h-7 rounded-lg bg-[#EE4D2D] flex items-center justify-center flex-shrink-0">
+            <i data-lucide="shopping-bag" class="w-4 h-4 text-white"></i>
+          </div>
+          <span>Conectar API Oficial Shopee Open Platform</span>
+        </h4>
+        <button onclick="closeShopeeConfigModal()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white rounded-lg">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="overflow-y-auto pr-1 space-y-3.5 max-h-[calc(92vh-100px)]">
+        <div class="bg-orange-950/40 border border-orange-500/30 p-3.5 rounded-xl text-xs text-orange-200 space-y-2">
+          <div class="font-bold flex items-center gap-1.5 text-white">
+            <i data-lucide="zap" class="w-4 h-4 text-orange-400 flex-shrink-0"></i>
+            <span>Credenciais Shopee Open Platform</span>
+          </div>
+          <p class="text-[11px] text-slate-300 leading-relaxed">
+            Obtenha suas credenciais no portal <a href="https://open.shopee.com" target="_blank" rel="noopener noreferrer" class="text-orange-400 underline font-semibold hover:text-orange-300">open.shopee.com</a> para sincronizar diretamente com a Shopee Brasil.
+          </p>
+        </div>
+
+        <form id="shopee-credentials-form" onsubmit="saveShopeeCredentials(event)" class="space-y-3 text-xs">
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Partner ID:</label>
+            <input type="text" id="shopee-input-partner-id" placeholder="Ex: 1002345" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-white font-mono text-base sm:text-xs focus:border-orange-400 focus:outline-none min-h-[44px]">
+          </div>
+
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Partner Key (Chave Secreta):</label>
+            <input type="password" id="shopee-input-partner-key" placeholder="Ex: a8f4e2b19c..." class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-white font-mono text-base sm:text-xs focus:border-orange-400 focus:outline-none min-h-[44px]">
+          </div>
+
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Shop ID:</label>
+            <input type="text" id="shopee-input-shop-id" placeholder="Ex: 9283741" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-white font-mono text-base sm:text-xs focus:border-orange-400 focus:outline-none min-h-[44px]">
+          </div>
+
+          <div class="flex items-center justify-between pt-3 border-t border-cardborder">
+            <button type="button" onclick="closeShopeeConfigModal()" class="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-xs min-h-[40px]">Fechar</button>
+            <button type="submit" class="px-4 py-2 rounded-lg bg-[#EE4D2D] hover:bg-[#FF5722] text-white font-bold text-xs flex items-center justify-center space-x-1 transition shadow-lg shadow-orange-600/20 min-h-[42px]">
+              <i data-lucide="save" class="w-3.5 h-3.5"></i>
+              <span>Salvar Credenciais Shopee</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: SIMULADOR DE PREÇO SHOPEE                             -->
+  <!-- ============================================================ -->
+  <div id="shopee-adjust-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-cardbg border border-cardborder rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-cardborder">
+        <h4 class="text-sm sm:text-base font-bold text-white flex items-center space-x-2">
+          <i data-lucide="sliders" class="w-4 h-4 text-orange-400"></i>
+          <span>Simulador de Preço Shopee</span>
+        </h4>
+        <button onclick="closeShopeeAdjustModal()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white rounded-lg">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs sm:text-sm">
+        <p class="text-slate-400 text-xs leading-relaxed">
+          Altere o preço de venda na Shopee para recalcular instantaneamente as taxas (14% ou 20% FGP + R$ 4,00), margem líquida e lucro.
+        </p>
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1 text-xs">Preço de Venda Simulado Shopee (R$):</label>
+          <input type="number" step="any" min="0.01" id="modal-shopee-price" placeholder="Ex: 89.90" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-white font-mono text-base sm:text-sm focus:border-orange-400 focus:outline-none min-h-[44px]">
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end space-x-2 pt-2">
+        <button onclick="closeShopeeAdjustModal()" class="px-3.5 py-2.5 rounded-lg text-slate-400 hover:text-white text-xs min-h-[44px] flex items-center justify-center">Cancelar</button>
+        <button onclick="submitShopeeAdjust()" class="px-4 py-2.5 rounded-lg bg-[#EE4D2D] hover:bg-[#FF5722] text-white font-bold text-xs sm:text-sm flex items-center justify-center space-x-1.5 transition min-h-[44px]">
+          <i data-lucide="calculator" class="w-3.5 h-3.5"></i>
+          <span>Recalcular Shopee</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="ml-config-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
     <div class="bg-cardbg border border-blue-500/40 rounded-2xl max-w-lg w-full max-h-[92vh] flex flex-col p-4 sm:p-6 shadow-2xl space-y-4 my-auto overflow-hidden">
       <div class="flex items-center justify-between pb-3 border-b border-cardborder flex-shrink-0">
@@ -2288,6 +2866,8 @@
           btnText.innerText = "Autorizado! Entrando...";
           document.getElementById('login-overlay').classList.add('hidden');
           loadMlStatus();
+          loadShopeeStatus();
+          openPlatformModal();
         } else {
           errText.innerText = data.error || "Usuário ou senha incorretos.";
           errBox.classList.remove('hidden');
@@ -2325,10 +2905,775 @@
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    // Verifica autenticação antes de iniciar o dashboard
+    
+    // =================================================================
+    // GESTÃO DE PLATAFORMA (MERCADO LIVRE vs SHOPEE BRASIL)
+    // =================================================================
+    let currentPlatform = 'mercadolivre'; // 'mercadolivre' | 'shopee'
+    let activeShopeeCompetitors = [];
+    let currentShopeeSessionData = null;
+    let shopeeConfig = { connected: false, partner_id: "", shop_id: "" };
+
+    function openPlatformModal() {
+      document.getElementById('platform-modal').classList.remove('hidden');
+    }
+
+    function closePlatformModal() {
+      document.getElementById('platform-modal').classList.add('hidden');
+    }
+
+    function selectPlatform(platform) {
+      currentPlatform = platform;
+      try { localStorage.setItem('selected_platform', platform); } catch(e) {}
+      closePlatformModal();
+
+      const viewMl = document.getElementById('view-mercadolivre');
+      const viewShp = document.getElementById('view-shopee');
+      const badgeDot = document.getElementById('platform-badge-dot');
+      const badgeText = document.getElementById('platform-badge-text');
+      const btnMlConfig = document.getElementById('btn-ml-config');
+      const btnShpConfig = document.getElementById('btn-shopee-config');
+      const p1 = document.getElementById('topbar-principle-1');
+      const p2 = document.getElementById('topbar-principle-2');
+      const p3 = document.getElementById('topbar-principle-3');
+      const platIndicator = document.getElementById('topbar-platform-indicator');
+
+      if (platform === 'shopee') {
+        if (viewMl) viewMl.classList.add('hidden');
+        if (viewShp) viewShp.classList.remove('hidden');
+        if (badgeDot) badgeDot.className = "w-2.5 h-2.5 rounded-full bg-[#EE4D2D] flex-shrink-0";
+        if (badgeText) {
+          badgeText.className = "text-[#EE4D2D] hidden xs:inline";
+          badgeText.innerText = "Shopee Brasil";
+        }
+
+        if (btnMlConfig) {
+          btnMlConfig.classList.add('hidden');
+          btnMlConfig.classList.remove('flex');
+        }
+        if (btnShpConfig) {
+          btnShpConfig.classList.remove('hidden');
+          btnShpConfig.classList.add('flex');
+        }
+
+        if (p1) p1.innerText = "Concorrência Mapeada via Shopee Brasil";
+        if (p2) p2.innerText = "Comissão 14%/20% (FGP) + R$ 4,00 Fixo";
+        if (p3) p3.innerText = "Frete Subsidiado FGP (R$ 0 pro Vendedor)";
+        if (platIndicator) platIndicator.innerText = "Workspace: Shopee Brasil";
+
+        updateShopeeStatusUI();
+      } else {
+        if (viewShp) viewShp.classList.add('hidden');
+        if (viewMl) viewMl.classList.remove('hidden');
+        if (badgeDot) badgeDot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0";
+        if (badgeText) {
+          badgeText.className = "text-amber-300 hidden xs:inline";
+          badgeText.innerText = "Mercado Livre";
+        }
+
+        if (btnShpConfig) {
+          btnShpConfig.classList.add('hidden');
+          btnShpConfig.classList.remove('flex');
+        }
+        if (btnMlConfig) {
+          btnMlConfig.classList.remove('hidden');
+          btnMlConfig.classList.add('flex');
+        }
+
+        if (p1) p1.innerText = "Concorrência Mapeada via Mercado Livre";
+        if (p2) p2.innerText = "Cálculo Determinístico de Taxas e Frete ME";
+        if (p3) p3.innerText = "Matriz de Viabilidade (Compensa ou Não)";
+        if (platIndicator) platIndicator.innerText = "Workspace: Mercado Livre";
+
+        updateMlStatusUI();
+      }
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    // =================================================================
+    // SHOPEE CONFIG & STATUS
+    // =================================================================
+    function openShopeeConfigModal() {
+      document.getElementById('shopee-config-modal').classList.remove('hidden');
+      loadShopeeStatus();
+    }
+
+    function closeShopeeConfigModal() {
+      document.getElementById('shopee-config-modal').classList.add('hidden');
+    }
+
+    async function loadShopeeStatus() {
+      try {
+        const res = await fetch('/api/shopee/status');
+        if (res.ok) {
+          shopeeConfig = await res.json();
+          if (shopeeConfig.partner_id) {
+            const el = document.getElementById('shopee-input-partner-id');
+            if (el && !el.value) el.value = shopeeConfig.partner_id;
+          }
+          if (shopeeConfig.shop_id) {
+            const el = document.getElementById('shopee-input-shop-id');
+            if (el && !el.value) el.value = shopeeConfig.shop_id;
+          }
+          updateShopeeStatusUI();
+        }
+      } catch(e) {}
+    }
+
+    function updateShopeeStatusUI() {
+      if (currentPlatform !== 'shopee') return;
+      const dot = document.getElementById('connection-status-dot');
+      const txt = document.getElementById('connection-status-text');
+      const btnTxt = document.getElementById('btn-shopee-api-status');
+      if (shopeeConfig.connected) {
+        if (dot) dot.className = "w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-400 flex-shrink-0";
+        if (txt) txt.innerText = "API SHOPEE: CONECTADA";
+        if (btnTxt) btnTxt.innerText = "API Shopee Conectada";
+      } else {
+        if (dot) dot.className = "w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-orange-400 flex-shrink-0";
+        if (txt) txt.innerText = "SHOPEE: CATÁLOGO ATIVO";
+        if (btnTxt) btnTxt.innerText = "Conectar API Shopee";
+      }
+    }
+
+    async function saveShopeeCredentials(e) {
+      e.preventDefault();
+      const partner_id = document.getElementById('shopee-input-partner-id').value.trim();
+      const partner_key = document.getElementById('shopee-input-partner-key').value.trim();
+      const shop_id = document.getElementById('shopee-input-shop-id').value.trim();
+      try {
+        const res = await fetch('/api/shopee/credentials', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ partner_id, partner_key, shop_id })
+        });
+        if (res.ok) {
+          alert("🎉 Credenciais da Shopee salvas com sucesso!");
+          closeShopeeConfigModal();
+          loadShopeeStatus();
+        } else {
+          alert("Falha ao salvar credenciais.");
+        }
+      } catch(err) {
+        alert("Erro ao salvar: " + err.message);
+      }
+    }
+
+    // =================================================================
+    // MOTOR DE CÁLCULO DETERMINÍSTICO SHOPEE
+    // =================================================================
+    function calculateShopeeEconomicsLocal(sellingPrice, costPrice, isFgp, packagingCost, taxRate, adsRate, shippingExtra) {
+      const p = parseFloat(sellingPrice) || 0.0;
+      const cmv = parseFloat(costPrice) || 0.0;
+      const pack = parseFloat(packagingCost) || 0.0;
+      const taxR = parseFloat(taxRate) || 0.06;
+      const adsR = parseFloat(adsRate) || 0.04;
+      const shipExtra = parseFloat(shippingExtra) || 0.0;
+
+      const commRate = isFgp ? 0.20 : 0.14;
+      const rawComm = p * commRate;
+      const percentFee = Math.min(Math.round(rawComm * 100) / 100, 100.00);
+
+      let fixedFee = 4.00;
+      if (p < 8.00) {
+        fixedFee = Math.round(p * 0.50 * 100) / 100;
+      }
+
+      const totalShopeeFee = Math.round((percentFee + fixedFee) * 100) / 100;
+      const taxVal = Math.round(p * taxR * 100) / 100;
+      const adsVal = Math.round(p * adsR * 100) / 100;
+
+      const totalCosts = Math.round((cmv + totalShopeeFee + shipExtra + taxVal + pack + adsVal) * 100) / 100;
+      const netProfit = Math.round((p - totalCosts) * 100) / 100;
+      const netMargin = p > 0 ? Math.round((netProfit / p) * 10000) / 100 : 0.0;
+      const roi = (cmv + pack) > 0 ? Math.round((netProfit / (cmv + pack)) * 10000) / 100 : 0.0;
+
+      return {
+        price: p,
+        cmv: cmv,
+        is_fgp: isFgp,
+        commission_rate_percent: isFgp ? 20 : 14,
+        shopee_percent_fee: percentFee,
+        shopee_fixed_fee: fixedFee,
+        shopee_total_fee: totalShopeeFee,
+        shipping: shipExtra,
+        packaging: pack,
+        tax: taxVal,
+        ads: adsVal,
+        total_costs: totalCosts,
+        net_profit: netProfit,
+        net_margin: netMargin,
+        roi: roi
+      };
+    }
+
+    function deriveShopeeSuggestedPrice(cmv, targetMargin, isFgp, packaging, taxRate, adsRate, shippingExtra) {
+      const commRate = isFgp ? 0.20 : 0.14;
+      const baseCosts = cmv + packaging + shippingExtra + 4.00;
+      const variableRate = commRate + taxRate + adsRate + targetMargin;
+
+      let p = 0;
+      if (variableRate < 0.95) {
+        p = baseCosts / (1.0 - variableRate);
+      } else {
+        p = baseCosts * 1.5;
+      }
+
+      // Check if percentage commission hits R$ 100 cap
+      if (p * commRate > 100.00) {
+        const noCommVar = taxRate + adsRate + targetMargin;
+        if (noCommVar < 0.95) {
+          p = (cmv + packaging + shippingExtra + 4.00 + 100.00) / (1.0 - noCommVar);
+        }
+      }
+
+      // Format neatly with .90 ending
+      let rounded = Math.ceil(p);
+      if (rounded - 0.10 >= p) {
+        return Math.round((rounded - 0.10) * 100) / 100;
+      }
+      return Math.round((rounded + 0.90) * 100) / 100;
+    }
+
+    // =================================================================
+    // SHOPEE PIPELINE RUNNER & RENDERING
+    // =================================================================
+    function clearShopeeIntakeForm() {
+      document.getElementById('shopee-input-sku').value = '';
+      document.getElementById('shopee-input-title').value = '';
+      document.getElementById('shopee-input-brand').value = '';
+      document.getElementById('shopee-input-cost').value = '';
+      document.getElementById('shopee-input-features').value = '';
+      document.getElementById('shopee-empty-state').classList.remove('hidden');
+      document.getElementById('shopee-pipeline-progress').classList.add('hidden');
+      activeShopeeCompetitors = [];
+      currentShopeeSessionData = null;
+    }
+
+    function dismissShopeeCompetitor(index) {
+      if (index >= 0 && index < activeShopeeCompetitors.length) {
+        const item = activeShopeeCompetitors[index];
+        activeShopeeCompetitors.splice(index, 1);
+        renderShopeeCompetitorsTable(activeShopeeCompetitors);
+        if (currentShopeeSessionData) {
+          recalculateShopeeWithCompetitors();
+        }
+      }
+    }
+
+    function renderShopeeCompetitorsTable(competitors) {
+      const tbody = document.getElementById('shopee-competitors-tbody');
+      const countEl = document.getElementById('shopee-competitors-count');
+      if (!tbody) return;
+
+      if (countEl) countEl.innerText = `${competitors.length} encontrados`;
+
+      if (!competitors || competitors.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-slate-400">Nenhum concorrente ativo no momento.</td></tr>`;
+        return;
+      }
+
+      const prices = competitors.map(c => c.price).filter(p => p > 0);
+      const minP = prices.length ? Math.min(...prices) : 0;
+      const maxP = prices.length ? Math.max(...prices) : 0;
+      const avgP = prices.length ? (prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
+
+      const minEl = document.getElementById('shopee-stat-min-price');
+      const avgEl = document.getElementById('shopee-stat-avg-price');
+      const maxEl = document.getElementById('shopee-stat-max-price');
+      if (minEl) minEl.innerText = `R$ ${minP.toFixed(2)}`;
+      if (avgEl) avgEl.innerText = `R$ ${avgP.toFixed(2)}`;
+      if (maxEl) maxEl.innerText = `R$ ${maxP.toFixed(2)}`;
+
+      tbody.innerHTML = competitors.map((c, idx) => {
+        const sellerBadge = c.seller_type === 'official' 
+          ? `<span class="bg-rose-500/20 text-rose-300 border border-rose-500/30 px-1.5 py-0.5 rounded text-[10px] font-bold">Oficial SP</span>`
+          : `<span class="bg-orange-500/20 text-orange-300 border border-orange-500/30 px-1.5 py-0.5 rounded text-[10px] font-bold">Indicado</span>`;
+
+        const shippingBadge = `<span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1"><i data-lucide="truck" class="w-3 h-3"></i> FGP Frete Grátis</span>`;
+
+        return `
+          <tr class="hover:bg-slate-800/40 transition">
+            <td class="px-3 py-3">
+              <div class="flex items-center space-x-3">
+                <img src="${c.thumbnail || 'https://via.placeholder.com/48'}" alt="${c.title}" class="w-10 h-10 rounded-lg object-cover bg-slate-800 border border-cardborder flex-shrink-0" onerror="this.src='https://via.placeholder.com/48'">
+                <div class="min-w-0 max-w-xs sm:max-w-md">
+                  <a href="${c.permalink || '#'}" target="_blank" rel="noopener noreferrer" class="text-white hover:text-orange-400 font-medium line-clamp-2 transition flex items-center gap-1" title="Ver produto na Shopee">
+                    <span>${c.title}</span>
+                    <i data-lucide="external-link" class="w-3 h-3 text-slate-400 flex-shrink-0"></i>
+                  </a>
+                  <span class="text-[10px] text-slate-500 font-mono">ID: ${c.id}</span>
+                </div>
+              </div>
+            </td>
+            <td class="px-3 py-3 whitespace-nowrap">
+              <span class="text-sm font-bold text-white">R$ ${c.price.toFixed(2)}</span>
+              ${c.original_price ? `<span class="text-[10px] text-slate-500 line-through block">R$ ${c.original_price.toFixed(2)}</span>` : ''}
+            </td>
+            <td class="px-3 py-3 whitespace-nowrap">
+              <span class="text-xs font-semibold text-orange-400">${c.sold_count || '+300 vendidos'}</span>
+            </td>
+            <td class="px-3 py-3 whitespace-nowrap">
+              <span class="text-xs text-amber-400 font-bold">${c.rating || '4.8'} ★</span>
+            </td>
+            <td class="px-3 py-3 whitespace-nowrap">
+              ${sellerBadge}
+              <span class="text-[11px] text-slate-400 block mt-0.5 truncate max-w-[120px]">${c.seller || 'Lojista Shopee'}</span>
+            </td>
+            <td class="px-3 py-3 whitespace-nowrap">
+              ${shippingBadge}
+            </td>
+            <td class="px-3 py-3 text-right whitespace-nowrap">
+              <button type="button" onclick="dismissShopeeCompetitor(${idx})" class="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 p-1.5 rounded-lg border border-rose-500/20 text-xs transition" title="Descartar este anúncio irrelevante">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function renderShopeeViability(econ, payload) {
+      const isViable = econ.net_margin >= (payload.target_margin * 100);
+      const banner = document.getElementById('shopee-verdict-banner');
+      const titleEl = document.getElementById('shopee-verdict-title');
+      const descEl = document.getElementById('shopee-verdict-desc');
+      const tagEl = document.getElementById('shopee-verdict-tag');
+
+      if (isViable) {
+        banner.className = "mb-5 p-4 rounded-xl border flex items-center justify-between gap-3 bg-emerald-950/40 border-emerald-500/40 text-emerald-300";
+        titleEl.innerText = "OPERAÇÃO ALTAMENTE VIÁVEL NA SHOPEE";
+        descEl.innerText = `O produto atinge margem real de ${econ.net_margin.toFixed(1)}%, gerando R$ ${econ.net_profit.toFixed(2)} de lucro líquido por unidade no programa ${econ.is_fgp ? 'Frete Grátis Extra (FGP)' : 'Padrão'}.`;
+        tagEl.className = "px-3 py-1 rounded-lg font-bold text-xs bg-emerald-500/30 text-emerald-200 border border-emerald-500/40 whitespace-nowrap";
+        tagEl.innerText = "COMPENSA VENDER";
+      } else {
+        banner.className = "mb-5 p-4 rounded-xl border flex items-center justify-between gap-3 bg-rose-950/40 border-rose-500/40 text-rose-300";
+        titleEl.innerText = "OPERAÇÃO COM RISCO DE MARGEM NA SHOPEE";
+        descEl.innerText = `A margem estimada de ${econ.net_margin.toFixed(1)}% está abaixo da meta desejada (${(payload.target_margin * 100).toFixed(0)}%). Recomendamos renegociar o CMV ou ajustar o preço.`;
+        tagEl.className = "px-3 py-1 rounded-lg font-bold text-xs bg-rose-500/30 text-rose-200 border border-rose-500/40 whitespace-nowrap";
+        tagEl.innerText = "MARGEM BAIXA";
+      }
+
+      // KPIs
+      document.getElementById('shopee-kpi-price').innerText = `R$ ${econ.price.toFixed(2)}`;
+      document.getElementById('shopee-kpi-profit').innerText = `R$ ${econ.net_profit.toFixed(2)}`;
+      document.getElementById('shopee-kpi-margin').innerText = `${econ.net_margin.toFixed(1)}%`;
+      document.getElementById('shopee-kpi-margin-sub').innerText = isViable ? `Meta atingida (${(payload.target_margin * 100).toFixed(0)}%)` : `Abaixo da meta (${(payload.target_margin * 100).toFixed(0)}%)`;
+      document.getElementById('shopee-kpi-margin-sub').className = isViable ? "text-[11px] text-emerald-400 font-medium mt-1 block" : "text-[11px] text-rose-400 font-medium mt-1 block";
+      document.getElementById('shopee-kpi-roi').innerText = `${econ.roi.toFixed(1)}%`;
+
+      // Cost Breakdown Table
+      const tbody = document.getElementById('shopee-cost-breakdown-tbody');
+      if (tbody) {
+        tbody.innerHTML = `
+          <tr class="hover:bg-slate-800/30">
+            <td class="px-3 py-2.5 font-sans font-medium text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-blue-400"></span> Custo CMV do Produto
+            </td>
+            <td class="px-3 py-2.5 text-slate-400">Custo unitário de aquisição / fabricação</td>
+            <td class="px-3 py-2.5 text-slate-300">${((econ.cmv / econ.price) * 100).toFixed(1)}% da venda</td>
+            <td class="px-3 py-2.5 text-right font-bold text-slate-200">R$ ${econ.cmv.toFixed(2)}</td>
+          </tr>
+          <tr class="hover:bg-slate-800/30">
+            <td class="px-3 py-2.5 font-sans font-medium text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-orange-400"></span> Comissão Shopee (${econ.commission_rate_percent}%)
+            </td>
+            <td class="px-3 py-2.5 text-slate-400">${econ.is_fgp ? 'Programa Frete Grátis Extra (14% + 6% FGP)' : 'Comissão Padrão sem FGP'} (Teto R$ 100)</td>
+            <td class="px-3 py-2.5 text-slate-300">${econ.commission_rate_percent}% s/ bruto</td>
+            <td class="px-3 py-2.5 text-right font-bold text-orange-400">R$ ${econ.shopee_percent_fee.toFixed(2)}</td>
+          </tr>
+          <tr class="hover:bg-slate-800/30">
+            <td class="px-3 py-2.5 font-sans font-medium text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-amber-400"></span> Taxa Fixa Transação Shopee
+            </td>
+            <td class="px-3 py-2.5 text-slate-400">Taxa oficial fixa por item vendido</td>
+            <td class="px-3 py-2.5 text-slate-300">R$ 4,00 fixo</td>
+            <td class="px-3 py-2.5 text-right font-bold text-amber-400">R$ ${econ.shopee_fixed_fee.toFixed(2)}</td>
+          </tr>
+          <tr class="hover:bg-slate-800/30">
+            <td class="px-3 py-2.5 font-sans font-medium text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Frete do Vendedor (FGP)
+            </td>
+            <td class="px-3 py-2.5 text-slate-400">Subsidiado pela Shopee via cupom ao comprador</td>
+            <td class="px-3 py-2.5 text-emerald-400 font-bold">R$ 0,00 (FGP)</td>
+            <td class="px-3 py-2.5 text-right font-bold text-emerald-400">R$ ${econ.shipping.toFixed(2)}</td>
+          </tr>
+          <tr class="hover:bg-slate-800/30">
+            <td class="px-3 py-2.5 font-sans font-medium text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-purple-400"></span> Imposto Simples Nacional
+            </td>
+            <td class="px-3 py-2.5 text-slate-400">Alíquota sobre faturamento bruto</td>
+            <td class="px-3 py-2.5 text-slate-300">${(payload.tax_rate * 100).toFixed(1)}%</td>
+            <td class="px-3 py-2.5 text-right font-bold text-purple-400">R$ ${econ.tax.toFixed(2)}</td>
+          </tr>
+          <tr class="hover:bg-slate-800/30">
+            <td class="px-3 py-2.5 font-sans font-medium text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-slate-400"></span> Embalagem & Proteção
+            </td>
+            <td class="px-3 py-2.5 text-slate-400">Insumos ou R$ 0,00 para Dropshipping</td>
+            <td class="px-3 py-2.5 text-slate-300">Fixo</td>
+            <td class="px-3 py-2.5 text-right font-bold text-slate-300">R$ ${econ.packaging.toFixed(2)}</td>
+          </tr>
+          <tr class="hover:bg-slate-800/30">
+            <td class="px-3 py-2.5 font-sans font-medium text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-rose-400"></span> Investimento Shopee Ads
+            </td>
+            <td class="px-3 py-2.5 text-slate-400">Tráfego pago patrocinado na busca da Shopee</td>
+            <td class="px-3 py-2.5 text-slate-300">${(payload.ads_rate * 100).toFixed(1)}%</td>
+            <td class="px-3 py-2.5 text-right font-bold text-rose-400">R$ ${econ.ads.toFixed(2)}</td>
+          </tr>
+          <tr class="bg-slate-800/60 font-bold border-t border-cardborder">
+            <td class="px-3 py-3 font-sans text-white" colspan="2">CUSTO TOTAL OPERACIONAL CONSOLIDADO</td>
+            <td class="px-3 py-3 text-slate-300">${((econ.total_costs / econ.price) * 100).toFixed(1)}% da venda</td>
+            <td class="px-3 py-3 text-right text-rose-400 font-bold">R$ ${econ.total_costs.toFixed(2)}</td>
+          </tr>
+          <tr class="bg-emerald-950/40 font-bold border-t-2 border-emerald-500/40 text-emerald-300">
+            <td class="px-3 py-3.5 font-sans text-white" colspan="2">LUCRO LÍQUIDO FINAL DO LOJISTA</td>
+            <td class="px-3 py-3.5 font-bold text-emerald-400">${econ.net_margin.toFixed(1)}% de margem</td>
+            <td class="px-3 py-3.5 text-right text-xl text-emerald-400 font-black">R$ ${econ.net_profit.toFixed(2)}</td>
+          </tr>
+        `;
+      }
+    }
+
+    function renderShopeeStressScenarios(cmv, isFgp, packaging, taxRate, adsRate, basePrice) {
+      const container = document.getElementById('shopee-stress-cards');
+      if (!container) return;
+
+      const scenarios = [
+        {
+          name: "Conservador (Alta Margem)",
+          price: Math.round((basePrice * 1.15) * 100) / 100,
+          tag: "Preço Premium",
+          tagColor: "bg-blue-500/20 text-blue-300 border-blue-500/30"
+        },
+        {
+          name: "Equilibrado (Sugerido)",
+          price: basePrice,
+          tag: "Recomendado",
+          tagColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+        },
+        {
+          name: "Promoção Relâmpago Shopee",
+          price: Math.round((basePrice * 0.88) * 100) / 100,
+          tag: "Flash Sale 12% OFF",
+          tagColor: "bg-orange-500/20 text-orange-300 border-orange-500/30"
+        },
+        {
+          name: "Guerra de Preços (Adverso)",
+          price: Math.round((basePrice * 0.80) * 100) / 100,
+          tag: "Pior Cenário",
+          tagColor: "bg-rose-500/20 text-rose-300 border-rose-500/30"
+        }
+      ];
+
+      container.innerHTML = scenarios.map(sc => {
+        const ec = calculateShopeeEconomicsLocal(sc.price, cmv, isFgp, packaging, taxRate, adsRate, 0.0);
+        const isPos = ec.net_profit > 0;
+        return `
+          <div class="bg-slate-900/90 border border-cardborder rounded-xl p-4 flex flex-col justify-between space-y-3">
+            <div>
+              <div class="flex items-center justify-between gap-1 mb-1">
+                <span class="text-xs font-bold text-white">${sc.name}</span>
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border ${sc.tagColor}">${sc.tag}</span>
+              </div>
+              <span class="text-lg font-bold text-slate-200">R$ ${sc.price.toFixed(2)}</span>
+            </div>
+            <div class="border-t border-cardborder/60 pt-2 space-y-1 text-xs font-mono">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Tarifas Shopee:</span>
+                <span class="text-orange-400">R$ ${ec.shopee_total_fee.toFixed(2)}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Lucro Líquido:</span>
+                <span class="${isPos ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}">R$ ${ec.net_profit.toFixed(2)}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Margem Real:</span>
+                <span class="${ec.net_margin >= 15 ? 'text-cyan-400 font-bold' : 'text-amber-400 font-bold'}">${ec.net_margin.toFixed(1)}%</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderShopeeCopywriting(payload, econ) {
+      const rawTitle = payload.title_raw;
+      const brand = payload.brand && payload.brand !== 'Genérica' ? payload.brand : '';
+      const features = payload.key_features.join(' • ');
+
+      // Algoritmo de Título Shopee: Termo Principal + Especificação + Marca + Diferencial Forte + Envio Rápido (Máx 120 chars)
+      let shopeeTitle = `${rawTitle}`;
+      if (brand && !shopeeTitle.toLowerCase().includes(brand.toLowerCase())) {
+        shopeeTitle += ` ${brand}`;
+      }
+      if (payload.is_fgp) {
+        shopeeTitle += ` Frete Grátis`;
+      }
+      shopeeTitle += ` Pronta Entrega Envio 24h`;
+      if (shopeeTitle.length > 120) {
+        shopeeTitle = shopeeTitle.slice(0, 117) + '...';
+      }
+
+      document.getElementById('shopee-copy-title').innerText = shopeeTitle;
+
+      // Hashtags
+      const cleanWords = rawTitle.toLowerCase().split(' ').filter(w => w.length > 3).slice(0, 4);
+      const tags = cleanWords.map(w => `#${w}`).concat(['#shopeebr', '#promocao', '#achadinhos', '#envio24h']);
+      document.getElementById('shopee-copy-tags').innerHTML = tags.map(t => `<span class="bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded text-orange-300 font-semibold">${t}</span>`).join(' ');
+
+      // Descrição Shopee Formatada
+      const desc = `🔥 ${rawTitle.toUpperCase()} COM ENVIO RÁPIDO & GARANTIA SHOPEE 🔥
+
+Bem-vindo(a) à nossa loja oficial na Shopee! Produto 100% novo, lacrado e com nota fiscal.
+
+📦 O QUE VOCÊ VAI RECEBER:
+• 1x ${rawTitle}
+${features ? `• Diferenciais Exclusivos: ${features}` : '• Estrutura reforçada de máxima durabilidade'}
+
+✨ POR QUE ESCOLHER ESTE PRODUTO?
+✅ Produto original com garantia total
+✅ Pronta entrega em estoque no Brasil
+✅ Envio expresso em até 24h úteis após a confirmação
+✅ Aproveite os cupons de Frete Grátis Shopee aplicados no checkout!
+
+📏 ESPECIFICAÇÕES TÉCNICAS:
+• Marca: ${brand || 'Original de Alta Qualidade'}
+• Categoria: Linha Premium Shopee Brasil
+• Condição: Novo na caixa
+
+🛡️ GARANTIA & SEGURANÇA:
+Sua compra está 100% protegida pela Garantia Shopee. Se não receber exatamente o que comprou, seu dinheiro é devolvido na hora.
+
+Dúvidas? Deixe sua pergunta no chat, respondemos em minutos! Boas compras!`;
+
+      document.getElementById('shopee-copy-description').value = desc;
+    }
+
+    function renderShopeeEvidence(payload, econ) {
+      const tbody = document.getElementById('shopee-evidence-tbody');
+      if (!tbody) return;
+
+      tbody.innerHTML = `
+        <tr class="hover:bg-slate-800/30">
+          <td class="px-4 py-2.5 font-medium text-white">Comissão Shopee (${econ.commission_rate_percent}%)</td>
+          <td class="px-4 py-2.5 text-orange-400 font-bold">R$ ${econ.shopee_percent_fee.toFixed(2)}</td>
+          <td class="px-4 py-2.5 text-slate-400">Comissão oficial com teto de R$ 100,00</td>
+          <td class="px-4 py-2.5 text-slate-300 font-mono">Tabela Oficial Shopee Brasil</td>
+          <td class="px-4 py-2.5"><span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-bold">100% Oficial</span></td>
+        </tr>
+        <tr class="hover:bg-slate-800/30">
+          <td class="px-4 py-2.5 font-medium text-white">Taxa Fixa Transação</td>
+          <td class="px-4 py-2.5 text-amber-400 font-bold">R$ ${econ.shopee_fixed_fee.toFixed(2)}</td>
+          <td class="px-4 py-2.5 text-slate-400">R$ 4,00 fixo por item vendido</td>
+          <td class="px-4 py-2.5 text-slate-300 font-mono">Shopee Open Platform</td>
+          <td class="px-4 py-2.5"><span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-bold">100% Oficial</span></td>
+        </tr>
+        <tr class="hover:bg-slate-800/30">
+          <td class="px-4 py-2.5 font-medium text-white">Frete Vendedor (FGP)</td>
+          <td class="px-4 py-2.5 text-emerald-400 font-bold">R$ 0,00</td>
+          <td class="px-4 py-2.5 text-slate-400">Frete subsidiado pela Shopee via cupom comprador</td>
+          <td class="px-4 py-2.5 text-slate-300 font-mono">Regra Programa FGP</td>
+          <td class="px-4 py-2.5"><span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-bold">100% Oficial</span></td>
+        </tr>
+        <tr class="hover:bg-slate-800/30">
+          <td class="px-4 py-2.5 font-medium text-white">Concorrência Mapeada</td>
+          <td class="px-4 py-2.5 text-cyan-400 font-bold">${activeShopeeCompetitors.length} anúncios</td>
+          <td class="px-4 py-2.5 text-slate-400">Anúncios reais indexados na Shopee</td>
+          <td class="px-4 py-2.5 text-slate-300 font-mono">Shopee Search Index</td>
+          <td class="px-4 py-2.5"><span class="bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded text-[10px] font-bold">Verificado</span></td>
+        </tr>
+      `;
+    }
+
+    function recalculateShopeeWithCompetitors() {
+      if (!currentShopeeSessionData) return;
+      const { payload } = currentShopeeSessionData;
+      const validComps = activeShopeeCompetitors.filter(c => c.price > 0);
+      const compPrices = validComps.map(c => c.price);
+      const avgP = compPrices.length ? (compPrices.reduce((a, b) => a + b, 0) / compPrices.length) : 0;
+
+      let suggestedPrice = deriveShopeeSuggestedPrice(payload.cost_price, payload.target_margin, payload.is_fgp, payload.packaging_cost, payload.tax_rate, payload.ads_rate, payload.shipping_extra);
+
+      // If average competitor price is reasonable and yields positive margin, compare
+      if (avgP > 0 && avgP > payload.cost_price * 1.2) {
+        const econAtAvg = calculateShopeeEconomicsLocal(avgP, payload.cost_price, payload.is_fgp, payload.packaging_cost, payload.tax_rate, payload.ads_rate, payload.shipping_extra);
+        if (econAtAvg.net_margin >= payload.target_margin * 100 * 0.8) {
+          suggestedPrice = Math.round((avgP * 0.98) * 100) / 100;
+        }
+      }
+
+      const econ = calculateShopeeEconomicsLocal(suggestedPrice, payload.cost_price, payload.is_fgp, payload.packaging_cost, payload.tax_rate, payload.ads_rate, payload.shipping_extra);
+      currentShopeeSessionData.econ = econ;
+
+      renderShopeeViability(econ, payload);
+      renderShopeeStressScenarios(payload.cost_price, payload.is_fgp, payload.packaging_cost, payload.tax_rate, payload.ads_rate, suggestedPrice);
+      renderShopeeCopywriting(payload, econ);
+      renderShopeeEvidence(payload, econ);
+    }
+
+    // =================================================================
+    // SIMULADOR DE PREÇO SHOPEE INTERATIVO
+    // =================================================================
+    function openShopeeAdjustModal() {
+      if (!currentShopeeSessionData) return;
+      const input = document.getElementById('modal-shopee-price');
+      if (input) input.value = currentShopeeSessionData.econ.price.toFixed(2);
+      document.getElementById('shopee-adjust-modal').classList.remove('hidden');
+    }
+
+    function closeShopeeAdjustModal() {
+      document.getElementById('shopee-adjust-modal').classList.add('hidden');
+    }
+
+    function submitShopeeAdjust() {
+      const input = document.getElementById('modal-shopee-price');
+      const newPrice = parseFloat(input.value);
+      if (!newPrice || newPrice <= 0) {
+        alert("Informe um preço de venda válido.");
+        return;
+      }
+      closeShopeeAdjustModal();
+
+      const { payload } = currentShopeeSessionData;
+      const econ = calculateShopeeEconomicsLocal(newPrice, payload.cost_price, payload.is_fgp, payload.packaging_cost, payload.tax_rate, payload.ads_rate, payload.shipping_extra);
+      currentShopeeSessionData.econ = econ;
+
+      renderShopeeViability(econ, payload);
+      renderShopeeStressScenarios(payload.cost_price, payload.is_fgp, payload.packaging_cost, payload.tax_rate, payload.ads_rate, newPrice);
+      renderShopeeCopywriting(payload, econ);
+      renderShopeeEvidence(payload, econ);
+    }
+
+    function copyShopeeTitle() {
+      const text = document.getElementById('shopee-copy-title').innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        const btnText = document.getElementById('copy-shopee-title-text');
+        btnText.innerText = "Copiado!";
+        setTimeout(() => { btnText.innerText = "Copiar Título"; }, 2000);
+      });
+    }
+
+    function copyShopeeDesc() {
+      const text = document.getElementById('shopee-copy-description').value;
+      navigator.clipboard.writeText(text).then(() => {
+        const btnText = document.getElementById('copy-shopee-desc-text');
+        btnText.innerText = "Copiado!";
+        setTimeout(() => { btnText.innerText = "Copiar Descrição"; }, 2000);
+      });
+    }
+
+    // Submissão do Formulário Shopee
+    const shopeeForm = document.getElementById('shopee-intake-form');
+    if (shopeeForm) {
+      shopeeForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const rawTitle = document.getElementById('shopee-input-title').value.trim();
+        const rawCost = parseFloat(document.getElementById('shopee-input-cost').value) || 0;
+
+        if (!rawTitle) {
+          alert("Por favor, preencha o Nome do Produto na Shopee.");
+          document.getElementById('shopee-input-title').focus();
+          return;
+        }
+        if (rawCost <= 0) {
+          alert("Por favor, informe o Custo CMV Unitário (R$).");
+          document.getElementById('shopee-input-cost').focus();
+          return;
+        }
+
+        const btn = document.getElementById('btn-run-shopee-pipeline');
+        btn.disabled = true;
+        btn.innerHTML = `<span class="inline-block animate-spin mr-2">⏳</span> Analisando Shopee Brasil...`;
+
+        const payload = {
+          sku: document.getElementById('shopee-input-sku').value.trim() || 'SHP-' + Date.now().toString().slice(-4),
+          title_raw: rawTitle,
+          brand: document.getElementById('shopee-input-brand').value.trim() || 'Própria',
+          cost_price: rawCost,
+          target_margin: parseFloat(document.getElementById('shopee-input-margin').value) || 0.20,
+          is_fgp: document.getElementById('shopee-input-fgp').value === 'true',
+          packaging_cost: parseFloat(document.getElementById('shopee-input-packaging').value) || 0.0,
+          stock_quantity: parseInt(document.getElementById('shopee-input-stock').value) || 50,
+          tax_rate: parseFloat(document.getElementById('shopee-input-tax').value) || 0.06,
+          ads_rate: parseFloat(document.getElementById('shopee-input-ads').value) || 0.04,
+          shipping_extra: 0.0,
+          key_features: document.getElementById('shopee-input-features').value.split(',').map(s => s.trim()).filter(Boolean)
+        };
+
+        // 1. Busca Concorrentes na Shopee
+        try {
+          const q = encodeURIComponent(payload.title_raw);
+          const cmvVal = payload.cost_price;
+          const brandVal = encodeURIComponent(payload.brand);
+          const res = await fetch(`/api/shopee/competitors?q=${q}&cmv=${cmvVal}&brand=${brandVal}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.results && data.results.length > 0) {
+              activeShopeeCompetitors = data.results;
+            } else {
+              activeShopeeCompetitors = [];
+            }
+          }
+        } catch(err) {
+          console.warn("Erro ao buscar concorrentes Shopee:", err);
+        }
+
+        // 2. Cálculo de Viabilidade e Precificação
+        let suggestedPrice = deriveShopeeSuggestedPrice(payload.cost_price, payload.target_margin, payload.is_fgp, payload.packaging_cost, payload.tax_rate, payload.ads_rate, payload.shipping_extra);
+
+        // Se concorrentes foram encontrados, analisa média competitiva
+        const compPrices = activeShopeeCompetitors.map(c => c.price).filter(p => p > 0);
+        if (compPrices.length > 0) {
+          const avgCompP = compPrices.reduce((a, b) => a + b, 0) / compPrices.length;
+          if (avgCompP > payload.cost_price * 1.25) {
+            const testEcon = calculateShopeeEconomicsLocal(avgCompP, payload.cost_price, payload.is_fgp, payload.packaging_cost, payload.tax_rate, payload.ads_rate, payload.shipping_extra);
+            if (testEcon.net_margin >= payload.target_margin * 100 * 0.8) {
+              suggestedPrice = Math.round((avgCompP * 0.98) * 100) / 100;
+            }
+          }
+        }
+
+        const econ = calculateShopeeEconomicsLocal(suggestedPrice, payload.cost_price, payload.is_fgp, payload.packaging_cost, payload.tax_rate, payload.ads_rate, payload.shipping_extra);
+        currentShopeeSessionData = { payload, econ };
+
+        // 3. Exibição dos Resultados
+        document.getElementById('shopee-empty-state').classList.add('hidden');
+        document.getElementById('shopee-pipeline-progress').classList.remove('hidden');
+
+        renderShopeeCompetitorsTable(activeShopeeCompetitors);
+        renderShopeeViability(econ, payload);
+        renderShopeeStressScenarios(payload.cost_price, payload.is_fgp, payload.packaging_cost, payload.tax_rate, payload.ads_rate, suggestedPrice);
+        renderShopeeCopywriting(payload, econ);
+        renderShopeeEvidence(payload, econ);
+
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="calculator" class="w-4 h-4"></i> <span>Analisar Mercado na Shopee</span>`;
+        if (window.lucide) lucide.createIcons();
+
+        // Scroll suave até os resultados
+        document.getElementById('shopee-pipeline-progress').scrollIntoView({ behavior: 'smooth' });
+      });
+    }
+
+    // Verifica autenticação antes de iniciar o dashboard e seleciona plataforma
     checkAuth().then((isAuth) => {
       if (isAuth) {
         loadMlStatus();
+        loadShopeeStatus();
+        let saved = null;
+        try { saved = localStorage.getItem('selected_platform'); } catch(e) {}
+        if (saved === 'shopee') {
+          selectPlatform('shopee');
+        } else if (saved === 'mercadolivre') {
+          selectPlatform('mercadolivre');
+        } else {
+          openPlatformModal();
+        }
       }
     });
 

@@ -329,6 +329,17 @@
                 <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0"></i>
                 <span id="competitors-source-text"><strong>100% Automatizado via API Oficial:</strong> Produtos, fotos, preços reais e links canônicos obtidos diretamente do Mercado Livre em tempo real.</span>
               </span>
+              <!-- Badge de Aprendizado e Concorrentes Ignorados -->
+              <div id="ignored-badge-container" class="hidden mt-2.5 flex items-center gap-2 flex-wrap">
+                <span class="text-xs bg-rose-500/15 text-rose-300 border border-rose-500/30 px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-medium">
+                  <i data-lucide="brain" class="w-3.5 h-3.5 text-rose-400"></i>
+                  <span id="ignored-badge-text">0 anúncios descartados</span>
+                  <button type="button" onclick="restoreIgnoredCompetitors()" class="underline hover:text-white font-bold ml-1.5 text-[11px] bg-rose-500/25 hover:bg-rose-500/40 px-2 py-0.5 rounded transition">
+                    Restaurar Todos
+                  </button>
+                </span>
+                <span class="text-[11px] text-slate-400 italic">O agente memorizou os descartes e não sugerirá mais esses anúncios.</span>
+              </div>
             </p>
           </div>
 
@@ -1313,6 +1324,19 @@
         console.warn("Consulta da API em background não retornou, mantendo lista atual.", err);
       }
 
+      // Consulta se há anúncios ignorados previamente para atualizar o badge de aprendizado
+      try {
+        const qNorm = (payload.title_raw || '').trim().toLowerCase();
+        const fbRes = await fetch(`/api/competitors/feedback?q=${encodeURIComponent(qNorm)}`);
+        if (fbRes.ok) {
+          const fbData = await fbRes.json();
+          if (fbData && Array.isArray(fbData.ignored)) {
+            ignoredCompetitorsMap[qNorm] = fbData.ignored;
+            updateIgnoredBadge(qNorm);
+          }
+        }
+      } catch (err) {}
+
       // 1. Estatísticas Reais da Concorrência Mapeada (Apenas produtos ativos com estoque)
       const validCompetitors = activeCompetitors.filter(c => c.available !== false && c.is_available !== false);
       const competitorPrices = validCompetitors.map(c => c.price).filter(p => p > 0);
@@ -1591,13 +1615,19 @@
               </div>
             </div>
 
-            <!-- Ação Oficial: Botão direto para o Anúncio Real -->
-            <div class="pt-2.5 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
-              <span class="text-[10px] text-slate-500 font-mono">${c.id || 'MLB'}</span>
-              <a href="${permalink}" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white font-bold px-3 py-2 sm:py-1.5 rounded-lg border border-blue-500/40 text-xs flex items-center justify-center space-x-1.5 transition shadow-sm min-h-[42px] sm:min-h-[36px]">
-                <span>Abrir Anúncio Oficial</span>
-                <i data-lucide="external-link" class="w-3.5 h-3.5 flex-shrink-0"></i>
-              </a>
+            <!-- Ação Oficial: Botão direto para o Anúncio Real e Botão de Ignorar -->
+            <div class="pt-2.5 border-t border-slate-800 flex items-center justify-between gap-2">
+              <span class="text-[10px] text-slate-500 font-mono truncate">${c.id || 'MLB'}</span>
+              <div class="flex items-center gap-1.5 flex-wrap sm:flex-nowrap justify-end">
+                <button type="button" onclick="ignoreCompetitor('${c.id}', '${encodeURIComponent(c.title || '')}', this)" title="Ignorar este anúncio (o agente memoriza e recalcula viabilidade)" class="bg-slate-800 hover:bg-rose-950/60 hover:border-rose-500/50 text-slate-400 hover:text-rose-300 font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 text-xs flex items-center space-x-1 transition min-h-[36px]">
+                  <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
+                  <span>Ignorar</span>
+                </button>
+                <a href="${permalink}" target="_blank" rel="noopener noreferrer" class="bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white font-bold px-3 py-1.5 rounded-lg border border-blue-500/40 text-xs flex items-center justify-center space-x-1.5 transition shadow-sm min-h-[36px]">
+                  <span>Abrir Anúncio Oficial</span>
+                  <i data-lucide="external-link" class="w-3.5 h-3.5 flex-shrink-0"></i>
+                </a>
+              </div>
             </div>
           </div>
         `;
@@ -1945,6 +1975,327 @@
       }
 
       closeAdjustModal();
+      renderPipelineResults(currentSessionData.data, currentSessionData.session_id);
+    }
+
+    // ============================================================
+    // APRENDIZADO CONTÍNUO & FEEDBACK DO LOJISTA
+    // ============================================================
+    let ignoredCompetitorsMap = {};
+
+    function showToast(message, icon = 'sparkles') {
+      let toastContainer = document.getElementById('app-toast-container');
+      if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'app-toast-container';
+        toastContainer.className = 'fixed bottom-5 right-5 z-[99999] flex flex-col space-y-2 pointer-events-none max-w-sm w-full px-4 sm:px-0';
+        document.body.appendChild(toastContainer);
+      }
+
+      const toast = document.createElement('div');
+      toast.className = 'pointer-events-auto bg-slate-900/95 border border-amber-500/60 text-white px-4 py-3 rounded-xl shadow-2xl backdrop-blur text-xs flex items-center justify-between gap-3 transform transition-all duration-300 translate-y-4 opacity-0';
+      toast.innerHTML = `
+        <div class="flex items-center gap-2.5">
+          <i data-lucide="${icon}" class="w-4 h-4 text-amber-400 flex-shrink-0"></i>
+          <span class="font-medium text-slate-100">${message}</span>
+        </div>
+        <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-white p-1 text-sm font-bold">&times;</button>
+      `;
+      toastContainer.appendChild(toast);
+      if (window.lucide) lucide.createIcons();
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-4', 'opacity-0');
+        toast.classList.add('translate-y-0', 'opacity-100');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 4500);
+    }
+
+    function updateIgnoredBadge(qNorm) {
+      const count = (ignoredCompetitorsMap[qNorm] || []).length;
+      const container = document.getElementById('ignored-badge-container');
+      const textElem = document.getElementById('ignored-badge-text');
+      if (container && textElem) {
+        if (count > 0) {
+          container.classList.remove('hidden');
+          container.classList.add('flex');
+          textElem.innerText = `${count} ${count === 1 ? 'anúncio descartado' : 'anúncios descartados'}`;
+        } else {
+          container.classList.add('hidden');
+          container.classList.remove('flex');
+        }
+      }
+    }
+
+    async function ignoreCompetitor(productId, encodedTitle, btn) {
+      const query = (document.getElementById('input-title')?.value || currentSessionData?.data?.payload_ref?.title_raw || "").trim();
+      const qNorm = query.toLowerCase();
+
+      if (!ignoredCompetitorsMap[qNorm]) {
+        ignoredCompetitorsMap[qNorm] = [];
+      }
+      if (!ignoredCompetitorsMap[qNorm].includes(productId)) {
+        ignoredCompetitorsMap[qNorm].push(productId);
+      }
+
+      // 1. Remove da lista de concorrentes ativos
+      activeCompetitors = (activeCompetitors || []).filter(c => c.id !== productId);
+      if (currentSessionData?.data?.live_market?.competitors) {
+        currentSessionData.data.live_market.competitors = currentSessionData.data.live_market.competitors.filter(c => c.id !== productId);
+      }
+
+      // 2. Atualiza badge de aprendizado
+      updateIgnoredBadge(qNorm);
+
+      // 3. Recalcula imediatamente métricas de mercado, margens e portão de decisão
+      recalculatePipelineFromCurrentCompetitors();
+
+      // 4. Salva no backend para aprendizado contínuo persistente
+      try {
+        await fetch('/api/competitors/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'ignore',
+            query: query,
+            product_id: productId
+          })
+        });
+      } catch (err) {
+        console.warn("[Feedback] Falha ao persistir no backend:", err);
+      }
+
+      showToast("🧠 Decisão memorizada! O agente aprendeu para esta busca e recalculou a viabilidade.", "brain");
+    }
+
+    async function restoreIgnoredCompetitors() {
+      const query = (document.getElementById('input-title')?.value || currentSessionData?.data?.payload_ref?.title_raw || "").trim();
+      const qNorm = query.toLowerCase();
+
+      try {
+        await fetch('/api/competitors/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'restore',
+            query: query,
+            product_id: 'all'
+          })
+        });
+      } catch (err) {
+        console.warn("[Feedback] Falha ao restaurar no backend:", err);
+      }
+
+      delete ignoredCompetitorsMap[qNorm];
+      updateIgnoredBadge(qNorm);
+
+      showToast("🔄 Anúncios restaurados! Atualizando concorrência oficial...", "refresh-cw");
+
+      // Reexecuta o pipeline completo para trazer os anúncios oficiais de volta
+      const form = document.getElementById('intake-form');
+      if (form) form.dispatchEvent(new Event('submit'));
+    }
+
+    function recalculatePipelineFromCurrentCompetitors() {
+      if (!currentSessionData || !currentSessionData.data) return;
+      const payload = currentSessionData.data.payload_ref;
+      if (!payload) return;
+
+      const validCompetitors = (activeCompetitors || []).filter(c => c.available !== false && c.is_available !== false && c.status !== 'inactive' && c.status !== 'paused');
+      const competitorPrices = validCompetitors.map(c => c.price).filter(p => p > 0);
+
+      const minCompPrice = competitorPrices.length ? Math.min(...competitorPrices) : Math.round(payload.cost_price * 1.5);
+      const maxCompPrice = competitorPrices.length ? Math.max(...competitorPrices) : Math.round(payload.cost_price * 2.5);
+      const avgCompPrice = competitorPrices.length ? Math.round((competitorPrices.reduce((a, b) => a + b, 0) / competitorPrices.length) * 100) / 100 : Math.round(payload.cost_price * 1.9);
+
+      // Atualiza estatísticas no topo da seção de concorrência
+      const minEl = document.getElementById('live-min-price');
+      const avgEl = document.getElementById('live-avg-price');
+      const maxEl = document.getElementById('live-max-price');
+      if (minEl) minEl.innerText = `R$ ${minCompPrice.toFixed(2)}`;
+      if (avgEl) avgEl.innerText = `R$ ${avgCompPrice.toFixed(2)}`;
+      if (maxEl) maxEl.innerText = `R$ ${maxCompPrice.toFixed(2)}`;
+
+      currentSessionData.data.live_market.competitors = activeCompetitors;
+      currentSessionData.data.live_market.min_price = minCompPrice;
+      currentSessionData.data.live_market.max_price = maxCompPrice;
+      currentSessionData.data.live_market.avg_price = avgCompPrice;
+
+      // Recalcula o Preço de Venda Sugerido e Unit Economics
+      const cmv = payload.cost_price;
+      const targetM = payload.target_margin;
+      const weight = payload.weight_kg;
+      const pack = weight > 10 ? 15.00 : (weight > 2 ? 6.00 : 3.00);
+
+      const varRates = targetM + 0.13 + 0.06 + 0.05;
+      const safeDivisor = Math.max(0.15, 1 - Math.min(varRates, 0.85));
+
+      let candidatePrice = (cmv + pack + 6.00) / safeDivisor;
+      if (candidatePrice >= 79.0) {
+        let shipEst = weight > 20 ? 65.00 : (weight > 10 ? 45.00 : (weight > 2 ? 28.00 : 20.90));
+        candidatePrice = (cmv + pack + shipEst) / safeDivisor;
+      }
+
+      if (avgCompPrice > 0) {
+        if (candidatePrice > avgCompPrice * 1.15) {
+          const testAtAvg = calculateUnitEconomics(avgCompPrice, cmv, weight);
+          if (testAtAvg.netMargin >= 12.0) {
+            candidatePrice = avgCompPrice;
+          }
+        } else if (candidatePrice < avgCompPrice * 0.82) {
+          candidatePrice = avgCompPrice * 0.92;
+        }
+      }
+
+      let sellingPrice = Math.floor(candidatePrice) + 0.90;
+      if (sellingPrice < cmv * 1.15) sellingPrice = Math.ceil(cmv * 1.25) + 0.90;
+
+      const econBase = calculateUnitEconomics(sellingPrice, cmv, weight);
+      const fee = econBase.mlTotalFee;
+      const shipping = econBase.shipping;
+      const tax = econBase.tax;
+      const ads = econBase.ads;
+      const netProfit = econBase.netProfit;
+      const netMargin = econBase.netMargin;
+      const roi = econBase.roi;
+
+      // Cenários de Estresse Atualizados
+      const priceCons = Math.round((sellingPrice * 1.14) * 10) / 10 + (Math.round((sellingPrice * 1.14) * 10) % 1 === 0 ? 0.90 : 0);
+      const econCons = calculateUnitEconomics(priceCons, cmv, weight);
+
+      const priceAgr = Math.max(Math.round(cmv * 1.18) + 0.90, Math.round((sellingPrice * 0.92) * 10) / 10);
+      const econAgr = calculateUnitEconomics(priceAgr, cmv, weight);
+
+      const priceAdv = Math.round((sellingPrice * 0.90) * 10) / 10;
+      const cmvAdv = Math.round(cmv * 1.10 * 100) / 100;
+      const econAdv = calculateUnitEconomics(priceAdv, cmvAdv, weight, 0.065);
+
+      const scenarios = [
+        {
+          name: "Conservador",
+          description: `Preço premium de R$ ${econCons.price.toFixed(2)} (${econCons.netMargin}% de margem líquida), priorizando lucro máximo por unidade vendida.`,
+          selling_price: econCons.price,
+          net_margin_percent: econCons.netMargin,
+          net_profit_unit: econCons.netProfit,
+          projected_monthly_units: Math.max(Math.round(payload.stock_quantity * 0.75), 1),
+          projected_monthly_profit: Math.round(econCons.netProfit * Math.max(Math.round(payload.stock_quantity * 0.75), 1)),
+          roi_percent: econCons.roi
+        },
+        {
+          name: "Base",
+          description: `Preço estratégico de R$ ${sellingPrice.toFixed(2)}: altamente competitivo frente à média de mercado (R$ ${avgCompPrice.toFixed(2)}) com margem saudável.`,
+          selling_price: sellingPrice,
+          net_margin_percent: netMargin,
+          net_profit_unit: netProfit,
+          projected_monthly_units: payload.stock_quantity,
+          projected_monthly_profit: Math.round(netProfit * payload.stock_quantity),
+          roi_percent: roi
+        },
+        {
+          name: "Agressivo",
+          description: `Preço de penetração de R$ ${econAgr.price.toFixed(2)} (${econAgr.netMargin}% de margem) para desbancar concorrentes e escalar vendas no ML.`,
+          selling_price: econAgr.price,
+          net_margin_percent: econAgr.netMargin,
+          net_profit_unit: econAgr.netProfit,
+          projected_monthly_units: Math.round(payload.stock_quantity * 1.6),
+          projected_monthly_profit: Math.round(econAgr.netProfit * Math.round(payload.stock_quantity * 1.6)),
+          roi_percent: econAgr.roi
+        },
+        {
+          name: "Adverso",
+          description: `Stress-Test Extremo: Guerra de preços (-10%), inflação de fornecedor (+10% CMV) e aumento de leilão de Ads (+30%).`,
+          selling_price: econAdv.price,
+          net_margin_percent: econAdv.netMargin,
+          net_profit_unit: econAdv.netProfit,
+          projected_monthly_units: Math.max(Math.round(payload.stock_quantity * 0.7), 1),
+          projected_monthly_profit: Math.round(econAdv.netProfit * Math.max(Math.round(payload.stock_quantity * 0.7), 1)),
+          roi_percent: econAdv.roi
+        }
+      ];
+
+      const leaderCompetitor = validCompetitors[0]?.seller || "Líder de Mercado";
+      const topCompetitor = validCompetitors[validCompetitors.length - 1]?.seller || "Concorrente Oficial";
+
+      const targetMarginPct = targetM * 100;
+      let rating = "A";
+      let ratingLabel = "A - ALTAMENTE VIÁVEL (Compensa Plenamente)";
+      let gateReasons = [];
+
+      if (netMargin >= targetMarginPct && econAdv.netProfit > 0) {
+        rating = "A";
+        ratingLabel = "A - ALTAMENTE VIÁVEL (Compensa Plenamente)";
+        gateReasons.push(`Preço sugerido de R$ ${sellingPrice.toFixed(2)} é altamente competitivo frente à concorrência (média de mercado em R$ ${avgCompPrice.toFixed(2)}).`);
+        gateReasons.push(`Margem líquida de ${netMargin}% atinge ou supera a meta desejada de ${targetMarginPct.toFixed(0)}%, gerando lucro de R$ ${netProfit.toFixed(2)} por unidade vendida.`);
+        gateReasons.push(`Cálculo determinístico inclui comissão oficial de R$ ${fee.toFixed(2)} e ${econBase.isFreeShipping ? `frete Mercado Envios (${weight}kg: R$ ${shipping.toFixed(2)})` : `taxa fixa de R$ 6,00 (frete comprador)`}.`);
+        gateReasons.push(`Resistência a estresse comprovada: no pior cenário simulado (+10% CMV e -10% preço), o lucro unitário se mantém positivo em R$ ${econAdv.netProfit.toFixed(2)}.`);
+      } else if (netMargin >= 10.0 && econAdv.netProfit >= -2.0) {
+        rating = "B";
+        ratingLabel = "B - VIÁVEL COM CONDIÇÕES (Ajustes Recomendados)";
+        gateReasons.push(`Margem líquida base de ${netMargin}% é rentável, mas está abaixo da meta desejada (${targetMarginPct.toFixed(0)}%).`);
+        gateReasons.push(`Vulnerabilidade em cenário adverso: sob guerra de preços e aumento de leilão, o lucro unitário recua para R$ ${econAdv.netProfit.toFixed(2)}.`);
+        gateReasons.push(`[Condição Recomendada]: Limitar o ACOS de campanhas de publicidade em no máximo 15% para proteger a margem.`);
+        gateReasons.push(`[Alternativa Estratégica]: Criar Kit/Combo com 2 unidades para diluir o custo de frete e embalagem.`);
+      } else if (netMargin >= 4.0) {
+        rating = "C";
+        ratingLabel = "C - RISCO ELEVADO (Testar em Escala Reduzida)";
+        gateReasons.push(`Margem líquida apertada (${netMargin}%): pouca tolerância para devoluções, trocas ou disputas de Buy Box.`);
+        gateReasons.push(`Risco de prejuízo caso os concorrentes baixem o preço.`);
+        gateReasons.push(`[Condição Recomendada]: Iniciar com lote piloto de 15 a 25 unidades para validar a aceitação.`);
+        gateReasons.push(`[Alternativa Estratégica]: Renegociar custo de aquisição (CMV) com o fornecedor.`);
+      } else {
+        rating = "D";
+        ratingLabel = "D - NÃO COMPENSA (Inviável / Risco Crítico)";
+        gateReasons.push(`Margem líquida de ${netMargin}% insuficiente ou prejuízo direto na venda unitária.`);
+        gateReasons.push(`A estrutura de custos (CMV R$ ${cmv.toFixed(2)} + Taxas do ML R$ ${fee.toFixed(2)}) inviabiliza a operação deste produto.`);
+        gateReasons.push(`[Veredito do Decision Gate]: O produto NÃO compensa nas condições comerciais atuais.`);
+        gateReasons.push(`[Alternativa]: Negociar custo menor com fornecedor, criar Kit de 3 unidades ou desconsiderar o produto.`);
+      }
+
+      currentSessionData.data.decision_gate = {
+        rating,
+        rating_label: ratingLabel,
+        reasons: gateReasons,
+        conditions: [],
+        alternatives: [],
+        scenarios
+      };
+
+      currentSessionData.data.financial_summary = {
+        sku: payload.sku,
+        product_name: payload.title_raw,
+        brand: payload.brand,
+        suggested_price: sellingPrice,
+        net_profit: netProfit,
+        net_margin: netMargin,
+        cmv: cmv,
+        ml_fee: fee,
+        shipping: shipping,
+        tax: tax,
+        pack: pack,
+        weight: weight,
+        monthly_units: payload.stock_quantity,
+        monthly_profit: Math.round(netProfit * payload.stock_quantity),
+        monthly_revenue: Math.round(sellingPrice * payload.stock_quantity)
+      };
+
+      currentSessionData.data.evidence_store = {
+        items: [
+          { field: "concorrente_lider_preco_minimo", formatted_value: `R$ ${minCompPrice.toFixed(2)} (${leaderCompetitor})`, evidence_type: "FATO", source: "Mercado Livre Brasil (Busca Oficial)", confidence: 100, source_layer: "7.2 MARKET INTEL" },
+          { field: "concorrencia_preco_medio_real", formatted_value: `R$ ${avgCompPrice.toFixed(2)}`, evidence_type: "FATO", source: "Mercado Livre Brasil (Busca Oficial)", confidence: 100, source_layer: "7.2 MARKET INTEL" },
+          { field: "concorrente_maior_preco", formatted_value: `R$ ${maxCompPrice.toFixed(2)} (${topCompetitor})`, evidence_type: "FATO", source: "Mercado Livre Brasil (Busca Oficial)", confidence: 100, source_layer: "7.2 MARKET INTEL" },
+          { field: "cmv_unitario", formatted_value: `R$ ${cmv.toFixed(2)}`, evidence_type: "FATO", source: "Briefing do Lojista", confidence: 100, source_layer: "1. INTAKE" },
+          { field: "margem_alvo_desejada", formatted_value: `${(targetM * 100).toFixed(0)}%`, evidence_type: "FATO", source: "Briefing do Lojista", confidence: 100, source_layer: "1. INTAKE" },
+          { field: "preco_venda_calculado", formatted_value: `R$ ${sellingPrice.toFixed(2)}`, evidence_type: "CALCULO", source: "Financial Engine Determinístico", confidence: 99, source_layer: "7.4 FINANCIAL" },
+          { field: "ml_comissao_calculada", formatted_value: `R$ ${fee.toFixed(2)} (${sellingPrice >= 79 ? '13%' : '13% + R$ 6,00 fixa'})`, evidence_type: "CALCULO", source: "Tabela Oficial Mercado Livre", confidence: 100, source_layer: "7.3 SPECIALIST" },
+          { field: "frete_mercado_envios", formatted_value: econBase.isFreeShipping ? `R$ ${shipping.toFixed(2)} (${weight}kg)` : `R$ 0,00 (Pago pelo Comprador)`, evidence_type: "CALCULO", source: `Tabela Mercado Envios (${weight}kg)`, confidence: 98, source_layer: "7.3 SPECIALIST" },
+          { field: "lucro_liquido_unitario", formatted_value: `R$ ${netProfit.toFixed(2)} (${netMargin}%)`, evidence_type: "CALCULO", source: "Financial Engine Determinístico", confidence: 100, source_layer: "7.4 FINANCIAL" }
+        ]
+      };
+
       renderPipelineResults(currentSessionData.data, currentSessionData.session_id);
     }
 

@@ -60,6 +60,48 @@ def save_ml_config(config):
         json.dump(config, f, indent=2, ensure_ascii=False)
 
 
+FEEDBACK_FILE = os.path.join(BASE_DIR, "feedback_memory.json")
+
+
+def load_feedback_memory() -> dict:
+    """Carrega o registro persistente de aprendizado e concorrentes ignorados pelo lojista."""
+    default_memory = {
+        "ignored_by_query": {},
+        "ignored_global": []
+    }
+    if os.path.exists(FEEDBACK_FILE):
+        try:
+            with open(FEEDBACK_FILE, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+                if isinstance(saved, dict):
+                    default_memory.update(saved)
+        except Exception as e:
+            print(f"[Feedback] Falha ao carregar memoria: {e}")
+    return default_memory
+
+
+def save_feedback_memory(memory: dict):
+    """Persiste a memoria de aprendizado do agente."""
+    try:
+        with open(FEEDBACK_FILE, "w", encoding="utf-8") as f:
+            json.dump(memory, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"[Feedback] Falha ao salvar memoria: {e}")
+
+
+def is_item_ignored(item_id: str, query: str) -> bool:
+    """Verifica se um concorrente foi descartado pelo lojista para uma busca especifica ou globalmente."""
+    if not item_id:
+        return False
+    mem = load_feedback_memory()
+    if item_id in mem.get("ignored_global", []):
+        return True
+    q_norm = query.strip().lower() if query else ""
+    ignored_for_q = mem.get("ignored_by_query", {}).get(q_norm, [])
+    return item_id in ignored_for_q
+
+
+
 def exchange_code_for_token(code: str, app_id: str, client_secret: str, redirect_uri: str):
     """Troca o authorization code pelo access_token oficial da API do Mercado Livre"""
     url = "https://api.mercadolibre.com/oauth/token"
@@ -672,6 +714,10 @@ def search_official_ml_api(query: str, access_token: str, cfg: dict = None, cmv:
                 if not pid or pid in seen_pids:
                     continue
 
+                # MEMÓRIA DE APRENDIZADO: ignora produtos previamente descartados pelo lojista para esta busca
+                if is_item_ignored(pid, query):
+                    continue
+
                 domain = (p.get("domain_id") or "").upper()
                 title = p.get("name", "").strip()
                 if keywords and not any(k in title.lower() for k in keywords):
@@ -958,6 +1004,67 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode('utf-8'))
             return
 
+        # Feedback e Aprendizado Contínuo (Ignorar / Restaurar Concorrentes)
+        if parsed.path == "/api/competitors/feedback":
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8') if content_length > 0 else "{}"
+            try:
+                data = json.loads(body)
+                query = str(data.get("query", "")).strip().lower()
+                pid = str(data.get("product_id", "")).strip()
+                action = str(data.get("action", "ignore")).strip().lower()
+
+                memory = load_feedback_memory()
+                if "ignored_by_query" not in memory:
+                    memory["ignored_by_query"] = {}
+
+                if action == "ignore" and pid:
+                    if query not in memory["ignored_by_query"]:
+                        memory["ignored_by_query"][query] = []
+                    if pid not in memory["ignored_by_query"][query]:
+                        memory["ignored_by_query"][query].append(pid)
+                    save_feedback_memory(memory)
+                    print(f"[Feedback] Concorrente {pid} ignorado para a busca '{query}'. Memória atualizada!")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({
+                        "success": True, 
+                        "message": f"Produto {pid} adicionado aos ignorados.",
+                        "ignored": memory["ignored_by_query"][query]
+                    }).encode('utf-8'))
+                    return
+                elif action == "restore":
+                    if query in memory["ignored_by_query"]:
+                        if pid and pid != "all":
+                            if pid in memory["ignored_by_query"][query]:
+                                memory["ignored_by_query"][query].remove(pid)
+                        else:
+                            memory["ignored_by_query"][query] = []
+                        save_feedback_memory(memory)
+                    print(f"[Feedback] Concorrentes restaurados para '{query}'.")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({
+                        "success": True, 
+                        "message": "Concorrentes restaurados.",
+                        "ignored": memory["ignored_by_query"].get(query, [])
+                    }).encode('utf-8'))
+                    return
+                else:
+                    self.send_response(400)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(b'{"error": "Acao ou parametros invalidos"}')
+                    return
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+                return
+
         # Trocar código de autorização pelo token oficial
         if parsed.path == "/api/ml/exchange-code":
             content_length = int(self.headers.get('Content-Length', 0))
@@ -1168,6 +1275,22 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.end_headers()
             self.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
+            return
+
+        # 4. Consulta de itens ignorados pelo lojista (Feedback memory)
+        if parsed.path == "/api/competitors/feedback":
+            query_params = urllib.parse.parse_qs(parsed.query)
+            q = query_params.get("q", [""])[0].strip().lower()
+            memory = load_feedback_memory()
+            ignored_list = memory.get("ignored_by_query", {}).get(q, []) if q else memory.get("ignored_by_query", {})
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "success": True,
+                "query": q,
+                "ignored": ignored_list
+            }, ensure_ascii=False).encode('utf-8'))
             return
 
         # Para qualquer outro caminho, serve os arquivos estáticos do frontend (index.html, etc.)

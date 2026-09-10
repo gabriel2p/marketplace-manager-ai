@@ -345,6 +345,9 @@ def scrape_mercadolivre_live(query: str):
                     break
 
         if items:
+            for it in items:
+                it["source"] = "live_scraper"
+                it["is_live"] = True
             print(f"[ML Live Scraper] Sucesso: {len(items)} produtos reais extraidos para '{search_term}'!")
             return items
 
@@ -362,7 +365,7 @@ def get_guaranteed_competitors(query: str):
     lower = query.lower() if query else ""
 
     if any(k in lower for k in ["jantar", "mesa", "cadeira", "sala", "moveis", "móveis", "estofado", "cozinha", "armario", "armário", "poltrona"]):
-        return [
+        results = [
             {
                 "id": "MLB24361666",
                 "title": "Mesa Jantar Charles Eames Eiffel Madeira 90cm Branca",
@@ -410,7 +413,7 @@ def get_guaranteed_competitors(query: str):
             }
         ]
     elif any(k in lower for k in ["fone", "bluetooth", "tws", "headset", "earphone", "audio", "áudio"]):
-        return [
+        results = [
             {
                 "id": "MLB25263382",
                 "title": "Fone Agold Fn-bt10 Bluetooth Sem Fio 3ª Geração TWS",
@@ -443,7 +446,7 @@ def get_guaranteed_competitors(query: str):
             }
         ]
     elif any(k in lower for k in ["garrafa", "termica", "térmica", "bule", "squeeze", "copo", "caneca", "stanley", "termolar", "invicta", "tramontina", "inox"]):
-        return [
+        results = [
             {
                 "id": "MLB15292657",
                 "title": "Garrafa Térmica Invicta GLT Pressão 1L Metalizada / Lisa",
@@ -475,28 +478,28 @@ def get_guaranteed_competitors(query: str):
                 "stock_status": "in_stock"
             },
             {
-                "id": "MLB27966615",
-                "title": "Garrafa Térmica Tramontina Exata Inox 1 Litro com Ampola",
-                "price": 79.90,
-                "original_price": 99.90,
-                "discount": "20% OFF",
-                "permalink": "https://www.mercadolivre.com.br/p/MLB27966615",
-                "thumbnail": "/img/tramontina_exata.jpg",
+                "id": "MLB10161248",
+                "title": "Garrafa Térmica Air Pot Inox New Vidro 1L Pressão Invicta",
+                "price": 105.90,
+                "original_price": 129.90,
+                "discount": "18% OFF",
+                "permalink": "https://www.mercadolivre.com.br/p/MLB10161248",
+                "thumbnail": "/img/invicta_inox_1l.jpg",
                 "free_shipping": True,
                 "condition": "Novo",
-                "seller": "Tramontina Loja Oficial (MercadoLíder Platinum • +100.000 vendidos)",
+                "seller": "Invicta Loja Oficial (+50.000 vendidos)",
                 "is_official_api": True,
                 "available": True,
                 "stock_status": "in_stock"
             },
             {
                 "id": "MLB75798065",
-                "title": "Garrafa Térmica Invicta Air Pot Aço Inox 1 Litro com Pressão",
-                "price": 89.90,
-                "original_price": 119.90,
-                "discount": "25% OFF",
+                "title": "Garrafa Térmica Invicta Air Pot Inox 1,8L Pressão",
+                "price": 107.00,
+                "original_price": 129.90,
+                "discount": "17% OFF",
                 "permalink": "https://www.mercadolivre.com.br/p/MLB75798065",
-                "thumbnail": "/img/invicta_airpot.jpg",
+                "thumbnail": "/img/invicta_airpot_18l.jpg",
                 "free_shipping": True,
                 "condition": "Novo",
                 "seller": "Invicta Loja Oficial (+50.000 vendidos)",
@@ -507,7 +510,7 @@ def get_guaranteed_competitors(query: str):
         ]
     else:
         # Fallback neutro com produtos oficiais mais populares com títulos e fotos REAIS
-        return [
+        results = [
             {
                 "id": "MLB29025522",
                 "title": "Mesa de Jantar Retangular Estilo Industrial Para 4 Pessoas KLM",
@@ -524,16 +527,16 @@ def get_guaranteed_competitors(query: str):
                 "stock_status": "in_stock"
             },
             {
-                "id": "MLB27966615",
-                "title": "Garrafa Térmica Tramontina Exata Inox 1 Litro com Ampola",
-                "price": 79.90,
-                "original_price": 99.90,
-                "discount": "20% OFF",
-                "permalink": "https://www.mercadolivre.com.br/p/MLB27966615",
-                "thumbnail": "/img/tramontina_exata.jpg",
+                "id": "MLB10161248",
+                "title": "Garrafa Térmica Air Pot Inox New Vidro 1L Pressão Invicta",
+                "price": 105.90,
+                "original_price": 129.90,
+                "discount": "18% OFF",
+                "permalink": "https://www.mercadolivre.com.br/p/MLB10161248",
+                "thumbnail": "/img/invicta_inox_1l.jpg",
                 "free_shipping": True,
                 "condition": "Novo",
-                "seller": "Tramontina Loja Oficial (MercadoLíder Platinum)",
+                "seller": "Invicta Loja Oficial (+50.000 vendidos)",
                 "is_official_api": True,
                 "available": True,
                 "stock_status": "in_stock"
@@ -554,6 +557,11 @@ def get_guaranteed_competitors(query: str):
                 "stock_status": "in_stock"
             }
         ]
+
+    for item in results:
+        item["source"] = "catalogo_garantido"
+        item["is_live"] = False
+    return results
 
 
 def search_official_ml_api(query: str, access_token: str, cfg: dict = None):
@@ -706,6 +714,9 @@ def search_official_ml_api(query: str, access_token: str, cfg: dict = None):
                 })
 
             if len(items) >= 2:
+                for it in items:
+                    it["source"] = "api_oficial"
+                    it["is_live"] = True
                 print(f"[ML API] Sucesso: {len(items)} produtos oficiais encontrados via Products API para '{q}'!")
                 return items
 
@@ -816,6 +827,28 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": True, "message": "Credenciais salvas com sucesso!"}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode('utf-8'))
+            return
+
+        # Salvar Access Token diretamente (persistência via localStorage)
+        if parsed.path == "/api/ml/save-token":
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8') if content_length > 0 else "{}"
+            try:
+                data = json.loads(body)
+                token = data.get("token", "").strip()
+                if token:
+                    cfg = load_ml_config()
+                    cfg["access_token"] = token
+                    save_ml_config(cfg)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True}).encode('utf-8'))
             except Exception as e:
                 self.send_response(400)
                 self.send_header("Content-Type", "application/json")
@@ -967,9 +1000,9 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                 save_ml_config(cfg)
                 print(f"[ML Auth] Autenticacao concluida com sucesso para o User ID: {cfg['user_id']}!")
 
-                # Redireciona de volta para a tela inicial do dashboard
+                # Redireciona de volta para a tela inicial do dashboard com o token
                 self.send_response(302)
-                self.send_header("Location", "/?ml_connected=true")
+                self.send_header("Location", f"/?ml_connected=true&access_token={token_res['access_token']}")
                 self.end_headers()
                 return
             else:
@@ -1002,14 +1035,24 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                 return
 
             cfg = load_ml_config()
-            access_token = cfg.get("access_token", "")
+            token_from_ml_header = self.headers.get("X-ML-Token", "").strip()
+            auth_header = self.headers.get("Authorization", "").strip()
+            bearer_token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else ""
+            ml_bearer = bearer_token if (bearer_token and bearer_token not in ACTIVE_SESSIONS) else ""
+            token_from_param = query_params.get("token", [""])[0].strip()
+            access_token = token_from_ml_header or ml_bearer or token_from_param or cfg.get("access_token", "")
 
-            print(f"[API] Buscando na API Oficial do Mercado Livre: '{search_query}' (Token ativo: {bool(access_token)})...")
+            print(f"[API] Buscando no Mercado Livre: '{search_query}' (Token ativo: {bool(access_token)})...")
             items = search_official_ml_api(search_query, access_token, cfg)
+
+            is_live = any(it.get("is_live", False) for it in items)
+            source_type = items[0].get("source", "catalogo_garantido") if items else "catalogo_garantido"
 
             payload = {
                 "success": True,
-                "is_official_api": bool(access_token),
+                "is_live": is_live,
+                "source": source_type,
+                "is_official_api": bool(access_token) or is_live,
                 "query": search_query,
                 "count": len(items),
                 "results": items

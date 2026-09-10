@@ -569,8 +569,41 @@ def get_guaranteed_competitors(query: str):
 
 SELLER_NICKNAME_CACHE = {}
 
+ACCESSORY_DOMAINS = {
+    "CASES_AND_COVERS", "CAMERA_PROTECTORS", "SCREEN_PROTECTORS", 
+    "CELLPHONE_ACCESSORIES", "TABLE_CLOTHS", "CHAIR_COVERS", "BAGS", 
+    "COVERS", "SKINS", "CABLES", "CHARGERS", "REPAIR_PARTS", "STANDS", 
+    "HOLDERS", "SLEEVES", "STRAPS"
+}
 
-def search_official_ml_api(query: str, access_token: str, cfg: dict = None):
+ACCESSORY_TITLE_TRIGGERS = [
+    "capa ", "capa/", "capa-", "capinha", "case ", "case/", "case-", "película", "pelicula", 
+    "protetor de lente", "protetor lente", "protetor de câmera", "protetor de camera", 
+    "protetor camera", "câmera de vidro", "camera de vidro", "toalha de mesa", "toalha ", 
+    "caminho de mesa", "adesivo", "skin", "suporte para", "suporte de", "transforme seu", 
+    "compatível com", "compativel com", "p/ iphone", "para iphone", "tampa para", "refil para"
+]
+
+
+def is_accessory_product(domain: str, title: str, user_query: str) -> bool:
+    """Identifica se o produto retornado é um acessório/capa/película quando a busca é pelo aparelho/produto principal."""
+    q_lower = user_query.lower()
+    user_wants_acc = any(w in q_lower for w in ["capa", "capinha", "case", "pelicula", "película", "cabo", "carregador", "toalha", "suporte", "adesivo", "skin", "refil", "tampa"])
+    if user_wants_acc:
+        return False
+    
+    dom_upper = (domain or "").upper()
+    if any(ad in dom_upper for ad in ACCESSORY_DOMAINS):
+        return True
+    
+    t_lower = (title or "").lower()
+    if any(trig in t_lower for trig in ACCESSORY_TITLE_TRIGGERS):
+        return True
+    
+    return False
+
+
+def search_official_ml_api(query: str, access_token: str, cfg: dict = None, cmv: float = 0.0):
     """
     Realiza a consulta no Mercado Livre:
     1. Se houver token oficial, consulta a API de Produtos (/products/search) para obter
@@ -594,7 +627,7 @@ def search_official_ml_api(query: str, access_token: str, cfg: dict = None):
 
         for q in queries_to_try:
             encoded_query = urllib.parse.quote(q)
-            products_url = f"https://api.mercadolibre.com/products/search?status=active&site_id=MLB&q={encoded_query}&limit=8"
+            products_url = f"https://api.mercadolibre.com/products/search?status=active&site_id=MLB&q={encoded_query}&limit=35"
 
             data = None
             req_headers = dict(headers)
@@ -639,8 +672,15 @@ def search_official_ml_api(query: str, access_token: str, cfg: dict = None):
                 if not pid or pid in seen_pids:
                     continue
 
+                domain = (p.get("domain_id") or "").upper()
                 title = p.get("name", "").strip()
                 if keywords and not any(k in title.lower() for k in keywords):
+                    continue
+
+                # FILTRAGEM SEMÂNTICA ANTI-ACESSÓRIOS:
+                # Se a busca for pelo produto principal (ex: iPhone, Console, Mesa, Garrafa),
+                # elimina capinhas, películas, protetores, suportes e toalhas.
+                if is_accessory_product(domain, title, query):
                     continue
 
                 # Link canônico oficial que leva direto à página de compra do produto no Mercado Livre
@@ -744,6 +784,12 @@ def search_official_ml_api(query: str, access_token: str, cfg: dict = None):
                 if price <= 0:
                     continue
 
+                # Checagem de coerência de preço com o CMV declarado:
+                # Ex: Para iPhone com CMV R$ 7.290, um anúncio de R$ 69,99 é incoerente (acessório remanescente)
+                user_wants_acc = any(w in query.lower() for w in ["capa", "capinha", "case", "pelicula", "película", "cabo", "carregador", "toalha", "suporte", "adesivo", "skin", "refil", "tampa"])
+                if cmv > 0 and price < (cmv * 0.20) and not user_wants_acc:
+                    continue
+
                 discount_str = None
                 if orig_price and orig_price > price:
                     disc_percent = round(((orig_price - price) / orig_price) * 100)
@@ -766,7 +812,7 @@ def search_official_ml_api(query: str, access_token: str, cfg: dict = None):
                     "stock_status": "in_stock"
                 })
 
-            if len(all_items) >= 4:
+            if len(all_items) >= 7:
                 break
 
         if len(all_items) >= 1:
@@ -1083,6 +1129,10 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/competitors":
             query_params = urllib.parse.parse_qs(parsed.query)
             search_query = query_params.get("q", [""])[0]
+            try:
+                cmv_val = float(query_params.get("cmv", ["0"])[0] or 0.0)
+            except (ValueError, TypeError):
+                cmv_val = 0.0
 
             if not search_query:
                 self.send_response(400)
@@ -1098,8 +1148,8 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
             token_from_param = query_params.get("token", [""])[0].strip()
             access_token = token_from_ml_header or ml_bearer or token_from_param or cfg.get("access_token", "")
 
-            print(f"[API] Buscando no Mercado Livre: '{search_query}' (Token ativo: {bool(access_token)})...")
-            items = search_official_ml_api(search_query, access_token, cfg)
+            print(f"[API] Buscando no Mercado Livre: '{search_query}' (Token ativo: {bool(access_token)}, CMV: R$ {cmv_val:.2f})...")
+            items = search_official_ml_api(search_query, access_token, cfg, cmv=cmv_val)
 
             is_live = any(it.get("is_live", False) for it in items)
             source_type = items[0].get("source", "catalogo_garantido") if items else "catalogo_garantido"

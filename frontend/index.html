@@ -1166,6 +1166,7 @@
 
       try {
         const q = encodeURIComponent(query);
+        const cmvVal = parseFloat(document.getElementById('input-cost')?.value) || 0;
         let storedToken = null;
         try { storedToken = localStorage.getItem('ml_access_token'); } catch(e) {}
         const headers = {};
@@ -1173,11 +1174,21 @@
           headers['Authorization'] = 'Bearer ' + storedToken;
           headers['X-ML-Token'] = storedToken;
         }
-        const res = await fetch(`/api/competitors?q=${q}`, { headers });
+        const res = await fetch(`/api/competitors?q=${q}&cmv=${cmvVal}`, { headers });
         if (res.ok) {
           const compData = await res.json();
           if (compData.results && compData.results.length > 0) {
-            const inStock = compData.results.filter(c => c.available !== false && c.is_available !== false && c.status !== 'inactive' && c.status !== 'paused');
+            const qLow = query.toLowerCase();
+            const wantsAcc = /capa|capinha|case|pel[ií]cula|cabo|carregador|toalha|suporte|adesivo|skin|refil|tampa/.test(qLow);
+            const inStock = compData.results.filter(c => {
+              if (c.available === false || c.is_available === false || c.status === 'inactive' || c.status === 'paused') return false;
+              if (!wantsAcc) {
+                const titleLow = (c.title || '').toLowerCase();
+                if (/^(capa|capinha|case|pel[ií]cula|toalha de mesa|caminho de mesa|protetor de|adesivo|skin)\b/i.test(titleLow) || /compat[ií]vel com|transforme seu/i.test(titleLow)) return false;
+                if (cmvVal > 0 && c.price < (cmvVal * 0.20)) return false;
+              }
+              return true;
+            });
             if (inStock.length > 0) {
               activeCompetitors = inStock;
               activeCompetitors._is_live = compData.is_live;
@@ -1267,6 +1278,7 @@
       // Consulta ao vivo na API do Mercado Livre (se conectada)
       try {
         const q = encodeURIComponent(payload.title_raw);
+        const cmvVal = payload.cost_price || 0;
         let storedToken = null;
         try { storedToken = localStorage.getItem('ml_access_token'); } catch(e) {}
         const headers = {};
@@ -1274,11 +1286,21 @@
           headers['Authorization'] = 'Bearer ' + storedToken;
           headers['X-ML-Token'] = storedToken;
         }
-        const res = await fetch(`/api/competitors?q=${q}`, { headers });
+        const res = await fetch(`/api/competitors?q=${q}&cmv=${cmvVal}`, { headers });
         if (res.ok) {
           const compData = await res.json();
           if (compData.results && compData.results.length > 0) {
-            const inStock = compData.results.filter(c => c.available !== false && c.is_available !== false && c.status !== 'inactive' && c.status !== 'paused');
+            const qLow = (payload.title_raw || '').toLowerCase();
+            const wantsAcc = /capa|capinha|case|pel[ií]cula|cabo|carregador|toalha|suporte|adesivo|skin|refil|tampa/.test(qLow);
+            const inStock = compData.results.filter(c => {
+              if (c.available === false || c.is_available === false || c.status === 'inactive' || c.status === 'paused') return false;
+              if (!wantsAcc) {
+                const titleLow = (c.title || '').toLowerCase();
+                if (/^(capa|capinha|case|pel[ií]cula|toalha de mesa|caminho de mesa|protetor de|adesivo|skin)\b/i.test(titleLow) || /compat[ií]vel com|transforme seu/i.test(titleLow)) return false;
+                if (cmvVal > 0 && c.price < (cmvVal * 0.20)) return false;
+              }
+              return true;
+            });
             if (inStock.length > 0) {
               activeCompetitors = inStock;
               activeCompetitors._is_live = compData.is_live;

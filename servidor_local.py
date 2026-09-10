@@ -170,40 +170,20 @@ def refresh_access_token(cfg: dict):
 
 def clean_ml_search_query(raw_query: str) -> list:
     """
-    Gera queries refinadas e de fallback para garantir retorno de produtos reais na API do Mercado Livre.
-    Elimina marcas privadas (ex: 'Vivi') e cores específicas que limitam ou zeram a busca no ML.
+    Gera queries refinadas e ordenadas pela maior fidelidade com o termo original do usuário.
+    Preserva rigorosamente modelos, marcas e especificações informadas pelo lojista.
     """
     candidates = []
     q_orig = raw_query.strip()
     if q_orig:
         candidates.append(q_orig)
 
-    # Remove marcas próprias e stopwords comuns
-    stop_words = {"vivi", "móveis", "moveis", "off", "white", "mel", "com", "de", "e", "para", "em", "da", "do"}
-    words = [w for w in re.split(r'\s+', q_orig) if w.lower() not in stop_words]
+    # Remove apenas conectivos gramaticais estritos (não apaga modelos, marcas ou cores)
+    connectors = {"com", "de", "e", "para", "em", "da", "do", "dos", "das"}
+    words = [w for w in re.split(r'\s+', q_orig) if w.lower() not in connectors]
     q_clean = " ".join(words).strip()
     if q_clean and q_clean.lower() != q_orig.lower():
         candidates.append(q_clean)
-
-    # Identificação semântica de categoria de produto
-    lower = q_orig.lower()
-    if any(k in lower for k in ["jantar", "mesa", "cadeira", "sala", "moveis", "móveis", "estofado", "cozinha", "armario", "armário", "poltrona"]):
-        if "6" in lower or "seis" in lower:
-            candidates.append("mesa de jantar 6 cadeiras")
-            candidates.append("conjunto sala de jantar 6 cadeiras")
-        elif "4" in lower or "quatro" in lower:
-            candidates.append("mesa de jantar 4 cadeiras")
-            candidates.append("conjunto sala de jantar 4 cadeiras")
-        else:
-            candidates.append("conjunto sala de jantar")
-            candidates.append("mesa de jantar 4 cadeiras")
-            candidates.append("mesa de jantar")
-    elif any(k in lower for k in ["fone", "bluetooth", "tws", "headset", "earphone", "audio", "áudio"]):
-        candidates.append("fone de ouvido bluetooth sem fio")
-        candidates.append("fone tws bluetooth")
-    elif any(k in lower for k in ["garrafa", "termica", "térmica", "bule", "squeeze", "inox"]):
-        candidates.append("garrafa termica inox 1 litro")
-        candidates.append("garrafa termica")
 
     unique = []
     for c in candidates:
@@ -219,8 +199,7 @@ def scrape_mercadolivre_live(query: str):
     preços atualizados e fotos oficiais da CDN do Mercado Livre.
     """
     import unicodedata
-    clean_q = re.sub(r'[^\w\s]', ' ', query)
-    clean_q = re.sub(r'\bvivi\b|\bm[oó]veis\b|\bmel\b|\boff\b', '', clean_q, flags=re.IGNORECASE).strip()
+    clean_q = re.sub(r'[^\w\s]', ' ', query).strip()
     words = [w for w in clean_q.split() if len(w) > 1]
     search_term = " ".join(words) if words else query.strip()
 

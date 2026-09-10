@@ -176,13 +176,16 @@ def scrape_mercadolivre_live(query: str):
     Garante a extração de anúncios REAIS de concorrentes com seus links canônicos EXATOS,
     preços atualizados e fotos oficiais da CDN do Mercado Livre.
     """
+    import unicodedata
     clean_q = re.sub(r'[^\w\s]', ' ', query)
     clean_q = re.sub(r'\bvivi\b|\bm[oó]veis\b|\bmel\b|\boff\b', '', clean_q, flags=re.IGNORECASE).strip()
     words = [w for w in clean_q.split() if len(w) > 1]
     search_term = " ".join(words) if words else query.strip()
 
-    # Formata a URL no padrão nativo com hifens do Mercado Livre Brasil (sem %20)
-    slug = re.sub(r'[^\w\s-]', '', search_term.lower())
+    # Formata a URL no padrão nativo com hifens do Mercado Livre Brasil (sem caracteres acentuados)
+    normalized = unicodedata.normalize('NFKD', search_term.lower())
+    ascii_term = ''.join(c for c in normalized if not unicodedata.combining(c))
+    slug = re.sub(r'[^\w\s-]', '', ascii_term)
     slug = re.sub(r'[\s_]+', '-', slug).strip('-')
     url = f"https://lista.mercadolivre.com.br/{slug}_NoIndex_True"
 
@@ -583,9 +586,12 @@ def search_official_ml_api(query: str, access_token: str, cfg: dict = None):
             "Authorization": f"Bearer {current_token}"
         }
 
+        all_items = []
+        seen_pids = set()
+
         for q in queries_to_try:
             encoded_query = urllib.parse.quote(q)
-            products_url = f"https://api.mercadolibre.com/products/search?status=active&site_id=MLB&q={encoded_query}&limit=6"
+            products_url = f"https://api.mercadolibre.com/products/search?status=active&site_id=MLB&q={encoded_query}&limit=8"
 
             data = None
             req_headers = dict(headers)
@@ -600,6 +606,7 @@ def search_official_ml_api(query: str, access_token: str, cfg: dict = None):
                     if new_token:
                         current_token = new_token
                         req_headers["Authorization"] = f"Bearer {current_token}"
+                        headers["Authorization"] = f"Bearer {current_token}"
                         try:
                             req = urllib.request.Request(products_url, headers=req_headers)
                             with urllib.request.urlopen(req, timeout=8) as response:
@@ -622,12 +629,11 @@ def search_official_ml_api(query: str, access_token: str, cfg: dict = None):
             if not raw_products:
                 continue
 
-            items = []
             keywords = [w.lower() for w in q.split() if len(w) > 3]
 
             for p in raw_products:
                 pid = p.get("id") or p.get("catalog_product_id")
-                if not pid:
+                if not pid or pid in seen_pids:
                     continue
 
                 title = p.get("name", "").strip()
@@ -653,7 +659,7 @@ def search_official_ml_api(query: str, access_token: str, cfg: dict = None):
                 orig_price = None
                 free_shipping = False
                 condition = "Novo"
-                seller_label = "MercadoLíder Platinum (Loja Oficial)"
+                seller_label = "Vendedor Oficial • Mercado Livre"
 
                 try:
                     items_req = urllib.request.Request(
@@ -664,16 +670,24 @@ def search_official_ml_api(query: str, access_token: str, cfg: dict = None):
                         item_data = json.loads(item_res.read().decode("utf-8"))
                         item_results = item_data.get("results", [])
                         
-                        # FILTRA RIGOROSAMENTE SOMENTE VENDEDORES ATIVOS E COM ESTOQUE DISPONÍVEL
-                        active_sellers = [
-                            it for it in item_results
-                            if it.get("status") == "active"
-                            and it.get("available_quantity", 1) > 0
-                            and float(it.get("price", 0.0)) > 0
-                        ]
+                        # FILTRA VENDEDORES COM OFERTA ATIVA E PREÇO VÁLIDO
+                        active_sellers = []
+                        for it in item_results:
+                            try:
+                                p_val = float(it.get("price", 0.0) or 0.0)
+                            except (ValueError, TypeError):
+                                p_val = 0.0
+                            if p_val <= 0:
+                                continue
+                            st = it.get("status")
+                            if st and st not in ["active", "activos"]:
+                                continue
+                            qty = it.get("available_quantity")
+                            if qty is not None and qty <= 0:
+                                continue
+                            active_sellers.append(it)
                         
                         if not active_sellers:
-                            print(f"[ML API] Produto {pid} ({title[:35]}) ignorado: nenhum vendedor com estoque ativo.")
                             continue
 
                         # Ordena pelo menor preço entre os vendedores disponíveis
@@ -685,10 +699,13 @@ def search_official_ml_api(query: str, access_token: str, cfg: dict = None):
                         free_shipping = first_item.get("shipping", {}).get("free_shipping", False) or price >= 79.0
                         if first_item.get("condition") == "used":
                             condition = "Usado"
+                        if first_item.get("official_store_id"):
+                            seller_label = "Loja Oficial no Mercado Livre"
+                        elif first_item.get("seller_address", {}).get("state", {}).get("name"):
+                            seller_label = f"Vendedor Oficial ({first_item.get('seller_address', {}).get('state', {}).get('name')})"
                 except Exception:
                     pass
 
-                # Se não tem preço válido ou não encontrou vendedores com estoque, descarta o concorrente
                 if price <= 0:
                     continue
 
@@ -697,7 +714,8 @@ def search_official_ml_api(query: str, access_token: str, cfg: dict = None):
                     disc_percent = round(((orig_price - price) / orig_price) * 100)
                     discount_str = f"{disc_percent}% OFF"
 
-                items.append({
+                seen_pids.add(pid)
+                all_items.append({
                     "id": pid,
                     "title": title,
                     "price": price,
@@ -713,12 +731,15 @@ def search_official_ml_api(query: str, access_token: str, cfg: dict = None):
                     "stock_status": "in_stock"
                 })
 
-            if len(items) >= 2:
-                for it in items:
-                    it["source"] = "api_oficial"
-                    it["is_live"] = True
-                print(f"[ML API] Sucesso: {len(items)} produtos oficiais encontrados via Products API para '{q}'!")
-                return items
+            if len(all_items) >= 4:
+                break
+
+        if len(all_items) >= 1:
+            for it in all_items:
+                it["source"] = "api_oficial"
+                it["is_live"] = True
+            print(f"[ML API] Sucesso: {len(all_items)} produtos oficiais encontrados via Products API para '{query}'!")
+            return all_items
 
     # 2. Tenta raspar ao vivo os anúncios reais caso a API de produtos não tenha retornado
     scraped = scrape_mercadolivre_live(query)

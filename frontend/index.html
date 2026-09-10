@@ -259,7 +259,13 @@
         <div class="flex flex-wrap items-center gap-2">
           <span class="text-xs text-slate-400 font-medium">Exemplo rápido:</span>
           <button type="button" onclick="loadPreset('garrafa')" class="px-3 py-2 text-xs rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold transition flex items-center space-x-1.5 shadow-sm min-h-[38px]">
-            <span>🍶 Garrafa Térmica Inox 1L</span>
+            <span>🍶 Garrafa Térmica 1L</span>
+          </button>
+          <button type="button" onclick="loadPreset('mesa')" class="px-3 py-2 text-xs rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 font-bold transition flex items-center space-x-1.5 shadow-sm min-h-[38px]">
+            <span>🪑 Sala de Jantar (Mesa 4 Lugares)</span>
+          </button>
+          <button type="button" onclick="loadPreset('fone')" class="px-3 py-2 text-xs rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 font-bold transition flex items-center space-x-1.5 shadow-sm min-h-[38px]">
+            <span>🎧 Fone TWS Bluetooth</span>
           </button>
         </div>
       </div>
@@ -912,7 +918,7 @@
             original_price: 69.90,
             discount: "29% OFF",
             permalink: "https://www.mercadolivre.com.br/p/MLB25263382",
-            thumbnail: "https://http2.mlstatic.com/D_NQ_NP_643207-MLA88650430170_072025-F.jpg",
+            thumbnail: "/img/fone_agold.jpg",
             free_shipping: false,
             seller: "Tech Audio Store (+25.000 vendidos)",
             available: true,
@@ -925,7 +931,7 @@
             original_price: 129.90,
             discount: "27% OFF",
             permalink: "https://www.mercadolivre.com.br/p/MLB15285466",
-            thumbnail: "https://http2.mlstatic.com/D_NQ_NP_833848-MLA88650616826_072025-F.jpg",
+            thumbnail: "/img/fone_qcy.jpg",
             free_shipping: true,
             seller: "QCY Loja Oficial (MercadoLíder Platinum)",
             available: true,
@@ -935,7 +941,7 @@
       },
       mesa: {
         sku: "MESA-JANTAR-4C",
-        title: "Mesa de Jantar Retangular 4 Lugares Estilo Industrial",
+        title: "Conjunto Sala de Jantar 4 Cadeiras Retangular Estilo Industrial",
         brand: "ArteMóveis",
         cost: 135.00,
         margin: "0.22",
@@ -950,7 +956,7 @@
             original_price: 399.90,
             discount: "25% OFF",
             permalink: "https://www.mercadolivre.com.br/p/MLB24361666",
-            thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_789421-MLA46552310344_062021-F.webp",
+            thumbnail: "/img/mesa_eiffel.webp",
             free_shipping: true,
             seller: "Algart Móveis (Loja Oficial)",
             available: true,
@@ -963,9 +969,22 @@
             original_price: 499.90,
             discount: "22% OFF",
             permalink: "https://www.mercadolivre.com.br/p/MLB29025522",
-            thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_910283-MLA46552310345_062021-F.webp",
+            thumbnail: "/img/mesa_klm.webp",
             free_shipping: true,
             seller: "KLM Store Móveis (MercadoLíder Platinum)",
+            available: true,
+            stock_status: "in_stock"
+          },
+          {
+            id: "MLB27341255",
+            title: "Mesa de Jantar Retangular 4 Cadeiras Madesa",
+            price: 549.90,
+            original_price: 699.90,
+            discount: "21% OFF",
+            permalink: "https://www.mercadolivre.com.br/p/MLB27341255",
+            thumbnail: "/img/mesa_madesa.webp",
+            free_shipping: true,
+            seller: "Madesa Móveis (Loja Oficial • +50.000 vendidos)",
             available: true,
             stock_status: "in_stock"
           }
@@ -1494,7 +1513,7 @@
           <div class="bg-slate-900/90 rounded-xl p-4 border border-blue-500/30 hover:border-emerald-400 bg-gradient-to-b from-slate-900/90 to-slate-950/90 flex flex-col justify-between transition space-y-3 shadow-lg group">
             <div class="flex space-x-3 items-start">
               <div class="w-16 h-16 bg-slate-800 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center border border-slate-700/80 p-0.5">
-                ${c.thumbnail ? `<img src="${c.thumbnail}" alt="" class="w-full h-full object-contain" onerror="this.onerror=null;this.src='/img/tramontina_exata.jpg';">` : `<i data-lucide="package" class="w-7 h-7 text-slate-500"></i>`}
+                ${c.thumbnail ? `<img src="${c.thumbnail}" alt="" class="w-full h-full object-contain" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-slate-500\\'><i data-lucide=\\'package\\' class=\\'w-7 h-7\\'></i></div>';if(window.lucide)lucide.createIcons();">` : `<i data-lucide="package" class="w-7 h-7 text-slate-500"></i>`}
               </div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center justify-between gap-1 mb-1">

@@ -21,11 +21,58 @@ except ImportError:
 PORT = int(os.environ.get("PORT", 8000))
 ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
-ACTIVE_SESSIONS = set()
+ACTIVE_SESSIONS = {}  # token -> {"username": str, "role": str}
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 CONFIG_FILE = os.path.join(BASE_DIR, "ml_credentials.json")
+
+
+def load_all_users() -> dict:
+    """
+    Retorna todos os usuários válidos:
+    1. Administrador Mestre: ADMIN_USER e ADMIN_PASSWORD (Render ou padrão)
+    2. Equipe / Outros Usuários: Variável de ambiente USERS ou TEAM_USERS (ex: "vendedor1:senha1,joao:senha2")
+    3. Arquivo local users.json (se existir)
+    """
+    users = {}
+    admin_u = os.environ.get("ADMIN_USER", "admin").strip()
+    admin_p = os.environ.get("ADMIN_PASSWORD", "admin123").strip()
+    if admin_u:
+        users[admin_u] = {"password": admin_p, "role": "admin", "name": admin_u}
+
+    # Variável de ambiente com múltiplos usuários da equipe
+    env_users = os.environ.get("USERS", "") or os.environ.get("TEAM_USERS", "")
+    if env_users:
+        for entry in re.split(r'[,;\n\r]+', env_users):
+            entry = entry.strip()
+            if ":" in entry:
+                parts = entry.split(":", 1)
+                u = parts[0].strip()
+                p = parts[1].strip()
+                if u and p and u != admin_u:
+                    users[u] = {"password": p, "role": "user", "name": u}
+
+    users_file = os.path.join(BASE_DIR, "users.json")
+    if os.path.exists(users_file):
+        try:
+            with open(users_file, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+                if isinstance(saved, dict):
+                    for u, data in saved.items():
+                        if u != admin_u:
+                            if isinstance(data, dict) and "password" in data:
+                                users[u] = {
+                                    "password": str(data["password"]),
+                                    "role": data.get("role", "user"),
+                                    "name": u
+                                }
+                            elif isinstance(data, str):
+                                users[u] = {"password": str(data), "role": "user", "name": u}
+        except Exception:
+            pass
+
+    return users
 
 
 def load_ml_config():
@@ -1509,15 +1556,22 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                 u = str(data.get("username", "")).strip()
                 p = str(data.get("password", ""))
 
-                if u == ADMIN_USER and p == ADMIN_PASSWORD:
+                all_users = load_all_users()
+                if u in all_users and all_users[u]["password"] == p:
                     token = secrets.token_hex(24)
-                    ACTIVE_SESSIONS.add(token)
-                    print(f"[AUTH] Login bem-sucedido para o usuário: '{u}'")
+                    role = all_users[u].get("role", "user")
+                    ACTIVE_SESSIONS[token] = {"username": u, "role": role}
+                    print(f"[AUTH] Login bem-sucedido: '{u}' (Perfil: {role})")
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json; charset=utf-8")
                     self.send_header("Set-Cookie", f"session_token={token}; Path=/; HttpOnly; SameSite=Lax")
                     self.end_headers()
-                    self.wfile.write(json.dumps({"success": True, "token": token, "user": ADMIN_USER}).encode('utf-8'))
+                    self.wfile.write(json.dumps({
+                        "success": True, 
+                        "token": token, 
+                        "user": u, 
+                        "role": role
+                    }).encode('utf-8'))
                 else:
                     print(f"[AUTH] Falha de login: credenciais inválidas para '{u}'")
                     self.send_response(401)
@@ -1535,11 +1589,11 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/auth/logout":
             token = self.get_session_token()
             if token and token in ACTIVE_SESSIONS:
-                ACTIVE_SESSIONS.remove(token)
+                del ACTIVE_SESSIONS[token]
             print("[AUTH] Usuário desconectado (sessão encerrada).")
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Set-Cookie", "session_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT")
+            self.send_header("Set-Cookie", "session_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax")
             self.end_headers()
             self.wfile.write(json.dumps({"success": True, "message": "Desconectado com sucesso."}).encode('utf-8'))
             return
@@ -1745,14 +1799,45 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
         # 0. Checagem de Sessão / Autenticação
         if parsed.path == "/api/auth/check":
             is_auth = self.is_authenticated()
+            sess_info = {}
+            token = self.get_session_token()
+            if is_auth and token and token in ACTIVE_SESSIONS:
+                sess_info = ACTIVE_SESSIONS[token] if isinstance(ACTIVE_SESSIONS[token], dict) else {"username": ADMIN_USER, "role": "admin"}
+
             res = {
                 "authenticated": is_auth,
-                "user": ADMIN_USER if is_auth else None
+                "user": sess_info.get("username", ADMIN_USER) if is_auth else None,
+                "role": sess_info.get("role", "admin") if is_auth else None
             }
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.end_headers()
             self.wfile.write(json.dumps(res).encode('utf-8'))
+            return
+
+        # 0.1 Consulta de usuários (apenas para Admin)
+        if parsed.path == "/api/auth/team":
+            token = self.get_session_token()
+            if not token or token not in ACTIVE_SESSIONS:
+                self.send_response(401)
+                self.end_headers()
+                return
+            sess = ACTIVE_SESSIONS[token] if isinstance(ACTIVE_SESSIONS[token], dict) else {}
+            if sess.get("role") != "admin":
+                self.send_response(403)
+                self.end_headers()
+                self.wfile.write(b'{"error": "Acesso restrito ao Administrador"}')
+                return
+            
+            all_users = load_all_users()
+            user_list = [
+                {"username": u, "role": d.get("role", "user")}
+                for u, d in all_users.items()
+            ]
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(json.dumps({"users": user_list}, ensure_ascii=False).encode('utf-8'))
             return
 
         # 1. Consulta de status das credenciais do Mercado Livre

@@ -213,6 +213,19 @@
           <span class="text-xs font-semibold text-slate-300">MODO: ANÁLISE</span>
         </div>
 
+        <!-- Perfil do Usuário Logado -->
+        <div id="topbar-user-badge" class="hidden sm:flex items-center space-x-1.5 bg-slate-800 border border-cardborder px-2.5 sm:px-3 py-1.5 rounded-lg text-xs min-h-[36px] sm:min-h-[38px]" title="Usuário Ativo">
+          <i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i>
+          <span id="topbar-user-name" class="font-bold text-white">admin</span>
+          <span id="topbar-user-role-badge" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">Admin</span>
+        </div>
+
+        <!-- Botão Guia da Equipe (visível para Admin) -->
+        <button id="btn-team-management" onclick="openTeamModal()" class="hidden items-center space-x-1 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition min-h-[36px] sm:min-h-[38px]" title="Gerenciar Usuários da Equipe">
+          <i data-lucide="users" class="w-3.5 h-3.5"></i>
+          <span class="hidden md:inline">Equipe</span>
+        </button>
+
         <!-- Botão Sair / Logout -->
         <button type="button" onclick="handleLogout()" title="Encerrar Sessão" class="flex items-center space-x-1 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 hover:text-white px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition shadow-sm min-h-[36px] sm:min-h-[38px]">
           <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
@@ -1242,6 +1255,62 @@
           <i data-lucide="calculator" class="w-3.5 h-3.5"></i>
           <span>Recalcular Shopee</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  
+  <!-- ============================================================ -->
+  <!-- MODAL: GERENCIAMENTO DE USUÁRIOS DA EQUIPE                   -->
+  <!-- ============================================================ -->
+  <div id="team-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-cardbg border border-purple-500/40 rounded-2xl max-w-lg w-full max-h-[92vh] flex flex-col p-5 sm:p-6 shadow-2xl space-y-4 my-auto overflow-hidden">
+      <div class="flex items-center justify-between pb-3 border-b border-cardborder flex-shrink-0">
+        <h4 class="text-base font-bold text-white flex items-center space-x-2">
+          <div class="w-7 h-7 rounded-lg bg-purple-600 flex items-center justify-center flex-shrink-0">
+            <i data-lucide="users" class="w-4 h-4 text-white"></i>
+          </div>
+          <span>Usuários & Acesso da Equipe</span>
+        </h4>
+        <button onclick="closeTeamModal()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white rounded-lg">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="overflow-y-auto pr-1 space-y-4 text-xs">
+        <div class="bg-purple-950/40 border border-purple-500/30 p-3.5 rounded-xl text-purple-200 space-y-2">
+          <div class="font-bold flex items-center gap-1.5 text-white">
+            <i data-lucide="shield-check" class="w-4 h-4 text-purple-400 flex-shrink-0"></i>
+            <span>Como Adicionar Usuários no Render (Permanente)</span>
+          </div>
+          <p class="text-[11px] text-slate-300 leading-relaxed">
+            Seu acesso mestre de Administrador fica em <strong>ADMIN_USER</strong> e <strong>ADMIN_PASSWORD</strong>.<br>
+            Para adicionar novos membros à equipe sem compartilhar sua senha:
+          </p>
+          <ol class="text-[11px] text-slate-300 list-decimal pl-4 space-y-1">
+            <li>Acesse o painel do seu serviço no <strong>Render.com</strong>.</li>
+            <li>Clique na aba lateral <strong>"Environment"</strong>.</li>
+            <li>Adicione ou edite a variável: <code class="text-amber-300 font-mono">USERS</code></li>
+            <li>Preencha os usuários e senhas separados por vírgula no formato: <code class="text-emerald-300 font-mono">vendedor1:senha123,joao:senha456</code></li>
+            <li>Clique em <strong>Save Changes</strong>. Conecta na hora!</li>
+          </ol>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h5 class="font-bold text-white text-xs">Usuários Reconhecidos no Sistema:</h5>
+            <button type="button" onclick="loadTeamUsers()" class="text-[11px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold">
+              <i data-lucide="refresh-cw" class="w-3 h-3"></i> Atualizar Lista
+            </button>
+          </div>
+          <div id="team-users-list" class="space-y-1.5">
+            <div class="text-slate-400 text-[11px] py-2">Carregando lista...</div>
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-cardborder flex justify-end">
+          <button type="button" onclick="closeTeamModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs min-h-[38px]">Fechar</button>
+        </div>
       </div>
     </div>
   </div>
@@ -2824,6 +2893,74 @@
       lucide.createIcons();
     }
 
+    
+    function updateCurrentUserUI(username, role) {
+      const nameEl = document.getElementById('topbar-user-name');
+      const roleEl = document.getElementById('topbar-user-role-badge');
+      const teamBtn = document.getElementById('btn-team-management');
+      if (nameEl && username) nameEl.innerText = username;
+      if (roleEl && role) {
+        if (role === 'admin') {
+          roleEl.innerText = 'Admin';
+          roleEl.className = 'text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30';
+          if (teamBtn) {
+            teamBtn.classList.remove('hidden');
+            teamBtn.classList.add('flex');
+          }
+        } else {
+          roleEl.innerText = 'Equipe';
+          roleEl.className = 'text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30';
+          if (teamBtn) {
+            teamBtn.classList.add('hidden');
+            teamBtn.classList.remove('flex');
+          }
+        }
+      }
+    }
+
+    function openTeamModal() {
+      document.getElementById('team-modal').classList.remove('hidden');
+      loadTeamUsers();
+    }
+
+    function closeTeamModal() {
+      document.getElementById('team-modal').classList.add('hidden');
+    }
+
+    async function loadTeamUsers() {
+      const listEl = document.getElementById('team-users-list');
+      if (!listEl) return;
+      listEl.innerHTML = `<div class="text-slate-400 text-[11px] py-2">Consultando usuários...</div>`;
+      try {
+        const res = await fetch('/api/auth/team');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.users && data.users.length > 0) {
+            listEl.innerHTML = data.users.map(u => {
+              const isAdm = u.role === 'admin';
+              return `
+                <div class="flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-cardborder">
+                  <div class="flex items-center space-x-2">
+                    <span class="w-6 h-6 rounded-full ${isAdm ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400'} flex items-center justify-center font-bold text-[10px]">
+                      ${u.username.slice(0, 1).toUpperCase()}
+                    </span>
+                    <span class="font-mono text-white text-xs font-semibold">${u.username}</span>
+                  </div>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded ${isAdm ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'}">
+                    ${isAdm ? 'Administrador Mestre' : 'Membro da Equipe'}
+                  </span>
+                </div>
+              `;
+            }).join('');
+          } else {
+            listEl.innerHTML = `<div class="text-slate-400 text-[11px] py-2">Nenhum usuário adicional. Apenas o Admin Mestre ativo.</div>`;
+          }
+        }
+      } catch(err) {
+        listEl.innerHTML = `<div class="text-rose-400 text-[11px] py-2">Erro ao carregar usuários.</div>`;
+      }
+    }
+
     async function checkAuth() {
       try {
         const res = await fetch('/api/auth/check');
@@ -2831,6 +2968,7 @@
           const data = await res.json();
           if (data.authenticated) {
             document.getElementById('login-overlay').classList.add('hidden');
+            updateCurrentUserUI(data.user, data.role);
             return true;
           }
         }
@@ -2865,6 +3003,7 @@
         if (res.ok && data.success) {
           btnText.innerText = "Autorizado! Entrando...";
           document.getElementById('login-overlay').classList.add('hidden');
+          updateCurrentUserUI(data.user, data.role);
           loadMlStatus();
           loadShopeeStatus();
           openPlatformModal();

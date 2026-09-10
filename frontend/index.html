@@ -241,17 +241,12 @@
             <span class="text-xs font-bold text-amber-400 tracking-wider uppercase bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20">Camadas 1 & 3</span>
             <h2 class="text-lg sm:text-xl font-bold text-white">Intake & Requirement Engine</h2>
           </div>
-          <p class="text-xs sm:text-sm text-slate-400 mt-1">Configure o seu produto e clique em <strong>"Analisar Mercado & Viabilidade"</strong>.</p>
+          <p class="text-xs sm:text-sm text-slate-400 mt-1">Preencha os dados do seu produto e clique em <strong>"Analisar Mercado & Viabilidade"</strong>.</p>
         </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="text-xs text-slate-400 font-medium hidden lg:inline">Exemplos Prontos:</span>
-          <button type="button" onclick="loadPreset('garrafa')" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white px-2.5 py-1.5 rounded-lg border border-cardborder text-xs transition">🧴 Garrafa Térmica</button>
-          <button type="button" onclick="loadPreset('fone')" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white px-2.5 py-1.5 rounded-lg border border-cardborder text-xs transition">🎧 Fone TWS</button>
-          <button type="button" onclick="loadPreset('mesa')" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white px-2.5 py-1.5 rounded-lg border border-cardborder text-xs transition">🪑 Mesa Jantar</button>
-          <button type="button" onclick="loadPreset('praia')" class="bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 hover:text-amber-200 px-2.5 py-1.5 rounded-lg border border-amber-500/30 text-xs transition font-semibold">🏖️ Cadeira de Praia</button>
-          <button type="button" onclick="clearIntakeForm()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3.5 py-1.5 rounded-xl border border-cardborder text-xs font-semibold flex items-center space-x-1.5 transition shadow-sm" title="Limpar todos os campos para cadastrar seu próprio produto">
-            <i data-lucide="eraser" class="w-3.5 h-3.5 text-amber-400"></i>
-            <span>Limpar Campos</span>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="clearIntakeForm()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3.5 py-1.5 rounded-xl border border-cardborder text-xs font-semibold flex items-center space-x-1.5 transition shadow-sm" title="Limpar todos os campos">
+            <i data-lucide="eraser" class="w-3.5 h-3.5 text-slate-400"></i>
+            <span>Limpar Formulário</span>
           </button>
         </div>
       </div>
@@ -260,24 +255,24 @@
       <form id="intake-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
         <div class="col-span-1">
           <label class="block text-xs font-semibold text-slate-300 mb-1.5">SKU / Código do Produto *</label>
-          <input type="text" id="input-sku" value="GAR-INOX-1000" required placeholder="Ex: CAD-PRAIA-01" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
+          <input type="text" id="input-sku" value="" required placeholder="Ex: SEU-SKU-01" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
         </div>
 
         <div class="col-span-1 sm:col-span-2 lg:col-span-2">
           <label class="block text-xs font-semibold text-slate-300 mb-1.5">Nome do Produto *</label>
-          <input type="text" id="input-title" value="Garrafa Térmica Inox 1 Litro Parede Dupla" required placeholder="Ex: Cadeira de Praia Alumínio Reclinável" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
+          <input type="text" id="input-title" value="" required placeholder="Ex: Cadeira de Praia Alumínio Reclinável" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
         </div>
 
         <div class="col-span-1">
           <label class="block text-xs font-semibold text-slate-300 mb-1.5">Marca / Fabricante</label>
-          <input type="text" id="input-brand" value="ThermoMax" placeholder="Ex: Mor / Belfix / Genérica" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
+          <input type="text" id="input-brand" value="" placeholder="Ex: Mor, Belfix ou Marca Própria" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
         </div>
 
         <div class="col-span-1">
           <label class="block text-xs font-semibold text-slate-300 mb-1.5">Custo CMV Unitário (R$) *</label>
           <div class="relative">
             <span class="absolute left-3 top-3 text-sm text-slate-500">R$</span>
-            <input type="number" step="any" min="0.01" id="input-cost" value="24.50" required placeholder="Ex: 39.90" class="w-full bg-slate-900 border border-cardborder rounded-lg pl-9 pr-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
+            <input type="number" step="any" min="0.01" id="input-cost" value="" required placeholder="Ex: 39.90" class="w-full bg-slate-900 border border-cardborder rounded-lg pl-9 pr-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
           </div>
         </div>
 
@@ -285,27 +280,27 @@
           <label class="block text-xs font-semibold text-slate-300 mb-1.5">Margem Líquida Alvo Desejada</label>
           <select id="input-margin" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
             <option value="0.15">15% (Competitivo)</option>
-            <option value="0.20">20% (Equilibrado)</option>
-            <option value="0.25" selected>25% (Alta Margem)</option>
+            <option value="0.20" selected>20% (Equilibrado)</option>
+            <option value="0.25">25% (Alta Margem)</option>
             <option value="0.30">30% (Excelente)</option>
           </select>
         </div>
 
         <div class="col-span-1">
           <label class="block text-xs font-semibold text-slate-300 mb-1.5">Estoque Disponível (Unidades)</label>
-          <input type="number" step="1" min="1" id="input-stock" value="120" placeholder="Ex: 50" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
+          <input type="number" step="1" min="1" id="input-stock" value="" placeholder="Ex: 50" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
         </div>
 
         <div class="col-span-1">
           <label class="block text-xs font-semibold text-slate-300 mb-1.5">Peso do Pacote (Kg) *</label>
-          <input type="number" step="any" min="0.01" id="input-weight" value="0.45" required placeholder="Ex: 2.00" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
+          <input type="number" step="any" min="0.01" id="input-weight" value="" required placeholder="Ex: 2.00" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
         </div>
 
         <div class="col-span-1">
           <label class="block text-xs font-semibold text-slate-300 mb-1.5">Embalagem & Proteção (R$) *</label>
           <div class="relative">
             <span class="absolute left-3 top-3 text-sm text-slate-500">R$</span>
-            <input type="number" step="any" min="0" id="input-packaging" value="3.00" required class="w-full bg-slate-900 border border-cardborder rounded-lg pl-9 pr-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]" placeholder="3.00">
+            <input type="number" step="any" min="0" id="input-packaging" value="" placeholder="Ex: 3.00" class="w-full bg-slate-900 border border-cardborder rounded-lg pl-9 pr-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
           </div>
         </div>
 
@@ -320,7 +315,7 @@
 
         <div class="col-span-1 sm:col-span-2 lg:col-span-3">
           <label class="block text-xs font-semibold text-slate-300 mb-1.5">Diferenciais e Benefícios Chave (Separados por vírgula)</label>
-          <input type="text" id="input-features" value="Conserva gelado por 24h e quente por 12h, Aço Inoxidável 304, Tampa hermética antiderrame, Livre de BPA" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
+          <input type="text" id="input-features" value="" placeholder="Ex: 8 posições, reclinável, estrutura 100% alumínio, dobrável" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
         </div>
 
         <div class="col-span-1 sm:col-span-2 lg:col-span-1 flex items-end">
@@ -331,6 +326,19 @@
         </div>
       </form>
     </section>
+
+    <!-- ============================================================ -->
+    <!-- ESTADO INICIAL VAZIO / AGUARDANDO PRODUTO                    -->
+    <!-- ============================================================ -->
+    <div id="empty-state" class="bg-cardbg rounded-2xl border border-cardborder p-8 sm:p-12 text-center shadow-xl space-y-3">
+      <div class="w-14 h-14 bg-blue-500/10 text-blue-400 rounded-2xl flex items-center justify-center mx-auto border border-blue-500/20">
+        <i data-lucide="package-search" class="w-7 h-7"></i>
+      </div>
+      <h3 class="text-base sm:text-lg font-bold text-white">Nenhum produto em análise no momento</h3>
+      <p class="text-xs sm:text-sm text-slate-400 max-w-lg mx-auto">
+        Preencha os campos do seu produto no formulário acima (Nome, Custo CMV, Peso, etc.) e clique em <strong>"Analisar Mercado & Viabilidade"</strong> para calcular a precificação ideal, taxas oficiais do Mercado Livre, frete e mapear os concorrentes reais.
+      </p>
+    </div>
 
     <!-- ============================================================ -->
     <!-- PIPELINE STATUS & LOGS VISUAIS                               -->
@@ -789,291 +797,8 @@
   <!-- JAVASCRIPT: CONTROLE REAL DE CONCORRENTES                    -->
   <!-- ============================================================ -->
   <script>
-    // Concorrentes Ativos Iniciais com Estoque Real Disponível (Mercado Livre)
-    let activeCompetitors = [
-      {
-        id: "MLB15292657",
-        title: "Garrafa Térmica Invicta GLT Pressão 1L Metalizada / Lisa",
-        price: 59.90,
-        original_price: 79.90,
-        discount: "25% OFF",
-        permalink: "https://www.mercadolivre.com.br/p/MLB15292657",
-        thumbnail: "/img/invicta_glt.jpg",
-        free_shipping: false,
-        seller: "Invicta Loja Oficial (+50.000 vendidos)",
-        available: true,
-        stock_status: "in_stock"
-      },
-      {
-        id: "MLB19663366",
-        title: "Bule Térmico Tramontina Exata em Plástico Preto com Ampola 1L",
-        price: 54.90,
-        original_price: 69.90,
-        discount: "21% OFF",
-        permalink: "https://www.mercadolivre.com.br/p/MLB19663366",
-        thumbnail: "/img/tramontina_bule.jpg",
-        free_shipping: false,
-        seller: "Tramontina Oficial / Mercado Livre (+100.000 vendidos)",
-        available: true,
-        stock_status: "in_stock"
-      },
-      {
-        id: "MLB10161248",
-        title: "Garrafa Térmica Air Pot Inox New Vidro 1L Pressão Invicta",
-        price: 105.90,
-        original_price: 129.90,
-        discount: "18% OFF",
-        permalink: "https://www.mercadolivre.com.br/p/MLB10161248",
-        thumbnail: "/img/invicta_inox_1l.jpg",
-        free_shipping: true,
-        seller: "Invicta Loja Oficial (+50.000 vendidos)",
-        available: true,
-        stock_status: "in_stock"
-      },
-      {
-        id: "MLB75798065",
-        title: "Garrafa Térmica Invicta Air Pot Inox 1,8L Pressão",
-        price: 107.00,
-        original_price: 129.90,
-        discount: "17% OFF",
-        permalink: "https://www.mercadolivre.com.br/p/MLB75798065",
-        thumbnail: "/img/invicta_airpot_18l.jpg",
-        free_shipping: true,
-        seller: "Invicta Loja Oficial (+50.000 vendidos)",
-        available: true,
-        stock_status: "in_stock"
-      }
-    ];
-
-    const PRESETS = {
-      garrafa: {
-        sku: "GAR-INOX-1000",
-        title: "Garrafa Térmica Inox 1 Litro Parede Dupla",
-        brand: "ThermoMax",
-        cost: 24.50,
-        margin: "0.25",
-        stock: 120,
-        weight: 0.45,
-        features: "Conserva gelado por 24h e quente por 12h, Aço Inoxidável 304, Tampa hermética antiderrame, Livre de BPA",
-        competitors: [
-          {
-            id: "MLB15292657",
-            title: "Garrafa Térmica Invicta GLT Pressão 1L Metalizada / Lisa",
-            price: 59.90,
-            original_price: 79.90,
-            discount: "25% OFF",
-            permalink: "https://www.mercadolivre.com.br/p/MLB15292657",
-            thumbnail: "/img/invicta_glt.jpg",
-            free_shipping: false,
-            seller: "Invicta Loja Oficial (+50.000 vendidos)",
-            available: true,
-            stock_status: "in_stock"
-          },
-          {
-            id: "MLB19663366",
-            title: "Bule Térmico Tramontina Exata em Plástico Preto com Ampola 1L",
-            price: 54.90,
-            original_price: 69.90,
-            discount: "21% OFF",
-            permalink: "https://www.mercadolivre.com.br/p/MLB19663366",
-            thumbnail: "/img/tramontina_bule.jpg",
-            free_shipping: false,
-            seller: "Tramontina Oficial / Mercado Livre (+100.000 vendidos)",
-            available: true,
-            stock_status: "in_stock"
-          },
-          {
-            id: "MLB10161248",
-            title: "Garrafa Térmica Air Pot Inox New Vidro 1L Pressão Invicta",
-            price: 105.90,
-            original_price: 129.90,
-            discount: "18% OFF",
-            permalink: "https://www.mercadolivre.com.br/p/MLB10161248",
-            thumbnail: "/img/invicta_inox_1l.jpg",
-            free_shipping: true,
-            seller: "Invicta Loja Oficial (+50.000 vendidos)",
-            available: true,
-            stock_status: "in_stock"
-          },
-          {
-            id: "MLB75798065",
-            title: "Garrafa Térmica Invicta Air Pot Inox 1,8L Pressão",
-            price: 107.00,
-            original_price: 129.90,
-            discount: "17% OFF",
-            permalink: "https://www.mercadolivre.com.br/p/MLB75798065",
-            thumbnail: "/img/invicta_airpot_18l.jpg",
-            free_shipping: true,
-            seller: "Invicta Loja Oficial (+50.000 vendidos)",
-            available: true,
-            stock_status: "in_stock"
-          }
-        ]
-      },
-      fone: {
-        sku: "FONE-TWS-PRO",
-        title: "Fone de Ouvido Bluetooth Sem Fio TWS com Case Carregador",
-        brand: "SoundWave",
-        cost: 16.80,
-        margin: "0.28",
-        stock: 250,
-        weight: 0.12,
-        features: "Bluetooth 5.3, Cancelamento de Ruído Passivo, Bateria de 24h com Case, Microfone Integrado",
-        competitors: [
-          {
-            id: "MLB25263382",
-            title: "Fone Agold Fn-bt10 Bluetooth Sem Fio 3ª Geração TWS",
-            price: 49.90,
-            original_price: 69.90,
-            discount: "29% OFF",
-            permalink: "https://www.mercadolivre.com.br/p/MLB25263382",
-            thumbnail: "/img/fone_agold.jpg",
-            free_shipping: false,
-            seller: "Tech Audio Store (+25.000 vendidos)",
-            available: true,
-            stock_status: "in_stock"
-          },
-          {
-            id: "MLB15285466",
-            title: "Fone de Ouvido QCY T1C Bluetooth 5.1 Case 380mAh Preto",
-            price: 94.90,
-            original_price: 129.90,
-            discount: "27% OFF",
-            permalink: "https://www.mercadolivre.com.br/p/MLB15285466",
-            thumbnail: "/img/fone_qcy.jpg",
-            free_shipping: true,
-            seller: "QCY Loja Oficial (MercadoLíder Platinum)",
-            available: true,
-            stock_status: "in_stock"
-          }
-        ]
-      },
-      mesa: {
-        sku: "MESA-JANTAR-4C",
-        title: "Conjunto Sala de Jantar 4 Cadeiras Retangular Estilo Industrial",
-        brand: "ArteMóveis",
-        cost: 135.00,
-        margin: "0.22",
-        stock: 45,
-        weight: 18.5,
-        features: "Tampo em MDF 25mm Acabamento Amadeirado, Estrutura em Aço Carbono Preto Fosco com Pintura Eletrostática",
-        competitors: [
-          {
-            id: "MLB24361666",
-            title: "Mesa Jantar Charles Eames Eiffel Madeira 90cm Branca",
-            price: 299.90,
-            original_price: 399.90,
-            discount: "25% OFF",
-            permalink: "https://www.mercadolivre.com.br/p/MLB24361666",
-            thumbnail: "/img/mesa_eiffel.webp",
-            free_shipping: true,
-            seller: "Algart Móveis (Loja Oficial)",
-            available: true,
-            stock_status: "in_stock"
-          },
-          {
-            id: "MLB29025522",
-            title: "Mesa de Jantar Retangular Estilo Industrial Para 4 Pessoas KLM",
-            price: 389.90,
-            original_price: 499.90,
-            discount: "22% OFF",
-            permalink: "https://www.mercadolivre.com.br/p/MLB29025522",
-            thumbnail: "/img/mesa_klm.webp",
-            free_shipping: true,
-            seller: "KLM Store Móveis (MercadoLíder Platinum)",
-            available: true,
-            stock_status: "in_stock"
-          },
-          {
-            id: "MLB27341255",
-            title: "Mesa de Jantar Retangular 4 Cadeiras Madesa",
-            price: 549.90,
-            original_price: 699.90,
-            discount: "21% OFF",
-            permalink: "https://www.mercadolivre.com.br/p/MLB27341255",
-            thumbnail: "/img/mesa_madesa.webp",
-            free_shipping: true,
-            seller: "Madesa Móveis (Loja Oficial • +50.000 vendidos)",
-            available: true,
-            stock_status: "in_stock"
-          }
-        ]
-      },
-      praia: {
-        sku: "CAD-PRAIA-01",
-        title: "Cadeira de Praia Alumínio Reclinável 8 Posições",
-        brand: "Mor",
-        cost: 39.90,
-        margin: "0.22",
-        stock: 50,
-        weight: 2.0,
-        features: "Estrutura 100% Alumínio resistente à maresia, Reclinável em 8 posições anatômicas, Dobrável e super leve, Tecido Poliéster reforçado",
-        competitors: [
-          {
-            id: "MLB28419203",
-            title: "Cadeira De Praia Alta Alumínio Dobrável Mor",
-            price: 89.90,
-            original_price: 109.90,
-            discount: "18% OFF",
-            permalink: "https://www.mercadolivre.com.br/p/MLB28419203",
-            thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_917343-MLA72803134989_112023-F.webp",
-            free_shipping: true,
-            seller: "Mor Loja Oficial (MercadoLíder Platinum)",
-            available: true,
-            stock_status: "in_stock"
-          },
-          {
-            id: "MLB18920441",
-            title: "Cadeira De Praia Reclinável 8 Posições Alumínio Mor Conforto",
-            price: 139.90,
-            original_price: 169.90,
-            discount: "17% OFF",
-            permalink: "https://www.mercadolivre.com.br/p/MLB18920441",
-            thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_792341-MLA72803134991_112023-F.webp",
-            free_shipping: true,
-            seller: "Casa & Praia Store (MercadoLíder Platinum)",
-            available: true,
-            stock_status: "in_stock"
-          },
-          {
-            id: "MLB29817203",
-            title: "Kit 2 Cadeiras De Praia Alumínio Dobrável Portátil Belfix",
-            price: 159.90,
-            original_price: 189.90,
-            discount: "15% OFF",
-            permalink: "https://www.mercadolivre.com.br/p/MLB29817203",
-            thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_891234-MLA72803134992_112023-F.webp",
-            free_shipping: true,
-            seller: "Belfix Oficial (+10.000 vendidos)",
-            available: true,
-            stock_status: "in_stock"
-          }
-        ]
-      }
-    };
-
-    function loadPreset(key) {
-      const p = PRESETS[key];
-      if (!p) return;
-      document.getElementById('input-sku').value = p.sku;
-      document.getElementById('input-title').value = p.title;
-      document.getElementById('input-brand').value = p.brand;
-      document.getElementById('input-cost').value = p.cost;
-      document.getElementById('input-margin').value = p.margin;
-      document.getElementById('input-stock').value = p.stock;
-      document.getElementById('input-weight').value = p.weight;
-      document.getElementById('input-features').value = p.features;
-
-      if (p.competitors && p.competitors.length > 0) {
-        activeCompetitors = JSON.parse(JSON.stringify(p.competitors));
-      }
-
-      // Executa recálculo automático imediato
-      setTimeout(() => {
-        const form = document.getElementById('intake-form');
-        if (form) form.dispatchEvent(new Event('submit'));
-      }, 50);
-    }
+    // Concorrentes mapeados dinamicamente para o produto em análise
+    let activeCompetitors = [];
 
     let currentSessionData = null;
     let currentlyEditingIndex = -1;
@@ -1423,16 +1148,22 @@
       return isNaN(n) ? fallback : n;
     }
 
-    // Limpar o exemplo padrão e preparar para cadastrar outro produto do zero
+    // Limpar o formulário e resetar estado para novo produto
     function clearIntakeForm() {
       document.getElementById('input-sku').value = '';
       document.getElementById('input-title').value = '';
       document.getElementById('input-brand').value = '';
       document.getElementById('input-cost').value = '';
-      document.getElementById('input-stock').value = '20';
+      document.getElementById('input-stock').value = '';
       document.getElementById('input-weight').value = '';
-      document.getElementById('input-packaging').value = '3.00';
+      document.getElementById('input-packaging').value = '';
       document.getElementById('input-features').value = '';
+      activeCompetitors = [];
+      currentSessionData = null;
+      const emptyState = document.getElementById('empty-state');
+      if (emptyState) emptyState.classList.remove('hidden');
+      const pipelineProgress = document.getElementById('pipeline-progress');
+      if (pipelineProgress) pipelineProgress.classList.add('hidden');
       const titleInput = document.getElementById('input-title');
       if (titleInput) titleInput.focus();
     }
@@ -1440,15 +1171,29 @@
     // Submissão do Formulário de Inteligência Comercial
     document.getElementById('intake-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const rawTitle = document.getElementById('input-title').value.trim();
+      const rawCost = parseFormNumber(document.getElementById('input-cost').value, 0);
+
+      if (!rawTitle) {
+        alert("Por favor, preencha o Nome do Produto.");
+        document.getElementById('input-title').focus();
+        return;
+      }
+      if (rawCost <= 0) {
+        alert("Por favor, informe o Custo CMV Unitário (R$).");
+        document.getElementById('input-cost').focus();
+        return;
+      }
+
       const btn = document.getElementById('btn-run-pipeline');
       btn.disabled = true;
       btn.innerHTML = `<span class="inline-block animate-spin mr-2">⏳</span> Processando Inteligência Comercial...`;
 
       const payload = {
         sku: document.getElementById('input-sku').value.trim() || 'SKU-' + Date.now().toString().slice(-4),
-        title_raw: document.getElementById('input-title').value.trim(),
+        title_raw: rawTitle,
         brand: document.getElementById('input-brand').value.trim() || 'Genérica',
-        cost_price: parseFormNumber(document.getElementById('input-cost').value),
+        cost_price: rawCost,
         target_margin: parseFormNumber(document.getElementById('input-margin').value, 0.20),
         stock_quantity: parseInt(document.getElementById('input-stock').value) || 1,
         weight_kg: parseFormNumber(document.getElementById('input-weight').value, 0.5),
@@ -1723,6 +1468,8 @@
     });
 
     function renderPipelineResults(data, sessionId) {
+      const emptyState = document.getElementById('empty-state');
+      if (emptyState) emptyState.classList.add('hidden');
       document.getElementById('pipeline-progress').classList.remove('hidden');
 
       // 1. Concorrentes Reais (Filtro Estrito: Apenas Anúncios Ativos com Estoque Disponível)
@@ -2538,13 +2285,7 @@
         if (res.ok && data.success) {
           btnText.innerText = "Autorizado! Entrando...";
           document.getElementById('login-overlay').classList.add('hidden');
-          // Dispara o cálculo inicial
-          loadMlStatus().then(() => {
-            setTimeout(() => {
-              const form = document.getElementById('intake-form');
-              if (form) form.dispatchEvent(new Event('submit'));
-            }, 250);
-          });
+          loadMlStatus();
         } else {
           errText.innerText = data.error || "Usuário ou senha incorretos.";
           errBox.classList.remove('hidden');
@@ -2585,12 +2326,7 @@
     // Verifica autenticação antes de iniciar o dashboard
     checkAuth().then((isAuth) => {
       if (isAuth) {
-        loadMlStatus().then(() => {
-          setTimeout(() => {
-            const form = document.getElementById('intake-form');
-            if (form) form.dispatchEvent(new Event('submit'));
-          }, 350);
-        });
+        loadMlStatus();
       }
     });
 

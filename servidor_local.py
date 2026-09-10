@@ -567,6 +567,9 @@ def get_guaranteed_competitors(query: str):
     return results
 
 
+SELLER_NICKNAME_CACHE = {}
+
+
 def search_official_ml_api(query: str, access_token: str, cfg: dict = None):
     """
     Realiza a consulta no Mercado Livre:
@@ -690,19 +693,51 @@ def search_official_ml_api(query: str, access_token: str, cfg: dict = None):
                         if not active_sellers:
                             continue
 
-                        # Ordena pelo menor preço entre os vendedores disponíveis
-                        active_sellers.sort(key=lambda x: float(x.get("price", 0.0)))
-                        first_item = active_sellers[0]
+                        # SELEÇÃO DO VENCEDOR DA BUY BOX (MERCADO LIVRE):
+                        # A rota /products/{pid}/items retorna os vendedores já ordenados pelo algoritmo
+                        # de Buy Box do Mercado Livre. Para refletir com exatidão o anúncio vencedor exibido
+                        # na página de compra do produto:
+                        # 1. Analisamos os concorrentes líderes (top 3) retornados pelo ML
+                        # 2. Dentre os líderes, priorizamos quem oferece frete grátis / custo de envio zero (Full/Crossdocking/Meli+)
+                        top_candidates = active_sellers[:min(3, len(active_sellers))]
+                        zero_cost_candidates = [
+                            it for it in top_candidates 
+                            if it.get("shipping", {}).get("cost", 999) == 0 or it.get("shipping", {}).get("free_shipping", False)
+                        ]
+                        first_item = zero_cost_candidates[0] if zero_cost_candidates else top_candidates[0]
                         price = float(first_item.get("price", 0.0))
                         if first_item.get("original_price"):
                             orig_price = float(first_item.get("original_price"))
                         free_shipping = first_item.get("shipping", {}).get("free_shipping", False) or price >= 79.0
                         if first_item.get("condition") == "used":
                             condition = "Usado"
+
+                        # Obtenção do vendedor real com apelido (nickname)
+                        seller_id = first_item.get("seller_id")
+                        seller_nick = SELLER_NICKNAME_CACHE.get(seller_id)
+                        if seller_nick is None and seller_id and req_headers.get("Authorization"):
+                            try:
+                                u_req = urllib.request.Request(
+                                    f"https://api.mercadolibre.com/users/{seller_id}",
+                                    headers=req_headers
+                                )
+                                with urllib.request.urlopen(u_req, timeout=1.5) as u_res:
+                                    u_data = json.loads(u_res.read().decode("utf-8"))
+                                    seller_nick = u_data.get("nickname") or ""
+                                    SELLER_NICKNAME_CACHE[seller_id] = seller_nick
+                            except Exception:
+                                SELLER_NICKNAME_CACHE[seller_id] = ""
+                                seller_nick = ""
+
+                        state_name = first_item.get("seller_address", {}).get("state", {}).get("name")
                         if first_item.get("official_store_id"):
-                            seller_label = "Loja Oficial no Mercado Livre"
-                        elif first_item.get("seller_address", {}).get("state", {}).get("name"):
-                            seller_label = f"Vendedor Oficial ({first_item.get('seller_address', {}).get('state', {}).get('name')})"
+                            seller_label = f"Loja Oficial ({seller_nick})" if seller_nick else "Loja Oficial no Mercado Livre"
+                        elif seller_nick and state_name:
+                            seller_label = f"Vendido por {seller_nick} ({state_name})"
+                        elif seller_nick:
+                            seller_label = f"Vendido por {seller_nick}"
+                        elif state_name:
+                            seller_label = f"Vendedor Oficial ({state_name})"
                 except Exception:
                     pass
 

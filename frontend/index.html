@@ -981,6 +981,7 @@
       try {
         const q = encodeURIComponent(query);
         const cmvVal = parseFloat(document.getElementById('input-cost')?.value) || 0;
+        const brandVal = encodeURIComponent((document.getElementById('input-brand')?.value || '').trim());
         let storedToken = null;
         try { storedToken = localStorage.getItem('ml_access_token'); } catch(e) {}
         const headers = {};
@@ -988,7 +989,7 @@
           headers['Authorization'] = 'Bearer ' + storedToken;
           headers['X-ML-Token'] = storedToken;
         }
-        const res = await fetch(`/api/competitors?q=${q}&cmv=${cmvVal}`, { headers });
+        const res = await fetch(`/api/competitors?q=${q}&cmv=${cmvVal}&brand=${brandVal}`, { headers });
         if (res.ok) {
           const compData = await res.json();
           if (compData.results && compData.results.length > 0) {
@@ -1206,6 +1207,7 @@
       try {
         const q = encodeURIComponent(payload.title_raw);
         const cmvVal = payload.cost_price || 0;
+        const brandVal = encodeURIComponent((payload.brand || '').trim());
         let storedToken = null;
         try { storedToken = localStorage.getItem('ml_access_token'); } catch(e) {}
         const headers = {};
@@ -1213,7 +1215,7 @@
           headers['Authorization'] = 'Bearer ' + storedToken;
           headers['X-ML-Token'] = storedToken;
         }
-        const res = await fetch(`/api/competitors?q=${q}&cmv=${cmvVal}`, { headers });
+        const res = await fetch(`/api/competitors?q=${q}&cmv=${cmvVal}&brand=${brandVal}`, { headers });
         if (res.ok) {
           const compData = await res.json();
           if (compData.results && compData.results.length > 0) {

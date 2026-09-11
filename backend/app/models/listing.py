@@ -49,7 +49,7 @@ class PreparedListing(BaseModel):
     marketplace: str = "mercadolivre"
     title_optimized: str = Field(description="Título otimizado para SEO com até 60 caracteres no ML")
     listing_type: str = "gold_special"  # Clássico ou Premium (gold_pro)
-    logistics_type: str = "mercado_envios"
+    logistics_type: str = "both"
     is_full: bool = False
     suggested_price: float
     min_price_floor: float

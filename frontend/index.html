@@ -455,7 +455,8 @@
         <div class="col-span-1">
           <label class="block text-xs font-semibold text-slate-300 mb-1.5">Modalidade Logística *</label>
           <select id="input-logistics" onchange="onLogisticsChange()" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
-            <option value="mercado_envios" selected>📦 Mercado Envios (Coleta / Agência)</option>
+            <option value="both" selected>🔄 Ambas (Híbrido / Comparativo Automático) [Recomendado]</option>
+            <option value="mercado_envios">📦 Mercado Envios Convencional (Coleta / Agência)</option>
             <option value="full">⚡ Mercado Envios FULL (Fulfillment Oficial)</option>
           </select>
         </div>
@@ -467,6 +468,16 @@
             <option value="yellow">🟡 Reputação Amarela (-40% Frete)</option>
             <option value="orange">🟠 Laranja / Sem Reputação (Tabela Cheia)</option>
           </select>
+        </div>
+
+        <div id="both-logistics-notice" class="col-span-1 sm:col-span-2 lg:col-span-4 bg-gradient-to-r from-blue-950/60 to-emerald-950/60 border border-emerald-500/40 rounded-xl p-3.5 text-xs text-emerald-200 flex items-start space-x-3">
+          <i data-lucide="split" class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5"></i>
+          <div class="space-y-1 text-slate-300 leading-relaxed">
+            <p class="font-bold text-emerald-300 text-xs">🔄 Modalidade Híbrida Ativada (Convencional + FULL Oficial):</p>
+            <p>• <strong>Comparativo Financeiro Lado a Lado:</strong> O motor calculará os custos e margens exatos em ambas as modalidades (com e sem desconto de frete do Full, e com embalagem de CD vs. própria).</p>
+            <p>• <strong>Estratégia Recomendada de Estoque:</strong> Aloque ~60% no CD do FULL (para ganhar Buy Box, tração do algoritmo e entrega no mesmo dia) e ~40% no seu depósito/agência (contingência contra ruptura de estoque).</p>
+            <p>• <strong>Regra de Frete & Embalagem:</strong> No comparativo, o Full zera a embalagem (R$ 0,00) e concede 10% de desconto adicional no frete para itens ≥ R$ 79; na coleta local, considera sua embalagem própria e tabela padrão.</p>
+          </div>
         </div>
 
         <div id="full-logistics-notice" class="hidden col-span-1 sm:col-span-2 lg:col-span-4 bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-3.5 text-xs text-emerald-200 flex items-start space-x-3">
@@ -745,6 +756,77 @@
                   <span class="text-slate-200 font-bold">Lucro Líquido Unitário:</span>
                   <span class="font-bold text-emerald-400 font-mono text-sm sm:text-base flex-shrink-0" id="display-final-profit-row">R$ 0,00</span>
                 </div>
+              </div>
+            </div>
+
+            <!-- Comparativo Lado a Lado: Convencional vs FULL -->
+            <div id="display-logistics-comparison" class="bg-gradient-to-br from-slate-900 via-slate-900/90 to-blue-950/40 rounded-xl p-3.5 sm:p-4 border border-blue-500/30 space-y-3">
+              <div class="flex items-center justify-between">
+                <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center space-x-1.5">
+                  <i data-lucide="git-compare" class="w-4 h-4 text-amber-400"></i>
+                  <span>Comparativo: Convencional vs. FULL Oficial</span>
+                </h4>
+                <span class="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
+                  <i data-lucide="sparkles" class="w-2.5 h-2.5"></i> Híbrido
+                </span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <!-- Coluna Convencional -->
+                <div class="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800 space-y-1.5">
+                  <div class="font-bold text-slate-300 text-[11px] flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-blue-400"></span> Convencional (Coleta)
+                  </div>
+                  <div class="flex justify-between text-slate-400 text-[11px]">
+                    <span>Embalagem:</span>
+                    <span class="font-mono text-slate-300 font-semibold" id="comp-std-pack">R$ 3,00</span>
+                  </div>
+                  <div class="flex justify-between text-slate-400 text-[11px]">
+                    <span>Frete ML:</span>
+                    <span class="font-mono text-slate-300 font-semibold" id="comp-std-ship">R$ 0,00</span>
+                  </div>
+                  <div class="flex justify-between text-slate-400 text-[11px] pt-1 border-t border-slate-800">
+                    <span>Lucro Unit.:</span>
+                    <span class="font-mono font-bold text-slate-200" id="comp-std-profit">R$ 0,00</span>
+                  </div>
+                  <div class="flex justify-between text-slate-400 text-[11px]">
+                    <span>Margem Líq.:</span>
+                    <span class="font-mono font-bold text-slate-200" id="comp-std-margin">0.0%</span>
+                  </div>
+                </div>
+
+                <!-- Coluna FULL -->
+                <div class="bg-emerald-950/30 p-2.5 rounded-lg border border-emerald-500/30 space-y-1.5 relative overflow-hidden">
+                  <div class="font-bold text-emerald-300 text-[11px] flex items-center justify-between">
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> FULL (Fulfillment)</span>
+                    <i data-lucide="zap" class="w-3 h-3 text-amber-400"></i>
+                  </div>
+                  <div class="flex justify-between text-slate-400 text-[11px]">
+                    <span>Embalagem:</span>
+                    <span class="font-mono text-emerald-300 font-semibold" id="comp-full-pack">R$ 0,00</span>
+                  </div>
+                  <div class="flex justify-between text-slate-400 text-[11px]">
+                    <span>Frete ML:</span>
+                    <span class="font-mono text-emerald-300 font-semibold" id="comp-full-ship">R$ 0,00</span>
+                  </div>
+                  <div class="flex justify-between text-slate-400 text-[11px] pt-1 border-t border-emerald-900/50">
+                    <span>Lucro Unit.:</span>
+                    <span class="font-mono font-bold text-emerald-400" id="comp-full-profit">R$ 0,00</span>
+                  </div>
+                  <div class="flex justify-between text-slate-400 text-[11px]">
+                    <span>Margem Líq.:</span>
+                    <span class="font-mono font-bold text-emerald-400" id="comp-full-margin">0.0%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Diferencial / Ganho Unitário no FULL -->
+              <div class="bg-amber-950/30 border border-amber-500/30 rounded-lg p-2 flex items-center justify-between text-xs">
+                <span class="text-amber-200 text-[11px] flex items-center gap-1">
+                  <i data-lucide="trending-up" class="w-3.5 h-3.5 text-amber-400"></i>
+                  <span>Ganho Extra no FULL:</span>
+                </span>
+                <span class="font-mono font-bold text-amber-300 text-xs sm:text-sm" id="comp-gain-profit">+ R$ 0,00 / un</span>
               </div>
             </div>
 
@@ -2264,20 +2346,26 @@
       };
     }
 
-    // Manipulador da troca de Modalidade Logística (Mercado Envios Tradicional vs Full)
+    // Manipulador da troca de Modalidade Logística (Ambas/Híbrido vs Convencional vs Full)
     function onLogisticsChange() {
       const logSelect = document.getElementById('input-logistics');
-      const notice = document.getElementById('full-logistics-notice');
+      const noticeFull = document.getElementById('full-logistics-notice');
+      const noticeBoth = document.getElementById('both-logistics-notice');
       const packInput = document.getElementById('input-packaging');
       if (!logSelect) return;
-      const isFull = logSelect.value === 'full';
-      if (notice) {
-        if (isFull) {
-          notice.classList.remove('hidden');
-        } else {
-          notice.classList.add('hidden');
-        }
+      const val = logSelect.value;
+      const isFull = val === 'full';
+      const isBoth = val === 'both';
+
+      if (noticeBoth) {
+        if (isBoth) noticeBoth.classList.remove('hidden');
+        else noticeBoth.classList.add('hidden');
       }
+      if (noticeFull) {
+        if (isFull) noticeFull.classList.remove('hidden');
+        else noticeFull.classList.add('hidden');
+      }
+
       if (packInput) {
         if (isFull && (packInput.value === '' || packInput.value === '3' || packInput.value === '3.00' || packInput.value === '3,00')) {
           packInput.value = '0.00';
@@ -2308,9 +2396,8 @@
       document.getElementById('input-packaging').value = '';
       document.getElementById('input-features').value = '';
       const logSelect = document.getElementById('input-logistics');
-      if (logSelect) logSelect.value = 'mercado_envios';
-      const notice = document.getElementById('full-logistics-notice');
-      if (notice) notice.classList.add('hidden');
+      if (logSelect) logSelect.value = 'both';
+      onLogisticsChange();
       activeCompetitors = [];
       currentSessionData = null;
       const emptyState = document.getElementById('empty-state');
@@ -2351,7 +2438,7 @@
         stock_quantity: parseInt(document.getElementById('input-stock').value) || 1,
         weight_kg: parseFormNumber(document.getElementById('input-weight').value, 0.5),
         packaging_cost: parseFormNumber(document.getElementById('input-packaging').value, 3.00),
-        logistics_type: document.getElementById('input-logistics') ? document.getElementById('input-logistics').value : 'mercado_envios',
+        logistics_type: document.getElementById('input-logistics') ? document.getElementById('input-logistics').value : 'both',
         reputation: document.getElementById('input-reputation').value || 'green',
         key_features: document.getElementById('input-features').value.split(',').map(s => s.trim()).filter(Boolean)
       };
@@ -2428,9 +2515,11 @@
       const cmv = payload.cost_price;
       const targetM = payload.target_margin;
       const weight = payload.weight_kg;
-      const pack = payload.packaging_cost;
       const rep = payload.reputation;
+      const isBothLogistics = payload.logistics_type === 'both';
       const isFull = payload.logistics_type === 'full';
+      const packStd = payload.packaging_cost > 0 ? payload.packaging_cost : 3.00;
+      const pack = isFull ? 0.00 : packStd;
 
       // Fórmula determinística: Preço = (Custos Fixos) / (1 - Soma das Taxas Percentuais)
       const varRates = targetM + 0.13 + 0.06 + 0.05; // Margem + ML (13%) + Imposto (6%) + Ads (5%)
@@ -2461,7 +2550,14 @@
       let sellingPrice = Math.floor(candidatePrice) + 0.90;
       if (sellingPrice < cmv * 1.15) sellingPrice = Math.ceil(cmv * 1.25) + 0.90;
 
-      const econBase = calculateUnitEconomics(sellingPrice, cmv, weight, pack, rep, undefined, undefined, undefined, isFull);
+      // Cálculo de ambos os modelos para comparativo lado a lado
+      const econStd = calculateUnitEconomics(sellingPrice, cmv, weight, packStd, rep, undefined, undefined, undefined, false);
+      const econFull = calculateUnitEconomics(sellingPrice, cmv, weight, 0.00, rep, undefined, undefined, undefined, true);
+      const econBase = (isFull || isBothLogistics) ? econFull : econStd;
+
+      const diffProfit = Number((econFull.netProfit - econStd.netProfit).toFixed(2));
+      const diffMargin = Number((parseFloat(econFull.netMargin) - parseFloat(econStd.netMargin)).toFixed(1));
+
       const fee = econBase.mlTotalFee;
       const shipping = econBase.shipping;
       const tax = econBase.tax;
@@ -2471,18 +2567,18 @@
       const roi = econBase.roi;
 
       // 4 Cenários de Estresse Totalmente Dinâmicos e Realistas
-      // 1. Conservador: Preço premium (+14%), lucro máximo por unidade
+      const isStressFull = isFull || isBothLogistics;
       const priceCons = Math.round((sellingPrice * 1.14) * 10) / 10 + (Math.round((sellingPrice * 1.14) * 10) % 1 === 0 ? 0.90 : 0);
-      const econCons = calculateUnitEconomics(priceCons, cmv, weight, pack, rep, undefined, undefined, undefined, isFull);
+      const econCons = calculateUnitEconomics(priceCons, cmv, weight, isStressFull ? 0.00 : packStd, rep, undefined, undefined, undefined, isStressFull);
 
       // 2. Agressivo: Preço de penetração (-8%), ganha volume e Buy Box
       const priceAgr = Math.max(Math.round(cmv * 1.18) + 0.90, Math.round((sellingPrice * 0.92) * 10) / 10);
-      const econAgr = calculateUnitEconomics(priceAgr, cmv, weight, pack, rep, undefined, undefined, undefined, isFull);
+      const econAgr = calculateUnitEconomics(priceAgr, cmv, weight, isStressFull ? 0.00 : packStd, rep, undefined, undefined, undefined, isStressFull);
 
       // 3. Adverso (Stress Test Extremo): Guerra de preços (-10%), inflação de CMV (+10%) e CAC de Ads (+30%)
       const priceAdv = Math.round((sellingPrice * 0.90) * 10) / 10;
       const cmvAdv = Math.round(cmv * 1.10 * 100) / 100;
-      const econAdv = calculateUnitEconomics(priceAdv, cmvAdv, weight, pack, rep, 0.065, undefined, undefined, isFull); // Ads 6.5% (+30% sobre 5%)
+      const econAdv = calculateUnitEconomics(priceAdv, cmvAdv, weight, isStressFull ? 0.00 : packStd, rep, 0.065, undefined, undefined, isStressFull); // Ads 6.5% (+30% sobre 5%)
 
       const scenarios = [
         {
@@ -2550,9 +2646,9 @@
             { field: "margem_alvo_desejada", formatted_value: `${(targetM * 100).toFixed(0)}%`, evidence_type: "FATO", source: "Briefing do Lojista", confidence: 100, source_layer: "1. INTAKE" },
             { field: "preco_venda_calculado", formatted_value: `R$ ${sellingPrice.toFixed(2)}`, evidence_type: "CALCULO", source: "Financial Engine Determinístico", confidence: 99, source_layer: "7.4 FINANCIAL" },
             { field: "ml_comissao_calculada", formatted_value: `R$ ${fee.toFixed(2)} (${sellingPrice >= 79 ? '13%' : '13% + R$ 6,00 fixa'})`, evidence_type: "CALCULO", source: "Tabela Oficial Mercado Livre", confidence: 100, source_layer: "7.3 SPECIALIST" },
-            { field: "frete_mercado_envios", formatted_value: econBase.isFreeShipping ? `R$ ${shipping.toFixed(2)} (${weight}kg • ${rep === 'yellow' ? 'Amarela' : (rep === 'orange' ? 'Sem Reputação' : 'MercadoLíder')}${isFull ? ' • FULL 10% OFF' : ''})` : `R$ 0,00 (Pago pelo Comprador)`, evidence_type: "CALCULO", source: isFull ? `Tabela Oficial ML FULL (10% Desconto Adicional)` : `Tabela Oficial ML ajuda/40538 (${weight}kg)`, confidence: 100, source_layer: "7.3 SPECIALIST" },
-            { field: "custo_embalagem_protecao", formatted_value: isFull ? `R$ 0,00 (Embalagem Inclusa pelo FULL)` : `R$ ${pack.toFixed(2)}`, evidence_type: "FATO", source: isFull ? "Mercado Envios FULL Oficial" : "Briefing do Lojista", confidence: 100, source_layer: "1. INTAKE" },
-            { field: "lucro_liquido_unitario", formatted_value: `R$ ${netProfit.toFixed(2)} (${netMargin}%)`, evidence_type: "CALCULO", source: "Financial Engine Determinístico", confidence: 100, source_layer: "7.4 FINANCIAL" }
+            { field: "frete_mercado_envios", formatted_value: econBase.isFreeShipping ? (isBothLogistics ? `FULL: R$ ${econFull.shipping.toFixed(2)} | Conv: R$ ${econStd.shipping.toFixed(2)}` : `R$ ${shipping.toFixed(2)} (${weight}kg • ${rep === 'yellow' ? 'Amarela' : (rep === 'orange' ? 'Sem Reputação' : 'MercadoLíder')}${isFull ? ' • FULL 10% OFF' : ''})`) : `R$ 0,00 (Pago pelo Comprador)`, evidence_type: "CALCULO", source: isBothLogistics ? `Tabelas ML Convencional + FULL (10% OFF)` : (isFull ? `Tabela Oficial ML FULL (10% Desconto Adicional)` : `Tabela Oficial ML ajuda/40538 (${weight}kg)`), confidence: 100, source_layer: "7.3 SPECIALIST" },
+            { field: "custo_embalagem_protecao", formatted_value: isBothLogistics ? `FULL: R$ 0,00 | Conv: R$ ${packStd.toFixed(2)}` : (isFull ? `R$ 0,00 (Embalagem Inclusa pelo FULL)` : `R$ ${pack.toFixed(2)}`), evidence_type: "FATO", source: isBothLogistics ? "Híbrido: CD Oficial ML + Própria" : (isFull ? "Mercado Envios FULL Oficial" : "Briefing do Lojista"), confidence: 100, source_layer: "1. INTAKE" },
+            { field: "lucro_liquido_unitario", formatted_value: isBothLogistics ? `FULL: R$ ${econFull.netProfit.toFixed(2)} (${econFull.netMargin}%) | Conv: R$ ${econStd.netProfit.toFixed(2)} (${econStd.netMargin}%)` : `R$ ${netProfit.toFixed(2)} (${netMargin}%)`, evidence_type: "CALCULO", source: "Financial Engine Determinístico", confidence: 100, source_layer: "7.4 FINANCIAL" }
           ]
         },
         // 10 & 11. VIABILITY & DECISION GATE (Padronização Oficial Camadas 10 e 11)
@@ -2570,8 +2666,15 @@
             ratingLabel = "A - ALTAMENTE VIÁVEL (Compensa Plenamente)";
             gateReasons.push(`Preço sugerido de R$ ${sellingPrice.toFixed(2)} é altamente competitivo frente à concorrência (média de mercado em R$ ${avgCompPrice.toFixed(2)}).`);
             gateReasons.push(`Margem líquida de ${netMargin}% atinge ou supera a meta desejada de ${targetMarginPct.toFixed(0)}%, gerando lucro de R$ ${netProfit.toFixed(2)} por unidade vendida.`);
-            gateReasons.push(`Cálculo determinístico inclui comissão oficial de R$ ${fee.toFixed(2)} e ${econBase.isFreeShipping ? `frete ${isFull ? 'Mercado Envios FULL com 10% OFF' : 'Mercado Envios'} (${weight}kg: R$ ${shipping.toFixed(2)})` : `taxa fixa de R$ 6,00 (frete comprador)`}.`);
-            if (isFull) {
+            gateReasons.push(`Cálculo determinístico inclui comissão oficial de R$ ${fee.toFixed(2)} e ${econBase.isFreeShipping ? `frete ${isFull || isBothLogistics ? 'Mercado Envios FULL com 10% OFF' : 'Mercado Envios'} (${weight}kg: R$ ${shipping.toFixed(2)})` : `taxa fixa de R$ 6,00 (frete comprador)`}.`);
+            if (isBothLogistics) {
+              gateReasons.push(`🔄 Modalidade Híbrida Ativada: O produto é altamente viável tanto no envio convencional (lucro de R$ ${econStd.netProfit.toFixed(2)} / ${econStd.netMargin}%) quanto no FULL (lucro de R$ ${econFull.netProfit.toFixed(2)} / ${econFull.netMargin}%).`);
+              gateReasons.push(`⚡ No FULL você ganha R$ ${diffProfit.toFixed(2)} a mais de lucro por unidade vendida (embalagem fornecida pelo CD + até 10% OFF no frete).`);
+              const stockFull = Math.round(payload.stock_quantity * 0.6);
+              const stockStd = payload.stock_quantity - stockFull;
+              gateReasons.push(`📦 Divisão de Estoque Recomendada: Aloque ~60% (${stockFull} un) no CD do FULL (para ganhar o Buy Box e entrega no mesmo dia) e mantenha ~40% (${stockStd} un) no depósito próprio para contingência.`);
+              gateReasons.push(`📋 Política de Armazenagem Prolongada: Envie remessas calculadas para 30 a 45 dias de giro no CD do Full para evitar tarifas de permanência após 60/90 dias.`);
+            } else if (isFull) {
               if (sellingPrice < 79.0) {
                 gateReasons.push(`⚡ Alavanca FULL (< R$ 79,00): Elegível ao frete grátis do comprador a partir de R$ 19/R$ 29 no carrinho Meli+. Você NÃO paga o frete (apenas a taxa fixa de R$ 6,00) e a embalagem é R$ 0,00!`);
               } else {
@@ -2585,7 +2688,9 @@
             ratingLabel = "B - VIÁVEL COM CONDIÇÕES (Ajustes Recomendados)";
             gateReasons.push(`Margem líquida base de ${netMargin}% é rentável, mas está abaixo da meta desejada (${targetMarginPct.toFixed(0)}%).`);
             gateReasons.push(`Vulnerabilidade em cenário adverso: sob guerra de preços e aumento de leilão, o lucro unitário recua para R$ ${econAdv.netProfit.toFixed(2)}.`);
-            if (isFull) {
+            if (isBothLogistics) {
+              gateReasons.push(`🔄 Oportunidade Híbrida: No FULL o lucro unitário sobe para R$ ${econFull.netProfit.toFixed(2)} (+R$ ${diffProfit.toFixed(2)} / un).`);
+            } else if (isFull) {
               if (sellingPrice < 79.0) {
                 gateReasons.push(`⚡ Oportunidade FULL: Frete grátis do comprador a partir de R$ 19/R$ 29 sem custo de frete para você (apenas taxa fixa R$ 6,00) acelera o giro de estoque.`);
               } else {
@@ -2630,14 +2735,31 @@
           ml_fee: fee,
           shipping: shipping,
           tax: tax,
-          pack: pack,
+          pack: isBothLogistics ? 0.00 : pack,
           weight: weight,
           reputation: rep,
           is_full: isFull,
+          is_both: isBothLogistics,
           logistics_type: payload.logistics_type,
           monthly_units: payload.stock_quantity,
           monthly_profit: Math.round(netProfit * payload.stock_quantity),
-          monthly_revenue: Math.round(sellingPrice * payload.stock_quantity)
+          monthly_revenue: Math.round(sellingPrice * payload.stock_quantity),
+          comparison: {
+            std: {
+              pack: packStd,
+              shipping: econStd.shipping,
+              netProfit: econStd.netProfit,
+              netMargin: econStd.netMargin
+            },
+            full: {
+              pack: 0.00,
+              shipping: econFull.shipping,
+              netProfit: econFull.netProfit,
+              netMargin: econFull.netMargin
+            },
+            diffProfit: diffProfit,
+            diffMargin: diffMargin
+          }
         }
       };
 
@@ -2968,10 +3090,17 @@
 
       const shipLabel = document.getElementById('display-shipping-label');
       if (shipLabel) {
+        const isBoth = Boolean(f.is_both || f.logistics_type === 'both');
         const isFull = Boolean(f.is_full || currentSessionData?.data?.payload_ref?.logistics_type === 'full');
         const repName = f.reputation === 'yellow' ? 'Amarela' : (f.reputation === 'orange' ? 'Sem Reputação' : 'MercadoLíder');
         if (f.shipping > 0) {
-          shipLabel.innerText = isFull ? `Frete ML FULL ⚡ (${f.weight}kg • ${repName} • 10% OFF):` : `Frete Mercado Envios (${f.weight}kg • ${repName}):`;
+          if (isBoth) {
+            shipLabel.innerText = `Frete FULL (10% OFF / Híbrido):`;
+          } else if (isFull) {
+            shipLabel.innerText = `Frete ML FULL ⚡ (${f.weight}kg • ${repName} • 10% OFF):`;
+          } else {
+            shipLabel.innerText = `Frete Mercado Envios (${f.weight}kg • ${repName}):`;
+          }
         } else {
           shipLabel.innerText = 'Taxa Fixa ML (< R$ 79):';
         }
@@ -2988,6 +3117,43 @@
 
       const revElem = document.getElementById('display-monthly-revenue');
       if (revElem) revElem.innerText = `R$ ${(f.monthly_revenue || 0).toFixed(2)}`;
+
+      // 5. Atualização do Comparativo Lado a Lado (Convencional vs. FULL)
+      const compCard = document.getElementById('display-logistics-comparison');
+      if (compCard) {
+        if (f.comparison && (f.logistics_type === 'both' || f.is_both)) {
+          compCard.classList.remove('hidden');
+          const std = f.comparison.std;
+          const full = f.comparison.full;
+          const diffP = f.comparison.diffProfit;
+          const diffM = f.comparison.diffMargin;
+
+          const stdPackElem = document.getElementById('comp-std-pack');
+          if (stdPackElem) stdPackElem.innerText = `R$ ${std.pack.toFixed(2)}`;
+          const stdShipElem = document.getElementById('comp-std-ship');
+          if (stdShipElem) stdShipElem.innerText = std.shipping > 0 ? `R$ ${std.shipping.toFixed(2)}` : (f.suggested_price < 79.0 ? 'R$ 6,00' : 'R$ 0,00');
+          const stdProfitElem = document.getElementById('comp-std-profit');
+          if (stdProfitElem) stdProfitElem.innerText = `R$ ${std.netProfit.toFixed(2)}`;
+          const stdMarginElem = document.getElementById('comp-std-margin');
+          if (stdMarginElem) stdMarginElem.innerText = `${std.netMargin}%`;
+
+          const fullPackElem = document.getElementById('comp-full-pack');
+          if (fullPackElem) fullPackElem.innerText = `R$ 0,00`;
+          const fullShipElem = document.getElementById('comp-full-ship');
+          if (fullShipElem) fullShipElem.innerText = full.shipping > 0 ? `R$ ${full.shipping.toFixed(2)}` : (f.suggested_price < 79.0 ? 'R$ 6,00' : 'R$ 0,00');
+          const fullProfitElem = document.getElementById('comp-full-profit');
+          if (fullProfitElem) fullProfitElem.innerText = `R$ ${full.netProfit.toFixed(2)}`;
+          const fullMarginElem = document.getElementById('comp-full-margin');
+          if (fullMarginElem) fullMarginElem.innerText = `${full.netMargin}%`;
+
+          const gainElem = document.getElementById('comp-gain-profit');
+          if (gainElem) {
+            gainElem.innerText = `+ R$ ${Math.max(0, diffP).toFixed(2)} / un (+${diffM}% margem)`;
+          }
+        } else {
+          compCard.classList.add('hidden');
+        }
+      }
 
       document.getElementById('pipeline-progress').scrollIntoView({ behavior: 'smooth' });
       lucide.createIcons();
@@ -4930,6 +5096,7 @@ Dúvidas? Deixe sua pergunta no chat, respondemos em minutos! Boas compras!`;
       }
     });
 
+    onLogisticsChange();
     lucide.createIcons();
   </script>
 </body>

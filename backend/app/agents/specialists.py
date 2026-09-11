@@ -338,7 +338,7 @@ Ficou com alguma dúvida? Envie sua pergunta abaixo, nossa equipe especializada 
         }
 
         is_full = getattr(intake, "is_full", False) or getattr(intake, "logistics_type", "") == "full"
-        logistics_type = getattr(intake, "logistics_type", "full" if is_full else "mercado_envios")
+        logistics_type = getattr(intake, "logistics_type", "both")
 
         return PreparedListing(
             sku=intake.sku,

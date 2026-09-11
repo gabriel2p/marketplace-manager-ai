@@ -32,8 +32,8 @@ class ProductIntakeRequest(BaseModel):
         description="Reputação no Mercado Livre: 'green' (MercadoLíder/Verde), 'yellow' (Amarela), 'orange' (Laranja/Sem reputação)"
     )
     logistics_type: str = Field(
-        default="mercado_envios",
-        description="Modalidade logística: 'mercado_envios' (Coleta/Agência) ou 'full' (Fulfillment Oficial)"
+        default="both",
+        description="Modalidade logística: 'both' (Ambas / Híbrido), 'mercado_envios' (Coleta/Agência) ou 'full' (Fulfillment Oficial)"
     )
     is_full: bool = Field(
         default=False,

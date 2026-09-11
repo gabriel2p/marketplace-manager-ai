@@ -7,6 +7,20 @@ e servidor de arquivos estáticos para o Dashboard Web.
 
 import os
 import sys
+
+# Força logs imediatos sem buffer para exibição instantânea no console do Render / PaaS
+os.environ["PYTHONUNBUFFERED"] = "1"
+try:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(line_buffering=True)
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(line_buffering=True)
+except Exception:
+    pass
+
+print("[STARTUP] Inicializando Marketplace Manager AI Server...", flush=True)
+print(f"[STARTUP] Versao Python: {sys.version.split()[0]}", flush=True)
+
 import json
 import re
 import secrets
@@ -25,12 +39,16 @@ ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
 ACTIVE_SESSIONS = {}  # token -> {"user_id": int, "username": str, "email": str, "nome": str, "role": str, "plano": str}
 
+print(f"[STARTUP] Porta detectada: {PORT} (Variavel PORT: {os.environ.get('PORT', 'Nao definida - usando 8000')})", flush=True)
+print(f"[STARTUP] Inicializando banco de dados (Engine padrao: {'PostgreSQL' if database.IS_POSTGRES else 'SQLite'})...", flush=True)
+
 # Inicialização do Banco de Dados Relacional (PostgreSQL / SQLite)
 try:
     database.init_db()
     database.seed_default_admin(ADMIN_USER, ADMIN_PASSWORD)
+    print(f"[STARTUP] Banco de dados pronto! Engine ativa: {getattr(database, 'ACTIVE_ENGINE', 'sqlite')}", flush=True)
 except Exception as e:
-    print(f"[DB] Aviso ao inicializar banco de dados: {e}")
+    print(f"[STARTUP DB WARNING] Aviso ao inicializar banco de dados: {e}. Servidor continuará normalmente em contingência.", flush=True)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
@@ -2153,6 +2171,20 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
 
+        # Endpoint de Health Check ultrarrápido para o Render / monitores de uptime
+        if parsed.path in ["/health", "/api/health", "/ping"]:
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            health_payload = {
+                "status": "ok",
+                "service": "marketplace-manager-ai",
+                "engine": getattr(database, "ACTIVE_ENGINE", "sqlite"),
+                "port": PORT
+            }
+            self.wfile.write(json.dumps(health_payload).encode("utf-8"))
+            return
+
         # 0. Checagem de Sessão / Perfil do Usuário
         if parsed.path in ["/api/auth/check", "/api/auth/me"]:
             is_auth = self.is_authenticated()
@@ -2493,19 +2525,39 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
         return super().do_GET()
 
 
+class RobustThreadingHTTPServer(ThreadingHTTPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+
 def run_server():
-    server_address = ('', PORT)
-    httpd = ThreadingHTTPServer(server_address, MarketplaceProxyHandler)
-    print("=" * 65)
-    print(f"  MARKETPLACE MANAGER AI - SERVIDOR LOCAL ATIVO")
-    print(f"  URL: http://localhost:{PORT}")
-    print(f"  API Oficial do Mercado Livre (Developers) Pronta para Conectar!")
-    print("=" * 65)
+    host = "0.0.0.0"
+    print(f"[STARTUP] Vinculando HTTP Server em {host}:{PORT}...", flush=True)
+    try:
+        httpd = RobustThreadingHTTPServer((host, PORT), MarketplaceProxyHandler)
+    except Exception as e:
+        print(f"[STARTUP WARNING] Falha ao vincular em {host}:{PORT} ({e}). Tentando vinculação padrão ('', {PORT})...", flush=True)
+        httpd = RobustThreadingHTTPServer(('', PORT), MarketplaceProxyHandler)
+
+    print("=" * 65, flush=True)
+    print(f"  MARKETPLACE MANAGER AI - SERVIDOR ATIVO NA NUVEM / LOCAL", flush=True)
+    print(f"  URL: http://0.0.0.0:{PORT}", flush=True)
+    print(f"  Engine Banco de Dados: {getattr(database, 'ACTIVE_ENGINE', 'sqlite').upper()}", flush=True)
+    print(f"  Health Check: http://0.0.0.0:{PORT}/health", flush=True)
+    print("=" * 65, flush=True)
+    print(f"[STARTUP] Pronto! Escutando requisições na porta {PORT} com sucesso.", flush=True)
+
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\nServidor finalizado.")
+        print("\nServidor finalizado por KeyboardInterrupt.", flush=True)
         httpd.server_close()
+    except Exception as err:
+        print(f"[SERVER CRASH] Erro fatal no loop do servidor: {err}", flush=True)
+        import traceback
+        traceback.print_exc()
+        httpd.server_close()
+        raise
 
 
 if __name__ == "__main__":

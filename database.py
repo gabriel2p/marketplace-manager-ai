@@ -59,20 +59,38 @@ IS_POSTGRES = bool(DATABASE_URL and (DATABASE_URL.startswith("postgres://") or D
 if IS_POSTGRES and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+# Se for PostgreSQL em nuvem (Render, Supabase, etc.) e sslmode não estiver explícito, adiciona sslmode=require
+POSTGRES_CONNECT_URL = DATABASE_URL
+if IS_POSTGRES:
+    if "sslmode=" not in POSTGRES_CONNECT_URL and ("render.com" in POSTGRES_CONNECT_URL or "supabase.co" in POSTGRES_CONNECT_URL or "aws" in POSTGRES_CONNECT_URL):
+        sep = "&" if "?" in POSTGRES_CONNECT_URL else "?"
+        POSTGRES_CONNECT_URL = f"{POSTGRES_CONNECT_URL}{sep}sslmode=require"
+
 SQLITE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "marketplace_saas.db")
+ACTIVE_ENGINE = "postgres" if IS_POSTGRES else "sqlite"
+_last_postgres_fail_time = 0.0
 
 
 def get_connection():
-    """Retorna uma conexão ativa com o banco (PostgreSQL ou SQLite fallback)."""
-    if IS_POSTGRES:
+    """Retorna uma conexão ativa com o banco (PostgreSQL ou SQLite fallback com tolerância a falhas)."""
+    global ACTIVE_ENGINE, _last_postgres_fail_time
+    now = datetime.now().timestamp()
+
+    if IS_POSTGRES and (now - _last_postgres_fail_time > 60.0):
         try:
             import psycopg2
             import psycopg2.extras
-            conn = psycopg2.connect(DATABASE_URL)
+            # Timeout curto de 5s para nunca travar o servidor nem o deploy do Render
+            conn = psycopg2.connect(POSTGRES_CONNECT_URL, connect_timeout=5)
+            ACTIVE_ENGINE = "postgres"
+            _last_postgres_fail_time = 0.0
             return conn, "postgres"
         except Exception as e:
-            print(f"[DB] Falha ao conectar no PostgreSQL ({e}). Usando SQLite local.")
+            _last_postgres_fail_time = now
+            ACTIVE_ENGINE = "sqlite"
+            print(f"[DB] Aviso: Conexão PostgreSQL falhou ({e}). Usando SQLite local com segurança.", flush=True)
     
+    ACTIVE_ENGINE = "sqlite"
     conn = sqlite3.connect(SQLITE_PATH)
     conn.row_factory = sqlite3.Row
     return conn, "sqlite"

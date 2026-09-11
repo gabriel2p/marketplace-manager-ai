@@ -320,23 +320,23 @@
           <span>Upgrade</span>
         </button>
 
-        <!-- Perfil do Usuário Logado -->
-        <div id="topbar-user-badge" class="hidden sm:flex items-center space-x-1.5 bg-slate-800 border border-cardborder px-2.5 sm:px-3 py-1.5 rounded-lg text-xs min-h-[36px] sm:min-h-[38px]" title="Usuário Ativo">
+        <!-- Perfil do Usuário Logado (Clique para Sair) -->
+        <div id="topbar-user-badge" onclick="handleLogout()" class="cursor-pointer hover:bg-slate-700/80 hover:border-slate-500 transition hidden sm:flex items-center space-x-1.5 bg-slate-800 border border-cardborder px-2.5 sm:px-3 py-1.5 rounded-lg text-xs min-h-[36px] sm:min-h-[38px] flex-shrink-0" title="Usuário Ativo • Clique para Sair / Encerrar Sessão">
           <i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i>
           <span id="topbar-user-name" class="font-bold text-white">admin</span>
           <span id="topbar-user-role-badge" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">Admin</span>
         </div>
 
         <!-- Botão Guia da Equipe (visível para Admin) -->
-        <button id="btn-team-management" onclick="openTeamModal()" class="hidden items-center space-x-1 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition min-h-[36px] sm:min-h-[38px]" title="Gerenciar Usuários da Equipe">
+        <button id="btn-team-management" onclick="openTeamModal()" class="hidden items-center space-x-1 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition min-h-[36px] sm:min-h-[38px] flex-shrink-0" title="Gerenciar Usuários da Equipe">
           <i data-lucide="users" class="w-3.5 h-3.5"></i>
           <span class="hidden md:inline">Equipe</span>
         </button>
 
-        <!-- Botão Sair / Logout -->
-        <button type="button" onclick="handleLogout()" title="Encerrar Sessão" class="flex items-center space-x-1 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 hover:text-white px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition shadow-sm min-h-[36px] sm:min-h-[38px]">
-          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
-          <span class="hidden sm:inline">Sair</span>
+        <!-- Botão Sair / Logout (Sempre visível e destacado com flex-shrink-0) -->
+        <button type="button" id="btn-topbar-logout" onclick="handleLogout()" title="Encerrar Sessão" class="flex items-center space-x-1.5 bg-rose-500/20 hover:bg-rose-600/30 border border-rose-500/50 text-rose-300 hover:text-white px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm min-h-[36px] sm:min-h-[38px] flex-shrink-0">
+          <i data-lucide="log-out" class="w-3.5 h-3.5 text-rose-400"></i>
+          <span>Sair</span>
         </button>
       </div>
     </div>
@@ -1415,7 +1415,11 @@
           </div>
         </div>
 
-        <div class="pt-2 border-t border-cardborder flex justify-end">
+        <div class="pt-2 border-t border-cardborder flex items-center justify-between">
+          <button type="button" onclick="closeTeamModal(); handleLogout();" class="px-3 py-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 hover:text-white border border-rose-500/30 font-bold text-xs flex items-center gap-1.5 transition min-h-[38px]">
+            <i data-lucide="log-out" class="w-3.5 h-3.5 text-rose-400"></i>
+            <span>Encerrar Sessão (Sair)</span>
+          </button>
           <button type="button" onclick="closeTeamModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs min-h-[38px]">Fechar</button>
         </div>
       </div>
@@ -3342,14 +3346,21 @@
       const nameEl = document.getElementById('topbar-user-name');
       const roleEl = document.getElementById('topbar-user-role-badge');
       const teamBtn = document.getElementById('btn-team-management');
+      const upgradeBtn = document.getElementById('btn-topbar-upgrade');
+
       if (nameEl && username) nameEl.innerText = username;
       if (roleEl && role) {
-        if (role === 'admin' || role === 'Admin') {
+        const isAdmin = (role === 'admin' || role === 'Admin');
+        if (isAdmin) {
           roleEl.innerText = 'Admin';
           roleEl.className = 'text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30';
           if (teamBtn) {
             teamBtn.classList.remove('hidden');
             teamBtn.classList.add('flex');
+          }
+          if (upgradeBtn) {
+            upgradeBtn.classList.add('hidden');
+            upgradeBtn.classList.remove('sm:flex');
           }
         } else {
           roleEl.innerText = role || 'Starter';
@@ -3358,8 +3369,13 @@
             teamBtn.classList.add('hidden');
             teamBtn.classList.remove('flex');
           }
+          if (upgradeBtn) {
+            upgradeBtn.classList.remove('hidden');
+            upgradeBtn.classList.add('sm:flex');
+          }
         }
       }
+      if (window.lucide) lucide.createIcons();
     }
 
     function updateCreditsUI(plan, creditsLeft, monthlyCredits, status, renewalDate) {
@@ -3372,21 +3388,27 @@
       const planEl = document.getElementById('topbar-plan-name');
       const creditsEl = document.getElementById('topbar-credits-text');
       const badgeBtn = document.getElementById('btn-credits-badge');
+      const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'Admin' || currentUser.plan === 'Admin' || (currentUser.monthly_credits && currentUser.monthly_credits >= 999999));
 
       if (planEl) planEl.innerText = (currentUser.plan || 'Starter').toUpperCase();
       if (creditsEl) {
-        creditsEl.innerText = `${currentUser.credits_left}/${currentUser.monthly_credits}`;
-        if (currentUser.credits_left <= 0) {
-          creditsEl.className = "text-rose-400 font-mono font-bold text-xs animate-pulse";
-          if (badgeBtn) {
-            badgeBtn.classList.remove('border-amber-500/30', 'text-amber-300');
-            badgeBtn.classList.add('border-rose-500/50', 'text-rose-300', 'bg-rose-500/10');
-          }
-        } else {
+        if (isAdmin) {
+          creditsEl.innerText = "ILIMITADO";
           creditsEl.className = "text-amber-300 font-mono font-bold text-xs";
-          if (badgeBtn) {
-            badgeBtn.classList.remove('border-rose-500/50', 'text-rose-300', 'bg-rose-500/10');
-            badgeBtn.classList.add('border-amber-500/30', 'text-amber-300');
+        } else {
+          creditsEl.innerText = `${currentUser.credits_left}/${currentUser.monthly_credits}`;
+          if (currentUser.credits_left <= 0) {
+            creditsEl.className = "text-rose-400 font-mono font-bold text-xs animate-pulse";
+            if (badgeBtn) {
+              badgeBtn.classList.remove('border-amber-500/30', 'text-amber-300');
+              badgeBtn.classList.add('border-rose-500/50', 'text-rose-300', 'bg-rose-500/10');
+            }
+          } else {
+            creditsEl.className = "text-amber-300 font-mono font-bold text-xs";
+            if (badgeBtn) {
+              badgeBtn.classList.remove('border-rose-500/50', 'text-rose-300', 'bg-rose-500/10');
+              badgeBtn.classList.add('border-amber-500/30', 'text-amber-300');
+            }
           }
         }
       }

@@ -2153,57 +2153,72 @@
         }
 
         const compGrid = document.getElementById('live-competitors-grid');
-        compGrid.innerHTML = activeOnly.map((c, index) => {
-          const permalink = c.permalink || (c.id ? `https://produto.mercadolivre.com.br/${c.id}` : 'https://www.mercadolivre.com.br');
-          const isItemLive = Boolean(c.is_live || isLiveMarket);
-          return `
-          <div class="bg-slate-900/90 rounded-xl p-4 border border-blue-500/30 hover:border-emerald-400 bg-gradient-to-b from-slate-900/90 to-slate-950/90 flex flex-col justify-between transition space-y-3 shadow-lg group">
-            <div class="flex space-x-3 items-start">
-              <div class="w-16 h-16 bg-slate-800 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center border border-slate-700/80 p-0.5">
-                ${c.thumbnail ? `<img src="${c.thumbnail}" alt="" class="w-full h-full object-contain" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-slate-500\\'><i data-lucide=\\'package\\' class=\\'w-7 h-7\\'></i></div>';if(window.lucide)lucide.createIcons();">` : `<i data-lucide="package" class="w-7 h-7 text-slate-500"></i>`}
+        if (activeOnly.length === 0) {
+          compGrid.innerHTML = `
+            <div class="col-span-full py-8 text-center bg-slate-900/60 rounded-xl border border-dashed border-slate-700/80 p-6">
+              <div class="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3 border border-slate-700">
+                <i data-lucide="search-x" class="w-6 h-6 text-slate-400"></i>
               </div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between gap-1 mb-1">
-                  <span class="text-[10px] ${isItemLive ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-sky-500/20 text-sky-300 border-sky-500/30'} font-bold px-2 py-0.5 rounded border flex items-center gap-1">
-                    <i data-lucide="${isItemLive ? 'check-circle-2' : 'shield-check'}" class="w-3 h-3 ${isItemLive ? 'text-emerald-400' : 'text-sky-400'}"></i> ${isItemLive ? 'Ao Vivo (Oficial)' : 'Catálogo Ativo'}
+              <h4 class="text-sm font-semibold text-slate-200">Nenhum concorrente direto encontrado para esta busca</h4>
+              <p class="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+                Não foram localizadas ofertas ativas no momento para estes termos exatos. O cálculo financeiro utilizou as métricas de CMV e margem-alvo declaradas.
+              </p>
+            </div>
+          `;
+          if (window.lucide) lucide.createIcons();
+        } else {
+          compGrid.innerHTML = activeOnly.map((c, index) => {
+            const permalink = c.permalink || (c.id ? `https://produto.mercadolivre.com.br/${c.id}` : 'https://www.mercadolivre.com.br');
+            const isItemLive = Boolean(c.is_live || isLiveMarket);
+            return `
+            <div class="bg-slate-900/90 rounded-xl p-4 border border-blue-500/30 hover:border-emerald-400 bg-gradient-to-b from-slate-900/90 to-slate-950/90 flex flex-col justify-between transition space-y-3 shadow-lg group">
+              <div class="flex space-x-3 items-start">
+                <div class="w-16 h-16 bg-slate-800 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center border border-slate-700/80 p-0.5">
+                  ${c.thumbnail ? `<img src="${c.thumbnail}" alt="" class="w-full h-full object-contain" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-slate-500\\'><i data-lucide=\\'package\\' class=\\'w-7 h-7\\'></i></div>';if(window.lucide)lucide.createIcons();">` : `<i data-lucide="package" class="w-7 h-7 text-slate-500"></i>`}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between gap-1 mb-1">
+                    <span class="text-[10px] ${isItemLive ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-sky-500/20 text-sky-300 border-sky-500/30'} font-bold px-2 py-0.5 rounded border flex items-center gap-1">
+                      <i data-lucide="${isItemLive ? 'check-circle-2' : 'shield-check'}" class="w-3 h-3 ${isItemLive ? 'text-emerald-400' : 'text-sky-400'}"></i> ${isItemLive ? 'Ao Vivo (Oficial)' : 'Catálogo Ativo'}
+                    </span>
+                    ${c.free_shipping ? '<span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">Frete Grátis</span>' : ''}
+                  </div>
+
+                  <a href="${permalink}" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-slate-100 hover:text-amber-300 line-clamp-2 transition flex items-start gap-1" title="${c.title}">
+                    <span>${c.title}</span>
+                    <i data-lucide="external-link" class="w-3 h-3 flex-shrink-0 text-amber-400 opacity-80 group-hover:opacity-100 mt-0.5"></i>
+                  </a>
+
+                  <div class="flex items-baseline space-x-2 mt-1.5">
+                    <span class="text-base font-bold text-amber-400">R$ ${c.price.toFixed(2)}</span>
+                    ${c.original_price && c.original_price > c.price ? `<span class="text-[10px] text-slate-500 line-through">R$ ${c.original_price.toFixed(2)}</span>` : ''}
+                    ${c.discount ? `<span class="text-[10px] bg-emerald-500/20 text-emerald-400 font-bold px-1.5 py-0.2 rounded border border-emerald-500/30">${c.discount}</span>` : ''}
+                  </div>
+                  <span class="text-[10px] text-slate-400 truncate block mt-0.5 font-medium flex items-center gap-1">
+                    <i data-lucide="store" class="w-3 h-3 text-slate-500"></i>
+                    ${c.seller}
                   </span>
-                  ${c.free_shipping ? '<span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">Frete Grátis</span>' : ''}
                 </div>
+              </div>
 
-                <a href="${permalink}" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-slate-100 hover:text-amber-300 line-clamp-2 transition flex items-start gap-1" title="${c.title}">
-                  <span>${c.title}</span>
-                  <i data-lucide="external-link" class="w-3 h-3 flex-shrink-0 text-amber-400 opacity-80 group-hover:opacity-100 mt-0.5"></i>
-                </a>
-
-                <div class="flex items-baseline space-x-2 mt-1.5">
-                  <span class="text-base font-bold text-amber-400">R$ ${c.price.toFixed(2)}</span>
-                  ${c.original_price && c.original_price > c.price ? `<span class="text-[10px] text-slate-500 line-through">R$ ${c.original_price.toFixed(2)}</span>` : ''}
-                  ${c.discount ? `<span class="text-[10px] bg-emerald-500/20 text-emerald-400 font-bold px-1.5 py-0.2 rounded border border-emerald-500/30">${c.discount}</span>` : ''}
+              <!-- Ação Oficial: Botão direto para o Anúncio Real e Botão de Ignorar -->
+              <div class="pt-2.5 border-t border-slate-800 flex items-center justify-between gap-2">
+                <span class="text-[10px] text-slate-500 font-mono truncate">${c.id || 'MLB'}</span>
+                <div class="flex items-center gap-1.5 flex-wrap sm:flex-nowrap justify-end">
+                  <button type="button" onclick="ignoreCompetitor('${c.id}', '${encodeURIComponent(c.title || '')}', this)" title="Ignorar este anúncio (o agente memoriza e recalcula viabilidade)" class="bg-slate-800 hover:bg-rose-950/60 hover:border-rose-500/50 text-slate-400 hover:text-rose-300 font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 text-xs flex items-center space-x-1 transition min-h-[36px]">
+                    <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
+                    <span>Ignorar</span>
+                  </button>
+                  <a href="${permalink}" target="_blank" rel="noopener noreferrer" class="bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white font-bold px-3 py-1.5 rounded-lg border border-blue-500/40 text-xs flex items-center justify-center space-x-1.5 transition shadow-sm min-h-[36px]">
+                    <span>Abrir Anúncio Oficial</span>
+                    <i data-lucide="external-link" class="w-3.5 h-3.5 flex-shrink-0"></i>
+                  </a>
                 </div>
-                <span class="text-[10px] text-slate-400 truncate block mt-0.5 font-medium flex items-center gap-1">
-                  <i data-lucide="store" class="w-3 h-3 text-slate-500"></i>
-                  ${c.seller}
-                </span>
               </div>
             </div>
-
-            <!-- Ação Oficial: Botão direto para o Anúncio Real e Botão de Ignorar -->
-            <div class="pt-2.5 border-t border-slate-800 flex items-center justify-between gap-2">
-              <span class="text-[10px] text-slate-500 font-mono truncate">${c.id || 'MLB'}</span>
-              <div class="flex items-center gap-1.5 flex-wrap sm:flex-nowrap justify-end">
-                <button type="button" onclick="ignoreCompetitor('${c.id}', '${encodeURIComponent(c.title || '')}', this)" title="Ignorar este anúncio (o agente memoriza e recalcula viabilidade)" class="bg-slate-800 hover:bg-rose-950/60 hover:border-rose-500/50 text-slate-400 hover:text-rose-300 font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 text-xs flex items-center space-x-1 transition min-h-[36px]">
-                  <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
-                  <span>Ignorar</span>
-                </button>
-                <a href="${permalink}" target="_blank" rel="noopener noreferrer" class="bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white font-bold px-3 py-1.5 rounded-lg border border-blue-500/40 text-xs flex items-center justify-center space-x-1.5 transition shadow-sm min-h-[36px]">
-                  <span>Abrir Anúncio Oficial</span>
-                  <i data-lucide="external-link" class="w-3.5 h-3.5 flex-shrink-0"></i>
-                </a>
-              </div>
-            </div>
-          </div>
-        `;
-        }).join('');
+          `;
+          }).join('');
+        }
 
         document.getElementById('stat-competitors-count').innerText = `${activeOnly.length} concorrentes ativos com estoque real mapeados no ML.`;
       }

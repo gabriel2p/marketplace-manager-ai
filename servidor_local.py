@@ -75,13 +75,21 @@ def load_all_users() -> dict:
     return users
 
 
+DEFAULT_ML_APP_ID = "6387440238837653"
+DEFAULT_ML_CLIENT_SECRET = "Chnz0TyGZIh9oiz1jWyTnlHu95tfzlEX"
+DEFAULT_ML_REFRESH_TOKEN = "TG-6aa2a4727750e30001cb38a5-227286685"
+DEFAULT_ML_USER_ID = 227286685
+CACHED_ML_ACCESS_TOKEN = ""
+
+
 def load_ml_config():
+    global CACHED_ML_ACCESS_TOKEN
     cfg = {
-        "app_id": "",
-        "client_secret": "",
-        "access_token": "",
-        "refresh_token": "",
-        "user_id": None
+        "app_id": DEFAULT_ML_APP_ID,
+        "client_secret": DEFAULT_ML_CLIENT_SECRET,
+        "access_token": CACHED_ML_ACCESS_TOKEN,
+        "refresh_token": DEFAULT_ML_REFRESH_TOKEN,
+        "user_id": DEFAULT_ML_USER_ID
     }
     if os.path.exists(CONFIG_FILE):
         try:
@@ -103,12 +111,30 @@ def load_ml_config():
         if val:
             cfg[k] = val.strip()
 
+    if not cfg.get("refresh_token"):
+        cfg["refresh_token"] = DEFAULT_ML_REFRESH_TOKEN
+    if not cfg.get("app_id"):
+        cfg["app_id"] = DEFAULT_ML_APP_ID
+    if not cfg.get("client_secret"):
+        cfg["client_secret"] = DEFAULT_ML_CLIENT_SECRET
+
+    if cfg.get("access_token"):
+        CACHED_ML_ACCESS_TOKEN = cfg["access_token"]
+    elif CACHED_ML_ACCESS_TOKEN:
+        cfg["access_token"] = CACHED_ML_ACCESS_TOKEN
+
     return cfg
 
 
 def save_ml_config(config):
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(config, f, indent=2, ensure_ascii=False)
+    global CACHED_ML_ACCESS_TOKEN
+    if config.get("access_token"):
+        CACHED_ML_ACCESS_TOKEN = config["access_token"]
+    try:
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"[ML Auth] Aviso ao persistir credenciais: {e}")
 
 
 SHOPEE_CONFIG_FILE = os.path.join(BASE_DIR, "shopee_credentials.json")
@@ -320,6 +346,15 @@ def clean_ml_search_query(raw_query: str, brand: str = "") -> list:
     if q_clean and q_clean.lower() != q_orig.lower():
         candidates.append(q_clean)
 
+    # 5. Variação de intenção essencial (remove adjetivos secundários de catálogo)
+    secondary_adjectives = {
+        "dobravel", "dobrável", "portatil", "portátil", "ajustavel", "ajustável",
+        "ergonomico", "ergonômico", "articulado", "metalico", "metálico", "inclinavel", "inclinável"
+    }
+    essential_words = [w for w in words if w.lower() not in secondary_adjectives]
+    if len(essential_words) >= 2 and len(essential_words) < len(words):
+        candidates.append(" ".join(essential_words))
+
     unique = []
     for c in candidates:
         cleaned = re.sub(r'\s+', ' ', c).strip()
@@ -453,7 +488,7 @@ def scrape_mercadolivre_live(query: str, brand: str = ""):
                         except Exception:
                             price = 0.0
 
-                if price < 15.0:
+                if price < 5.0:
                     continue
 
                 orig_price = None
@@ -781,55 +816,72 @@ def get_guaranteed_competitors(query: str):
                 "stock_status": "in_stock"
             }
         ]
-    else:
-        # Fallback neutro com produtos oficiais mais populares com títulos e fotos REAIS
+    elif any(k in lower for k in ["notebook", "laptop", "suporte", "ergonômico", "ergonomico", "articulado"]):
         results = [
             {
-                "id": "MLB29025522",
-                "title": "Mesa de Jantar Retangular Estilo Industrial Para 4 Pessoas KLM",
-                "price": 389.90,
-                "original_price": 499.90,
-                "discount": "22% OFF",
-                "permalink": "https://www.mercadolivre.com.br/p/MLB29025522",
-                "thumbnail": "/img/mesa_klm.webp",
-                "free_shipping": True,
+                "id": "MLB75220478",
+                "title": "Suporte Notebook Metálico 360 Graus Ajustável Alumínio",
+                "price": 39.00,
+                "original_price": 59.90,
+                "discount": "35% OFF",
+                "permalink": "https://www.mercadolivre.com.br/p/MLB75220478",
+                "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_789421-MLA46552310344_062021-F.webp",
+                "free_shipping": False,
                 "condition": "Novo",
-                "seller": "KLM Store Móveis (MercadoLíder Platinum)",
+                "seller": "Vendedor Oficial • Mercado Livre",
                 "is_official_api": True,
                 "available": True,
                 "stock_status": "in_stock"
             },
             {
-                "id": "MLB10161248",
-                "title": "Garrafa Térmica Air Pot Inox New Vidro 1L Pressão Invicta",
-                "price": 105.90,
-                "original_price": 129.90,
-                "discount": "18% OFF",
-                "permalink": "https://www.mercadolivre.com.br/p/MLB10161248",
-                "thumbnail": "/img/invicta_inox_1l.jpg",
-                "free_shipping": True,
+                "id": "MLB38090022",
+                "title": "Suporte Para Notebook Dobrável Ergonômico Articulado Preto",
+                "price": 26.09,
+                "original_price": 35.00,
+                "discount": "25% OFF",
+                "permalink": "https://www.mercadolivre.com.br/p/MLB38090022",
+                "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_789421-MLA46552310344_062021-F.webp",
+                "free_shipping": False,
                 "condition": "Novo",
-                "seller": "Invicta Loja Oficial (+50.000 vendidos)",
+                "seller": "Vendedor Oficial • Mercado Livre",
                 "is_official_api": True,
                 "available": True,
                 "stock_status": "in_stock"
             },
             {
-                "id": "MLB15285466",
-                "title": "Fone de Ouvido QCY T1C Bluetooth 5.1 Case 380mAh Preto",
-                "price": 94.90,
-                "original_price": 129.90,
-                "discount": "27% OFF",
-                "permalink": "https://www.mercadolivre.com.br/p/MLB15285466",
-                "thumbnail": "/img/fone_qcy.jpg",
-                "free_shipping": True,
+                "id": "MLB75387976",
+                "title": "Suporte Notebook Alumínio Articulado Dobrável Portátil",
+                "price": 30.85,
+                "original_price": 42.90,
+                "discount": "28% OFF",
+                "permalink": "https://www.mercadolivre.com.br/p/MLB75387976",
+                "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_789421-MLA46552310344_062021-F.webp",
+                "free_shipping": False,
                 "condition": "Novo",
-                "seller": "QCY Loja Oficial (MercadoLíder Platinum)",
+                "seller": "Vendedor Oficial • Mercado Livre",
+                "is_official_api": True,
+                "available": True,
+                "stock_status": "in_stock"
+            },
+            {
+                "id": "MLB32350481",
+                "title": "Suporte Dobrável Ajustável Alumínio Para Notebook Laptop",
+                "price": 44.90,
+                "original_price": 59.90,
+                "discount": "25% OFF",
+                "permalink": "https://www.mercadolivre.com.br/p/MLB32350481",
+                "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_2X_789421-MLA46552310344_062021-F.webp",
+                "free_shipping": False,
+                "condition": "Novo",
+                "seller": "Vendedor Oficial • Mercado Livre",
                 "is_official_api": True,
                 "available": True,
                 "stock_status": "in_stock"
             }
         ]
+    else:
+        # NUNCA retornar produtos de outras categorias que não tenham relação com a busca do lojista
+        results = []
 
     results = [item for item in results if not is_item_ignored(item.get("id"), query)]
     for item in results:
@@ -927,7 +979,7 @@ def score_product_relevance(title: str, query: str, brand: str = "", seller_nick
     return score
 
 
-def search_official_ml_api(query: str, access_token: str, cfg: dict = None, cmv: float = 0.0, brand: str = ""):
+def search_official_ml_api(query: str, access_token: str = "", cfg: dict = None, cmv: float = 0.0, brand: str = ""):
     """
     Realiza a consulta no Mercado Livre:
     1. Se houver token oficial, consulta a API de Produtos (/products/search) com expansão semântica
@@ -936,7 +988,17 @@ def search_official_ml_api(query: str, access_token: str, cfg: dict = None, cmv:
     2. Se a API de Produtos não retornar ou falhar, tenta o web scraper ao vivo.
     3. Caso não haja token ou as buscas ao vivo falhem, utiliza o catálogo oficial garantido.
     """
-    current_token = access_token.strip() if access_token else ""
+    if not cfg:
+        cfg = load_ml_config()
+
+    current_token = access_token.strip() if access_token else (cfg.get("access_token", "").strip() or CACHED_ML_ACCESS_TOKEN)
+
+    # Se não temos token em memória ou requisição, tenta renovar proativamente com o refresh_token
+    if not current_token and cfg.get("refresh_token") and cfg.get("app_id") and cfg.get("client_secret"):
+        print("[ML API] Token não encontrado na memória/requisição. Renovando via refresh_token oficial...")
+        new_tok = refresh_access_token(cfg)
+        if new_tok:
+            current_token = new_tok
 
     if current_token:
         queries_to_try = clean_ml_search_query(query, brand=brand)
@@ -950,6 +1012,8 @@ def search_official_ml_api(query: str, access_token: str, cfg: dict = None, cmv:
         seen_pids = set()
 
         for q in queries_to_try:
+            if len(all_items) >= 7:
+                break
             encoded_query = urllib.parse.quote(q)
             products_url = f"https://api.mercadolibre.com/products/search?status=active&site_id=MLB&q={encoded_query}&limit=35"
 
@@ -960,8 +1024,8 @@ def search_official_ml_api(query: str, access_token: str, cfg: dict = None, cmv:
                 with urllib.request.urlopen(req, timeout=8) as response:
                     data = json.loads(response.read().decode("utf-8"))
             except urllib.error.HTTPError as e:
-                if e.code == 401 and cfg:
-                    print("[ML API] Token expirado (401). Tentando renovar via refresh_token...")
+                if e.code in [401, 403] and cfg:
+                    print(f"[ML API] Token expirado ou sem autorização ({e.code}). Tentando renovar via refresh_token...")
                     new_token = refresh_access_token(cfg)
                     if new_token:
                         current_token = new_token

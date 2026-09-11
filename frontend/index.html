@@ -167,7 +167,7 @@
           <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center">
             <span class="text-xs text-amber-300 font-semibold flex items-center justify-center gap-1.5">
               <i data-lucide="gift" class="w-4 h-4 text-amber-400 flex-shrink-0"></i>
-              <span>Novo cadastro ganha <strong>50 créditos mensais</strong> no Plano Starter!</span>
+              <span>Novo cadastro ganha <strong>3 créditos gratuitos</strong> para testar e validar o software!</span>
             </span>
           </div>
 
@@ -234,7 +234,7 @@
               id="btn-register-submit" 
               class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-emerald-500/20 transition flex items-center justify-center space-x-2 text-sm sm:text-base min-h-[46px]"
             >
-              <span id="btn-register-text">Criar Conta & Ativar 50 Créditos</span>
+              <span id="btn-register-text">Criar Conta & Ativar 3 Créditos Grátis</span>
               <i data-lucide="check-circle" class="w-4 h-4"></i>
             </button>
           </div>
@@ -310,7 +310,7 @@
           <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400 fill-amber-400 flex-shrink-0"></i>
           <span id="topbar-plan-name" class="font-bold text-white uppercase text-[10px] sm:text-[11px] tracking-wide">STARTER</span>
           <span class="text-slate-600">|</span>
-          <span id="topbar-credits-text" class="text-amber-300 font-mono font-bold text-xs">50/50</span>
+          <span id="topbar-credits-text" class="text-amber-300 font-mono font-bold text-xs">3/3</span>
           <span class="hidden md:inline text-[10px] text-slate-400">créditos</span>
         </button>
 
@@ -3757,7 +3757,7 @@
         errText.innerText = "A senha deve conter pelo menos 6 caracteres.";
         errBox.classList.remove('hidden');
         btn.disabled = false;
-        btnText.innerText = "Criar Conta & Ativar 50 Créditos";
+        btnText.innerText = "Criar Conta & Ativar 3 Créditos Grátis";
         return;
       }
 
@@ -3776,8 +3776,8 @@
             email: data.email || email,
             role: data.role || 'Starter',
             plan: data.plan || 'Starter',
-            credits_left: data.credits_left !== undefined ? data.credits_left : 50,
-            monthly_credits: data.monthly_credits !== undefined ? data.monthly_credits : 50,
+            credits_left: data.credits_left !== undefined ? data.credits_left : 3,
+            monthly_credits: data.monthly_credits !== undefined ? data.monthly_credits : 3,
             status: data.status || 'ativo'
           };
           updateCurrentUserUI(currentUser.user, currentUser.role);
@@ -3785,18 +3785,18 @@
           loadMlStatus();
           loadShopeeStatus();
           openPlatformModal();
-          alert(`🎉 Bem-vindo ao Marketplace Manager AI!\n\nSua conta foi criada no Plano Starter e você já possui ${currentUser.credits_left} créditos mensais disponíveis para analisar o Mercado Livre e Shopee!`);
+          alert(`🎉 Bem-vindo ao Marketplace Manager AI!\n\nSua conta foi criada e você já possui ${currentUser.credits_left} créditos gratuitos para testar e validar o software na prática no Mercado Livre e Shopee!`);
         } else {
           errText.innerText = data.error || "Erro ao realizar cadastro.";
           errBox.classList.remove('hidden');
           btn.disabled = false;
-          btnText.innerText = "Criar Conta & Ativar 50 Créditos";
+          btnText.innerText = "Criar Conta & Ativar 3 Créditos Grátis";
         }
       } catch (err) {
         errText.innerText = "Erro ao conectar com o servidor: " + err.message;
         errBox.classList.remove('hidden');
         btn.disabled = false;
-        btnText.innerText = "Criar Conta & Ativar 50 Créditos";
+        btnText.innerText = "Criar Conta & Ativar 3 Créditos Grátis";
       }
     }
 

@@ -12,11 +12,14 @@ BRASILIA_TZ = timezone(timedelta(hours=-3))
 DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 
 PLANS_CONFIG = {
+    "Free Trial": {"creditos": 3, "nome": "Free Trial"},
     "Starter": {"creditos": 50, "nome": "Starter"},
     "Pro": {"creditos": 250, "nome": "Pro"},
     "Advanced": {"creditos": 1000, "nome": "Advanced"},
     "Admin": {"creditos": 999999, "nome": "Admin"}
 }
+
+SIGNUP_DEFAULT_CREDITS = 3
 
 IS_POSTGRES = bool(DATABASE_URL and (DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://")))
 
@@ -178,14 +181,19 @@ def seed_default_admin(admin_user: str = "admin", admin_password: str = "admin12
         conn.close()
 
 
-def create_user(email: str, password: str, nome: str = "", plano: str = "Starter") -> dict:
-    """Cria um novo usuário cliente na plataforma."""
+def create_user(email: str, password: str, nome: str = "", plano: str = "Starter", creditos: int = None) -> dict:
+    """Cria um novo usuário cliente na plataforma com 3 créditos gratuitos para teste e validação."""
     email_clean = email.strip().lower()
     if not email_clean or not password:
         return {"success": False, "error": "E-mail e senha são obrigatórios."}
     
-    plan_info = PLANS_CONFIG.get(plano, PLANS_CONFIG["Starter"])
-    credits = plan_info["creditos"]
+    if creditos is not None:
+        credits = int(creditos)
+    elif plano in ("Starter", "Free Trial"):
+        credits = SIGNUP_DEFAULT_CREDITS
+    else:
+        plan_info = PLANS_CONFIG.get(plano, PLANS_CONFIG["Starter"])
+        credits = plan_info["creditos"]
     hashed = hash_password(password)
     now_dt = get_brasilia_now()
     renovacao_dt = now_dt + timedelta(days=30)

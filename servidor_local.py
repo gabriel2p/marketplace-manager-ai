@@ -18,10 +18,19 @@ try:
 except ImportError:
     ThreadingHTTPServer = HTTPServer
 
+import database
+
 PORT = int(os.environ.get("PORT", 8000))
 ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
-ACTIVE_SESSIONS = {}  # token -> {"username": str, "role": str}
+ACTIVE_SESSIONS = {}  # token -> {"user_id": int, "username": str, "email": str, "nome": str, "role": str, "plano": str}
+
+# Inicialização do Banco de Dados Relacional (PostgreSQL / SQLite)
+try:
+    database.init_db()
+    database.seed_default_admin(ADMIN_USER, ADMIN_PASSWORD)
+except Exception as e:
+    print(f"[DB] Aviso ao inicializar banco de dados: {e}")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
@@ -1604,6 +1613,12 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                 return match.group(1).strip()
         return None
 
+    def get_current_user_session(self):
+        token = self.get_session_token()
+        if token and token in ACTIVE_SESSIONS:
+            return ACTIVE_SESSIONS[token]
+        return None
+
     def is_authenticated(self):
         token = self.get_session_token()
         return bool(token and token in ACTIVE_SESSIONS)
@@ -1611,21 +1626,137 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
 
+        # Autenticação: Registro de Novo Usuário (SaaS)
+        if parsed.path == "/api/auth/register":
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8') if content_length > 0 else "{}"
+            try:
+                data = json.loads(body)
+                email = str(data.get("email", "")).strip().lower()
+                password = str(data.get("password", ""))
+                nome = str(data.get("nome", "")).strip()
+                plano = str(data.get("plano", "Starter")).strip()
+
+                if not email or not password:
+                    self.send_response(400)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"success": False, "error": "E-mail e senha são obrigatórios."}).encode('utf-8'))
+                    return
+
+                res = database.create_user(email, password, nome=nome, plano=plano)
+                if not res.get("success"):
+                    self.send_response(400)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(json.dumps(res, ensure_ascii=False).encode('utf-8'))
+                    return
+
+                user_info = res["user"]
+                token = secrets.token_hex(24)
+                ACTIVE_SESSIONS[token] = {
+                    "user_id": user_info["id"],
+                    "username": user_info["email"],
+                    "email": user_info["email"],
+                    "nome": user_info["nome"],
+                    "role": "user",
+                    "plano": user_info["plano"]
+                }
+                print(f"[AUTH] Novo usuário registrado com sucesso: '{email}' (Plano: {user_info['plano']})")
+
+                self.send_response(201)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Set-Cookie", f"session_token={token}; Path=/; HttpOnly; SameSite=Lax")
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "success": True,
+                    "token": token,
+                    "user": user_info["email"],
+                    "nome": user_info["nome"],
+                    "email": user_info["email"],
+                    "role": "user",
+                    "plano": user_info["plano"],
+                    "plan": user_info["plano"],
+                    "creditos_restantes": user_info["creditos_restantes"],
+                    "credits_left": user_info["creditos_restantes"],
+                    "creditos_mensais": user_info["creditos_mensais"],
+                    "monthly_credits": user_info["creditos_mensais"],
+                    "status_assinatura": user_info.get("status_assinatura", "ativo"),
+                    "status": user_info.get("status_assinatura", "ativo")
+                }, ensure_ascii=False).encode('utf-8'))
+            except Exception as e:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode('utf-8'))
+            return
+
         # Autenticação: Login
         if parsed.path == "/api/auth/login":
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length).decode('utf-8') if content_length > 0 else "{}"
             try:
                 data = json.loads(body)
-                u = str(data.get("username", "")).strip()
+                u = str(data.get("username", "") or data.get("email", "")).strip()
                 p = str(data.get("password", ""))
 
+                # 1. Tenta autenticar no banco de dados relacional
+                auth_res = database.authenticate_user(u, p)
+                if auth_res.get("authenticated"):
+                    token = secrets.token_hex(24)
+                    ACTIVE_SESSIONS[token] = {
+                        "user_id": auth_res["user_id"],
+                        "username": auth_res["email"],
+                        "email": auth_res["email"],
+                        "nome": auth_res.get("nome", ""),
+                        "role": auth_res.get("role", "user"),
+                        "plano": auth_res.get("plano", "Starter")
+                    }
+                    print(f"[AUTH] Login bem-sucedido (Banco): '{auth_res['email']}' (Plano: {auth_res['plano']})")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.send_header("Set-Cookie", f"session_token={token}; Path=/; HttpOnly; SameSite=Lax")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({
+                        "success": True, 
+                        "token": token, 
+                        "user": auth_res["email"],
+                        "email": auth_res["email"],
+                        "nome": auth_res.get("nome", ""),
+                        "role": auth_res["role"],
+                        "plano": auth_res["plano"],
+                        "plan": auth_res["plano"],
+                        "creditos_restantes": auth_res["creditos_restantes"],
+                        "credits_left": auth_res["creditos_restantes"],
+                        "creditos_mensais": auth_res["creditos_mensais"],
+                        "monthly_credits": auth_res["creditos_mensais"],
+                        "status_assinatura": auth_res["status_assinatura"],
+                        "status": auth_res["status_assinatura"]
+                    }, ensure_ascii=False).encode('utf-8'))
+                    return
+
+                # 2. Fallback de compatibilidade para admin ou equipe legada
                 all_users = load_all_users()
                 if u in all_users and all_users[u]["password"] == p:
                     token = secrets.token_hex(24)
                     role = all_users[u].get("role", "user")
-                    ACTIVE_SESSIONS[token] = {"username": u, "role": role}
-                    print(f"[AUTH] Login bem-sucedido: '{u}' (Perfil: {role})")
+                    plano = "Admin" if role == "admin" else "Pro"
+                    db_u = database.get_user_by_email(u)
+                    if not db_u:
+                        cr = database.create_user(u, p, nome=u, plano=plano)
+                        uid = cr.get("user", {}).get("id", 1)
+                    else:
+                        uid = db_u["id"]
+
+                    ACTIVE_SESSIONS[token] = {
+                        "user_id": uid,
+                        "username": u, 
+                        "email": u, 
+                        "nome": u,
+                        "role": role,
+                        "plano": plano
+                    }
+                    print(f"[AUTH] Login bem-sucedido (Legado sincronizado): '{u}' (Perfil: {role})")
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json; charset=utf-8")
                     self.send_header("Set-Cookie", f"session_token={token}; Path=/; HttpOnly; SameSite=Lax")
@@ -1634,14 +1765,24 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                         "success": True, 
                         "token": token, 
                         "user": u, 
-                        "role": role
+                        "email": u,
+                        "role": role,
+                        "plano": plano,
+                        "plan": plano,
+                        "creditos_restantes": 999999 if role == "admin" else 250,
+                        "credits_left": 999999 if role == "admin" else 250,
+                        "creditos_mensais": 999999 if role == "admin" else 250,
+                        "monthly_credits": 999999 if role == "admin" else 250,
+                        "status_assinatura": "ativo",
+                        "status": "ativo"
                     }).encode('utf-8'))
-                else:
-                    print(f"[AUTH] Falha de login: credenciais inválidas para '{u}'")
-                    self.send_response(401)
-                    self.send_header("Content-Type", "application/json; charset=utf-8")
-                    self.end_headers()
-                    self.wfile.write(json.dumps({"success": False, "error": "Usuário ou senha incorretos."}).encode('utf-8'))
+                    return
+
+                print(f"[AUTH] Falha de login: credenciais inválidas para '{u}'")
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": "Usuário ou senha incorretos."}).encode('utf-8'))
             except Exception as e:
                 self.send_response(400)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -1660,6 +1801,134 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
             self.send_header("Set-Cookie", "session_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax")
             self.end_headers()
             self.wfile.write(json.dumps({"success": True, "message": "Desconectado com sucesso."}).encode('utf-8'))
+            return
+
+        # Middleware de Créditos & Auditoria de Consumo
+        if parsed.path == "/api/v1/credits/consume":
+            sess = self.get_current_user_session()
+            if not sess:
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": "Autenticação obrigatória para executar análises de mercado."}).encode('utf-8'))
+                return
+
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8') if content_length > 0 else "{}"
+            try:
+                data = json.loads(body)
+                sku = str(data.get("sku", "")).strip() or "N/A"
+                title = str(data.get("title", "") or data.get("produto_nome", "")).strip() or "Produto"
+                marketplace = str(data.get("marketplace", "Mercado Livre")).strip()
+
+                uid = sess.get("user_id")
+                if not uid:
+                    db_u = database.get_user_by_email(sess.get("email") or sess.get("username", ""))
+                    if db_u:
+                        uid = db_u["id"]
+                        sess["user_id"] = uid
+
+                if not uid:
+                    self.send_response(400)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"success": False, "error": "Usuário não localizado no banco."}).encode('utf-8'))
+                    return
+
+                result = database.consume_credit(uid, sku=sku, produto_nome=title, marketplace=marketplace, creditos=1)
+                result["credits_left"] = result.get("saldo_restante", 0)
+                result["plan"] = result.get("plano", "Starter")
+                if "message" in result:
+                    result["error"] = result["message"]
+
+                if result.get("success"):
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(json.dumps(result, ensure_ascii=False).encode('utf-8'))
+                elif result.get("reason") == "no_credits":
+                    self.send_response(402)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(json.dumps(result, ensure_ascii=False).encode('utf-8'))
+                elif result.get("reason") == "inactive":
+                    self.send_response(403)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(json.dumps(result, ensure_ascii=False).encode('utf-8'))
+                else:
+                    self.send_response(400)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(json.dumps(result, ensure_ascii=False).encode('utf-8'))
+            except Exception as e:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode('utf-8'))
+            return
+
+        # Webhook de Pagamentos (Asaas, Stripe ou Simulação)
+        if parsed.path == "/api/v1/webhooks/pagamentos":
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8') if content_length > 0 else "{}"
+            try:
+                payload = json.loads(body)
+                print(f"[WEBHOOK] Notificação de pagamento recebida: {payload}")
+
+                target_email = ""
+                if "user_email" in payload:
+                    target_email = str(payload["user_email"]).strip().lower()
+                elif "email" in payload:
+                    target_email = str(payload["email"]).strip().lower()
+                elif "customer_email" in payload:
+                    target_email = str(payload["customer_email"]).strip().lower()
+                elif "payment" in payload and isinstance(payload["payment"], dict):
+                    target_email = str(payload["payment"].get("externalReference") or payload["payment"].get("customerEmail") or "").strip().lower()
+                elif "data" in payload and isinstance(payload["data"], dict):
+                    obj = payload["data"].get("object", {})
+                    target_email = str(obj.get("customer_email") or obj.get("metadata", {}).get("email") or "").strip().lower()
+
+                plano = str(payload.get("plano") or payload.get("plan") or "Pro").strip()
+                if "data" in payload and isinstance(payload["data"], dict):
+                    obj = payload["data"].get("object", {})
+                    plano = str(obj.get("metadata", {}).get("plano") or plano).strip()
+
+                status = "ativo"
+                event_name = str(payload.get("event") or payload.get("type") or "").upper()
+                if "OVERDUE" in event_name or "FAILED" in event_name or "CANCELED" in event_name:
+                    status = "inadimplente" if "OVERDUE" in event_name else "cancelado"
+
+                is_recharge_only = "RECHARGE" in event_name or payload.get("event") == "credit.recharge"
+                custom_credits = payload.get("credits") or payload.get("creditos")
+
+                if not target_email:
+                    self.send_response(400)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"success": False, "error": "E-mail do cliente não identificado no payload."}).encode('utf-8'))
+                    return
+
+                res = database.recharge_user_credits(target_email, plano=plano, status=status, credits=custom_credits, add_only=is_recharge_only)
+                print(f"[WEBHOOK] Resultado do processamento para '{target_email}': {res}")
+
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "success": True,
+                    "message": "Webhook processado com sucesso.",
+                    "plan": plano,
+                    "plano": plano,
+                    "new_credits_left": res.get("creditos_restantes"),
+                    "creditos_restantes": res.get("creditos_restantes"),
+                    "resultado": res
+                }, ensure_ascii=False).encode('utf-8'))
+            except Exception as e:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode('utf-8'))
             return
 
         # Salvar credenciais do Mercado Livre
@@ -1860,23 +2129,93 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
 
-        # 0. Checagem de Sessão / Autenticação
-        if parsed.path == "/api/auth/check":
+        # 0. Checagem de Sessão / Perfil do Usuário
+        if parsed.path in ["/api/auth/check", "/api/auth/me"]:
             is_auth = self.is_authenticated()
-            sess_info = {}
-            token = self.get_session_token()
-            if is_auth and token and token in ACTIVE_SESSIONS:
-                sess_info = ACTIVE_SESSIONS[token] if isinstance(ACTIVE_SESSIONS[token], dict) else {"username": ADMIN_USER, "role": "admin"}
-
             res = {
-                "authenticated": is_auth,
-                "user": sess_info.get("username", ADMIN_USER) if is_auth else None,
-                "role": sess_info.get("role", "admin") if is_auth else None
+                "authenticated": False,
+                "user": None,
+                "email": None,
+                "nome": None,
+                "role": None,
+                "plano": "Starter",
+                "creditos_restantes": 0,
+                "creditos_mensais": 0,
+                "status_assinatura": "inativo"
             }
+            if is_auth:
+                sess = self.get_current_user_session()
+                uid = sess.get("user_id") if sess else None
+                user_email = sess.get("email") or sess.get("username") if sess else None
+
+                db_user = None
+                if uid:
+                    db_user = database.get_user_by_id(uid)
+                if not db_user and user_email:
+                    db_user = database.get_user_by_email(user_email)
+
+                if db_user:
+                    res = {
+                        "authenticated": True,
+                        "user_id": db_user["id"],
+                        "user": db_user["email"],
+                        "email": db_user["email"],
+                        "nome": db_user.get("nome", "") or db_user["email"].split("@")[0],
+                        "role": "admin" if db_user.get("plano") == "Admin" else sess.get("role", "user"),
+                        "plano": db_user.get("plano", "Starter"),
+                        "plan": db_user.get("plano", "Starter"),
+                        "creditos_mensais": db_user.get("creditos_mensais", 50),
+                        "monthly_credits": db_user.get("creditos_mensais", 50),
+                        "creditos_restantes": db_user.get("creditos_restantes", 0),
+                        "credits_left": db_user.get("creditos_restantes", 0),
+                        "status_assinatura": db_user.get("status_assinatura", "ativo"),
+                        "status": db_user.get("status_assinatura", "ativo"),
+                        "data_renovacao": db_user.get("data_renovacao")
+                    }
+                else:
+                    res = {
+                        "authenticated": True,
+                        "user": user_email or ADMIN_USER,
+                        "email": user_email or ADMIN_USER,
+                        "nome": user_email or ADMIN_USER,
+                        "role": sess.get("role", "admin"),
+                        "plano": "Admin" if sess.get("role") == "admin" else "Starter",
+                        "plan": "Admin" if sess.get("role") == "admin" else "Starter",
+                        "creditos_mensais": 999999 if sess.get("role") == "admin" else 50,
+                        "monthly_credits": 999999 if sess.get("role") == "admin" else 50,
+                        "creditos_restantes": 999999 if sess.get("role") == "admin" else 50,
+                        "credits_left": 999999 if sess.get("role") == "admin" else 50,
+                        "status_assinatura": "ativo",
+                        "status": "ativo"
+                    }
+
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.end_headers()
-            self.wfile.write(json.dumps(res).encode('utf-8'))
+            self.wfile.write(json.dumps(res, ensure_ascii=False).encode('utf-8'))
+            return
+
+        # 0.2 Extrato e Auditoria de Créditos do Usuário
+        if parsed.path == "/api/v1/credits/history":
+            sess = self.get_current_user_session()
+            if not sess:
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(b'{"success": false, "error": "Autenticacao necessaria"}')
+                return
+
+            uid = sess.get("user_id")
+            if not uid:
+                db_u = database.get_user_by_email(sess.get("email") or sess.get("username", ""))
+                if db_u:
+                    uid = db_u["id"]
+
+            logs = database.get_user_audit_logs(uid, limit=30) if uid else []
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(json.dumps({"success": True, "logs": logs}, ensure_ascii=False).encode('utf-8'))
             return
 
         # 0.1 Consulta de usuários (apenas para Admin)

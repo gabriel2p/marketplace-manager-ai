@@ -85,15 +85,25 @@
       <div class="bg-cardbg/95 backdrop-blur border border-cardborder rounded-2xl p-5 sm:p-8 shadow-2xl space-y-5 sm:space-y-6">
         <div class="border-b border-cardborder pb-4 flex items-center justify-between">
           <div>
-            <h2 class="text-base font-semibold text-white">Acesso ao Painel</h2>
-            <p class="text-xs text-slate-400">Insira suas credenciais para continuar</p>
+            <h2 class="text-base font-semibold text-white">Acesso à Plataforma SaaS</h2>
+            <p class="text-xs text-slate-400">Inteligência de Mercado & Viabilidade Comercial</p>
           </div>
           <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1">
             <i data-lucide="shield-check" class="w-3 h-3 text-emerald-400"></i> Protegido
           </span>
         </div>
 
-        <!-- Alerta de Erro -->
+        <!-- Abas de Autenticação (Entrar vs Criar Conta) -->
+        <div class="flex border-b border-cardborder">
+          <button type="button" id="tab-btn-login" onclick="switchAuthTab('login')" class="flex-1 pb-2.5 text-xs sm:text-sm font-bold text-amber-400 border-b-2 border-amber-400 transition flex items-center justify-center gap-1.5">
+            <i data-lucide="log-in" class="w-3.5 h-3.5"></i> Entrar
+          </button>
+          <button type="button" id="tab-btn-register" onclick="switchAuthTab('register')" class="flex-1 pb-2.5 text-xs sm:text-sm font-semibold text-slate-400 hover:text-slate-200 border-b-2 border-transparent transition flex items-center justify-center gap-1.5">
+            <i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Criar Conta Grátis
+          </button>
+        </div>
+
+        <!-- Alerta de Erro Login -->
         <div id="login-error" class="hidden bg-rose-500/10 border border-rose-500/30 text-rose-300 px-3.5 py-2.5 rounded-lg text-xs flex items-center gap-2">
           <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0 text-rose-400"></i>
           <span id="login-error-msg">Usuário ou senha incorretos.</span>
@@ -102,10 +112,10 @@
         <!-- Formulário de Login -->
         <form id="login-form" class="space-y-4" onsubmit="handleLogin(event)">
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5" for="login-username">Usuário</label>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5" for="login-username">E-mail ou Usuário</label>
             <div class="relative">
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <i data-lucide="user" class="w-4 h-4"></i>
+                <i data-lucide="mail" class="w-4 h-4"></i>
               </div>
               <input 
                 type="text" 
@@ -114,7 +124,7 @@
                 required 
                 autocomplete="username" 
                 class="w-full bg-slate-900 border border-cardborder rounded-lg pl-9 pr-3 py-2.5 sm:py-2.5 text-base sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 transition min-h-[44px]"
-                placeholder="Nome de usuário"
+                placeholder="seuemail@empresa.com ou admin"
               >
             </div>
           </div>
@@ -149,6 +159,88 @@
               <span id="btn-login-text">Entrar no Sistema</span>
               <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </button>
+          </div>
+        </form>
+
+        <!-- Formulário de Cadastro (Criar Nova Conta) -->
+        <form id="register-form" class="space-y-3.5 hidden" onsubmit="handleRegister(event)">
+          <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center">
+            <span class="text-xs text-amber-300 font-semibold flex items-center justify-center gap-1.5">
+              <i data-lucide="gift" class="w-4 h-4 text-amber-400 flex-shrink-0"></i>
+              <span>Novo cadastro ganha <strong>50 créditos mensais</strong> no Plano Starter!</span>
+            </span>
+          </div>
+
+          <div id="register-error" class="hidden bg-rose-500/10 border border-rose-500/30 text-rose-300 px-3.5 py-2.5 rounded-lg text-xs flex items-center gap-2">
+            <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0 text-rose-400"></i>
+            <span id="register-error-msg">Erro ao cadastrar.</span>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1" for="register-name">Nome Completo / Empresa</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <i data-lucide="user" class="w-4 h-4"></i>
+              </div>
+              <input 
+                type="text" 
+                id="register-name" 
+                required 
+                autocomplete="name" 
+                class="w-full bg-slate-900 border border-cardborder rounded-lg pl-9 pr-3 py-2 text-base sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 transition min-h-[42px]"
+                placeholder="Ex: João da Silva ou Loja Tech"
+              >
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1" for="register-email">E-mail Comercial *</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <i data-lucide="mail" class="w-4 h-4"></i>
+              </div>
+              <input 
+                type="email" 
+                id="register-email" 
+                required 
+                autocomplete="email" 
+                class="w-full bg-slate-900 border border-cardborder rounded-lg pl-9 pr-3 py-2 text-base sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 transition min-h-[42px]"
+                placeholder="seuemail@empresa.com"
+              >
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1" for="register-password">Senha de Acesso (mínimo 6 caracteres) *</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <i data-lucide="lock" class="w-4 h-4"></i>
+              </div>
+              <input 
+                type="password" 
+                id="register-password" 
+                required 
+                minlength="6"
+                autocomplete="new-password" 
+                class="w-full bg-slate-900 border border-cardborder rounded-lg pl-9 pr-3 py-2 text-base sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 transition min-h-[42px]"
+                placeholder="Mínimo 6 caracteres"
+              >
+            </div>
+          </div>
+
+          <div class="pt-1.5">
+            <button 
+              type="submit" 
+              id="btn-register-submit" 
+              class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-emerald-500/20 transition flex items-center justify-center space-x-2 text-sm sm:text-base min-h-[46px]"
+            >
+              <span id="btn-register-text">Criar Conta & Ativar 50 Créditos</span>
+              <i data-lucide="check-circle" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <div class="text-[11px] text-center text-slate-500">
+            Acesso liberado imediatamente após o cadastro.
           </div>
         </form>
       </div>
@@ -212,6 +304,21 @@
           <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
           <span class="text-xs font-semibold text-slate-300">MODO: ANÁLISE</span>
         </div>
+
+        <!-- Badge de Créditos do Usuário SaaS -->
+        <button onclick="openCreditsModal()" id="btn-credits-badge" class="flex items-center space-x-1.5 sm:space-x-2 bg-gradient-to-r from-amber-500/10 to-amber-600/10 hover:from-amber-500/20 hover:to-amber-600/20 border border-amber-500/30 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-semibold text-amber-300 transition shadow-sm min-h-[36px] sm:min-h-[38px]" title="Ver Saldo de Créditos e Histórico de Consultas">
+          <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400 fill-amber-400 flex-shrink-0"></i>
+          <span id="topbar-plan-name" class="font-bold text-white uppercase text-[10px] sm:text-[11px] tracking-wide">STARTER</span>
+          <span class="text-slate-600">|</span>
+          <span id="topbar-credits-text" class="text-amber-300 font-mono font-bold text-xs">50/50</span>
+          <span class="hidden md:inline text-[10px] text-slate-400">créditos</span>
+        </button>
+
+        <!-- Botão Upgrade Rápido -->
+        <button onclick="openUpgradeModal()" id="btn-topbar-upgrade" class="hidden sm:flex items-center space-x-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-900 font-bold px-2.5 sm:px-3 py-1.5 rounded-lg text-xs transition shadow-sm shadow-amber-500/20 min-h-[36px] sm:min-h-[38px]" title="Fazer Upgrade ou Recarregar Créditos">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+          <span>Upgrade</span>
+        </button>
 
         <!-- Perfil do Usuário Logado -->
         <div id="topbar-user-badge" class="hidden sm:flex items-center space-x-1.5 bg-slate-800 border border-cardborder px-2.5 sm:px-3 py-1.5 rounded-lg text-xs min-h-[36px] sm:min-h-[38px]" title="Usuário Ativo">
@@ -1315,6 +1422,281 @@
     </div>
   </div>
 
+  <!-- ============================================================ -->
+  <!-- MODAL: PLANOS & UPGRADE DE CRÉDITOS (PAYWALL SAAS)           -->
+  <!-- ============================================================ -->
+  <div id="upgrade-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[9990] hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-cardbg border border-amber-500/40 rounded-2xl max-w-3xl w-full max-h-[94vh] flex flex-col p-4 sm:p-6 shadow-2xl space-y-4 my-auto overflow-hidden">
+      <!-- Cabeçalho -->
+      <div class="flex items-center justify-between pb-3 border-b border-cardborder flex-shrink-0">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-400 to-amber-600 flex items-center justify-center shadow-md shadow-amber-500/20 flex-shrink-0">
+            <i data-lucide="sparkles" class="w-4 h-4 text-slate-900"></i>
+          </div>
+          <div>
+            <h3 class="text-base sm:text-lg font-bold text-white">Planos de Assinatura & Créditos</h3>
+            <p class="text-xs text-slate-400">Desbloqueie análises ilimitadas de inteligência comercial</p>
+          </div>
+        </div>
+        <button onclick="closeUpgradeModal()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white rounded-lg">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="overflow-y-auto pr-1 space-y-4 text-xs">
+        <!-- Banner de Limite Atingido (Paywall Trigger) -->
+        <div id="upgrade-paywall-alert" class="hidden bg-rose-500/15 border border-rose-500/40 text-rose-200 p-4 rounded-xl text-sm flex items-start gap-3 shadow-lg">
+          <div class="w-8 h-8 rounded-lg bg-rose-500/20 flex items-center justify-center flex-shrink-0">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-400"></i>
+          </div>
+          <div>
+            <h4 class="font-bold text-rose-100 text-sm sm:text-base">Limite de Consultas Atingido</h4>
+            <p id="upgrade-paywall-msg" class="text-xs sm:text-sm text-rose-200 mt-1 leading-relaxed font-medium">
+              Você atingiu o limite de consultas do seu plano atual. Faça um upgrade ou recarregue seus créditos para continuar.
+            </p>
+          </div>
+        </div>
+
+        <!-- Grade de Planos Comerciais -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4">
+          <!-- Plano Starter -->
+          <div class="bg-slate-900/80 border border-cardborder rounded-xl p-4 flex flex-col justify-between hover:border-slate-600 transition">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Starter</span>
+                <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-semibold border border-cardborder">Essencial</span>
+              </div>
+              <div>
+                <div class="flex items-baseline gap-1">
+                  <span class="text-2xl font-extrabold text-white">R$ 49</span>
+                  <span class="text-xs text-slate-400">/mês</span>
+                </div>
+                <p class="text-[11px] text-amber-400 font-semibold mt-0.5">50 análises completas / mês</p>
+              </div>
+              <ul class="space-y-1.5 text-slate-300 text-[11px] pt-2 border-t border-cardborder">
+                <li class="flex items-center gap-1.5">
+                  <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0"></i>
+                  <span>Mercado Livre & Shopee Brasil</span>
+                </li>
+                <li class="flex items-center gap-1.5">
+                  <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0"></i>
+                  <span>Motor Financeiro CMV & Margem</span>
+                </li>
+                <li class="flex items-center gap-1.5">
+                  <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0"></i>
+                  <span>Copywriting & Gatilhos Mentais</span>
+                </li>
+                <li class="flex items-center gap-1.5">
+                  <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0"></i>
+                  <span>Suporte Padrão via E-mail</span>
+                </li>
+              </ul>
+            </div>
+            <button onclick="simulateUpgrade('Starter', 50)" class="w-full mt-4 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-3 rounded-lg border border-cardborder text-xs transition min-h-[40px]">
+              Assinar Starter
+            </button>
+          </div>
+
+          <!-- Plano Pro (Destaque) -->
+          <div class="bg-gradient-to-b from-amber-500/10 to-slate-900 border-2 border-amber-500 rounded-xl p-4 flex flex-col justify-between shadow-xl shadow-amber-500/10 relative">
+            <div class="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-500 text-slate-950 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full tracking-wider shadow">
+              Mais Popular
+            </div>
+            <div class="space-y-3 mt-1">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-amber-400">Pro</span>
+                <span class="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-semibold border border-amber-500/40">Recomendado</span>
+              </div>
+              <div>
+                <div class="flex items-baseline gap-1">
+                  <span class="text-2xl font-extrabold text-white">R$ 149</span>
+                  <span class="text-xs text-slate-400">/mês</span>
+                </div>
+                <p class="text-[11px] text-amber-400 font-semibold mt-0.5">250 análises completas / mês</p>
+              </div>
+              <ul class="space-y-1.5 text-slate-200 text-[11px] pt-2 border-t border-cardborder">
+                <li class="flex items-center gap-1.5 font-medium">
+                  <i data-lucide="check" class="w-3.5 h-3.5 text-amber-400 flex-shrink-0"></i>
+                  <span>Tudo incluso no plano Starter</span>
+                </li>
+                <li class="flex items-center gap-1.5">
+                  <i data-lucide="check" class="w-3.5 h-3.5 text-amber-400 flex-shrink-0"></i>
+                  <span>Varredura de Concorrência ao Vivo</span>
+                </li>
+                <li class="flex items-center gap-1.5">
+                  <i data-lucide="check" class="w-3.5 h-3.5 text-amber-400 flex-shrink-0"></i>
+                  <span>Simulador Buy Box & Estresse</span>
+                </li>
+                <li class="flex items-center gap-1.5">
+                  <i data-lucide="check" class="w-3.5 h-3.5 text-amber-400 flex-shrink-0"></i>
+                  <span>Suporte Prioritário no WhatsApp</span>
+                </li>
+              </ul>
+            </div>
+            <button onclick="simulateUpgrade('Pro', 250)" class="w-full mt-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold py-2.5 px-3 rounded-lg shadow-lg shadow-amber-500/20 text-xs transition min-h-[40px]">
+              Assinar Plano Pro
+            </button>
+          </div>
+
+          <!-- Plano Advanced -->
+          <div class="bg-slate-900/80 border border-cardborder rounded-xl p-4 flex flex-col justify-between hover:border-slate-600 transition">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-purple-400">Advanced</span>
+                <span class="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded font-semibold border border-purple-500/30">Escala</span>
+              </div>
+              <div>
+                <div class="flex items-baseline gap-1">
+                  <span class="text-2xl font-extrabold text-white">R$ 299</span>
+                  <span class="text-xs text-slate-400">/mês</span>
+                </div>
+                <p class="text-[11px] text-purple-300 font-semibold mt-0.5">1.000 análises completas / mês</p>
+              </div>
+              <ul class="space-y-1.5 text-slate-300 text-[11px] pt-2 border-t border-cardborder">
+                <li class="flex items-center gap-1.5">
+                  <i data-lucide="check" class="w-3.5 h-3.5 text-purple-400 flex-shrink-0"></i>
+                  <span>Tudo incluso no plano Pro</span>
+                </li>
+                <li class="flex items-center gap-1.5">
+                  <i data-lucide="check" class="w-3.5 h-3.5 text-purple-400 flex-shrink-0"></i>
+                  <span>Acesso Multi-usuários da Equipe</span>
+                </li>
+                <li class="flex items-center gap-1.5">
+                  <i data-lucide="check" class="w-3.5 h-3.5 text-purple-400 flex-shrink-0"></i>
+                  <span>Consultas e Exportações em Lote</span>
+                </li>
+                <li class="flex items-center gap-1.5">
+                  <i data-lucide="check" class="w-3.5 h-3.5 text-purple-400 flex-shrink-0"></i>
+                  <span>Gerente de Conta & Onboarding VIP</span>
+                </li>
+              </ul>
+            </div>
+            <button onclick="simulateUpgrade('Advanced', 1000)" class="w-full mt-4 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 px-3 rounded-lg text-xs transition min-h-[40px]">
+              Assinar Plano Advanced
+            </button>
+          </div>
+        </div>
+
+        <!-- Pacotes de Recarga Avulsa -->
+        <div class="bg-slate-900/60 border border-cardborder rounded-xl p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div>
+            <h5 class="font-bold text-white text-xs flex items-center gap-1.5">
+              <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
+              <span>Precisa apenas de uma recarga avulsa de créditos?</span>
+            </h5>
+            <p class="text-[11px] text-slate-400 mt-0.5">Adicione créditos ao seu saldo atual sem alterar o plano contratado.</p>
+          </div>
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <button onclick="simulateRecharge(50)" class="flex-1 sm:flex-none bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-bold px-3 py-1.5 rounded-lg text-xs transition">
+              +50 Créditos (R$ 39)
+            </button>
+            <button onclick="simulateRecharge(100)" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs transition">
+              +100 Créditos (R$ 69)
+            </button>
+          </div>
+        </div>
+
+        <div class="text-[11px] text-slate-500 text-center">
+          Cobrança transparente via Asaas ou Stripe. Sem taxa de cancelamento.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: EXTRATO DE CRÉDITOS & AUDITORIA                       -->
+  <!-- ============================================================ -->
+  <div id="credits-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[9990] hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-cardbg border border-cardborder rounded-2xl max-w-3xl w-full max-h-[92vh] flex flex-col p-4 sm:p-6 shadow-2xl space-y-4 my-auto overflow-hidden">
+      <!-- Cabeçalho -->
+      <div class="flex items-center justify-between pb-3 border-b border-cardborder flex-shrink-0">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
+            <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+          </div>
+          <div>
+            <h3 class="text-base sm:text-lg font-bold text-white">Extrato de Créditos & Auditoria</h3>
+            <p class="text-xs text-slate-400">Controle rigoroso de débitos e histórico de análises de mercado</p>
+          </div>
+        </div>
+        <button onclick="closeCreditsModal()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white rounded-lg">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Resumo do Saldo Atual -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-900/90 border border-cardborder rounded-xl p-3.5">
+        <div>
+          <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Saldo de Consultas</span>
+          <div class="flex items-baseline gap-1 mt-0.5">
+            <span id="modal-credits-balance" class="text-xl font-extrabold text-amber-300 font-mono">-- / --</span>
+            <span class="text-[11px] text-slate-400">créditos</span>
+          </div>
+          <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
+            <div id="modal-credits-bar" class="bg-gradient-to-r from-amber-400 to-amber-600 h-1.5 rounded-full" style="width: 100%"></div>
+          </div>
+        </div>
+
+        <div>
+          <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Plano Atual</span>
+          <div class="flex items-center gap-2 mt-0.5">
+            <span id="modal-credits-plan" class="text-base font-bold text-white uppercase">STARTER</span>
+            <span id="modal-credits-status" class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-bold border border-emerald-500/30">ATIVO</span>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-1.5">Renovação: <span id="modal-credits-renewal" class="font-semibold text-slate-300">--/--/----</span></p>
+        </div>
+
+        <div class="flex items-center justify-end">
+          <button onclick="closeCreditsModal(); openUpgradeModal();" class="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold px-3.5 py-2 rounded-lg text-xs transition shadow-md shadow-amber-500/20 flex items-center justify-center gap-1.5 min-h-[38px]">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            <span>Fazer Upgrade</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabela de Auditoria (logs_consumo_creditos) -->
+      <div class="overflow-y-auto flex-1 pr-1 space-y-2">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+            <i data-lucide="history" class="w-3.5 h-3.5 text-slate-400"></i>
+            <span>Histórico de Auditoria (Horário de Brasília UTC-3)</span>
+          </h4>
+          <button onclick="loadCreditsHistory()" class="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1 font-semibold">
+            <i data-lucide="refresh-cw" class="w-3 h-3"></i> Atualizar
+          </button>
+        </div>
+
+        <div class="overflow-x-auto rounded-lg border border-cardborder">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-900 border-b border-cardborder text-slate-400 text-[10px] uppercase font-bold tracking-wider">
+                <th class="p-2.5">Data / Hora</th>
+                <th class="p-2.5">Marketplace</th>
+                <th class="p-2.5">SKU & Produto</th>
+                <th class="p-2.5 text-center">Débito</th>
+                <th class="p-2.5 text-right">Saldo Restante</th>
+              </tr>
+            </thead>
+            <tbody id="credits-history-tbody" class="divide-y divide-cardborder/60 bg-slate-950/40">
+              <tr>
+                <td colspan="5" class="p-4 text-center text-slate-400 text-xs">
+                  Carregando extrato de auditoria...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="pt-2 border-t border-cardborder flex items-center justify-between text-xs text-slate-500">
+        <span>Auditoria imutável conforme diretrizes SaaS.</span>
+        <button type="button" onclick="closeCreditsModal()" class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs min-h-[36px]">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="ml-config-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
     <div class="bg-cardbg border border-blue-500/40 rounded-2xl max-w-lg w-full max-h-[92vh] flex flex-col p-4 sm:p-6 shadow-2xl space-y-4 my-auto overflow-hidden">
       <div class="flex items-center justify-between pb-3 border-b border-cardborder flex-shrink-0">
@@ -1849,6 +2231,15 @@
         reputation: document.getElementById('input-reputation').value || 'green',
         key_features: document.getElementById('input-features').value.split(',').map(s => s.trim()).filter(Boolean)
       };
+
+      // 0. Auditoria e Débito de Crédito SaaS
+      const creditCheck = await consumeCreditBeforeAnalysis(payload.sku, payload.title_raw, 'Mercado Livre');
+      if (!creditCheck.allowed) {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="calculator" class="w-4 h-4"></i><span>Analisar Mercado & Viabilidade</span>`;
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
 
       // Consulta ao vivo na API do Mercado Livre (se conectada)
       try {
@@ -2908,14 +3299,52 @@
       lucide.createIcons();
     }
 
-    
+    // ============================================================
+    // ESTADO DO USUÁRIO & CRÉDITOS SAAS
+    // ============================================================
+    let currentUser = {
+      user: 'admin',
+      email: 'admin@marketplacemanager.ai',
+      role: 'admin',
+      plan: 'Starter',
+      credits_left: 50,
+      monthly_credits: 50,
+      status: 'ativo',
+      renewal_date: null
+    };
+
+    function switchAuthTab(tab) {
+      const loginForm = document.getElementById('login-form');
+      const registerForm = document.getElementById('register-form');
+      const tabLogin = document.getElementById('tab-btn-login');
+      const tabRegister = document.getElementById('tab-btn-register');
+      const loginErr = document.getElementById('login-error');
+      const regErr = document.getElementById('register-error');
+
+      if (loginErr) loginErr.classList.add('hidden');
+      if (regErr) regErr.classList.add('hidden');
+
+      if (tab === 'register') {
+        if (loginForm) loginForm.classList.add('hidden');
+        if (registerForm) registerForm.classList.remove('hidden');
+        if (tabLogin) tabLogin.className = "flex-1 pb-2.5 text-xs sm:text-sm font-semibold text-slate-400 hover:text-slate-200 border-b-2 border-transparent transition flex items-center justify-center gap-1.5";
+        if (tabRegister) tabRegister.className = "flex-1 pb-2.5 text-xs sm:text-sm font-bold text-emerald-400 border-b-2 border-emerald-400 transition flex items-center justify-center gap-1.5";
+      } else {
+        if (registerForm) registerForm.classList.add('hidden');
+        if (loginForm) loginForm.classList.remove('hidden');
+        if (tabLogin) tabLogin.className = "flex-1 pb-2.5 text-xs sm:text-sm font-bold text-amber-400 border-b-2 border-amber-400 transition flex items-center justify-center gap-1.5";
+        if (tabRegister) tabRegister.className = "flex-1 pb-2.5 text-xs sm:text-sm font-semibold text-slate-400 hover:text-slate-200 border-b-2 border-transparent transition flex items-center justify-center gap-1.5";
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
     function updateCurrentUserUI(username, role) {
       const nameEl = document.getElementById('topbar-user-name');
       const roleEl = document.getElementById('topbar-user-role-badge');
       const teamBtn = document.getElementById('btn-team-management');
       if (nameEl && username) nameEl.innerText = username;
       if (roleEl && role) {
-        if (role === 'admin') {
+        if (role === 'admin' || role === 'Admin') {
           roleEl.innerText = 'Admin';
           roleEl.className = 'text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30';
           if (teamBtn) {
@@ -2923,13 +3352,266 @@
             teamBtn.classList.add('flex');
           }
         } else {
-          roleEl.innerText = 'Equipe';
+          roleEl.innerText = role || 'Starter';
           roleEl.className = 'text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30';
           if (teamBtn) {
             teamBtn.classList.add('hidden');
             teamBtn.classList.remove('flex');
           }
         }
+      }
+    }
+
+    function updateCreditsUI(plan, creditsLeft, monthlyCredits, status, renewalDate) {
+      if (plan) currentUser.plan = plan;
+      if (creditsLeft !== undefined) currentUser.credits_left = creditsLeft;
+      if (monthlyCredits !== undefined) currentUser.monthly_credits = monthlyCredits;
+      if (status) currentUser.status = status;
+      if (renewalDate) currentUser.renewal_date = renewalDate;
+
+      const planEl = document.getElementById('topbar-plan-name');
+      const creditsEl = document.getElementById('topbar-credits-text');
+      const badgeBtn = document.getElementById('btn-credits-badge');
+
+      if (planEl) planEl.innerText = (currentUser.plan || 'Starter').toUpperCase();
+      if (creditsEl) {
+        creditsEl.innerText = `${currentUser.credits_left}/${currentUser.monthly_credits}`;
+        if (currentUser.credits_left <= 0) {
+          creditsEl.className = "text-rose-400 font-mono font-bold text-xs animate-pulse";
+          if (badgeBtn) {
+            badgeBtn.classList.remove('border-amber-500/30', 'text-amber-300');
+            badgeBtn.classList.add('border-rose-500/50', 'text-rose-300', 'bg-rose-500/10');
+          }
+        } else {
+          creditsEl.className = "text-amber-300 font-mono font-bold text-xs";
+          if (badgeBtn) {
+            badgeBtn.classList.remove('border-rose-500/50', 'text-rose-300', 'bg-rose-500/10');
+            badgeBtn.classList.add('border-amber-500/30', 'text-amber-300');
+          }
+        }
+      }
+
+      // Modal de Créditos
+      const mBalance = document.getElementById('modal-credits-balance');
+      const mPlan = document.getElementById('modal-credits-plan');
+      const mStatus = document.getElementById('modal-credits-status');
+      const mRenewal = document.getElementById('modal-credits-renewal');
+      const mBar = document.getElementById('modal-credits-bar');
+
+      if (mBalance) mBalance.innerText = `${currentUser.credits_left} / ${currentUser.monthly_credits}`;
+      if (mPlan) mPlan.innerText = (currentUser.plan || 'Starter').toUpperCase();
+      if (mStatus) {
+        const isAtivo = (currentUser.status || 'ativo') === 'ativo';
+        mStatus.innerText = isAtivo ? 'ATIVO' : (currentUser.status || 'INATIVO').toUpperCase();
+        mStatus.className = isAtivo
+          ? 'text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-bold border border-emerald-500/30'
+          : 'text-[10px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded font-bold border border-rose-500/30';
+      }
+      if (mRenewal) {
+        if (currentUser.renewal_date) {
+          mRenewal.innerText = currentUser.renewal_date.slice(0, 10);
+        } else {
+          mRenewal.innerText = "Mensal Contínuo";
+        }
+      }
+      if (mBar) {
+        const pct = currentUser.monthly_credits > 0 ? Math.max(0, Math.min(100, Math.round((currentUser.credits_left / currentUser.monthly_credits) * 100))) : 0;
+        mBar.style.width = pct + '%';
+        if (pct < 15) {
+          mBar.className = "bg-rose-500 h-1.5 rounded-full transition-all duration-500";
+        } else if (pct < 40) {
+          mBar.className = "bg-amber-400 h-1.5 rounded-full transition-all duration-500";
+        } else {
+          mBar.className = "bg-gradient-to-r from-emerald-400 to-teal-500 h-1.5 rounded-full transition-all duration-500";
+        }
+      }
+    }
+
+    function openUpgradeModal(fromPaywall = false, message = null) {
+      const modal = document.getElementById('upgrade-modal');
+      const alertBox = document.getElementById('upgrade-paywall-alert');
+      const alertMsg = document.getElementById('upgrade-paywall-msg');
+
+      if (fromPaywall) {
+        if (alertBox) alertBox.classList.remove('hidden');
+        if (alertMsg) {
+          alertMsg.innerText = message || "Você atingiu o limite de consultas do seu plano atual. Faça um upgrade ou recarregue seus créditos para continuar.";
+        }
+      } else {
+        if (alertBox) alertBox.classList.add('hidden');
+      }
+
+      if (modal) modal.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeUpgradeModal() {
+      const modal = document.getElementById('upgrade-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function openCreditsModal() {
+      const modal = document.getElementById('credits-modal');
+      if (modal) modal.classList.remove('hidden');
+      updateCreditsUI();
+      loadCreditsHistory();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeCreditsModal() {
+      const modal = document.getElementById('credits-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function loadCreditsHistory() {
+      const tbody = document.getElementById('credits-history-tbody');
+      if (!tbody) return;
+      tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400 text-xs">Consultando extrato...</td></tr>`;
+
+      try {
+        const res = await fetch('/api/v1/credits/history');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.logs && data.logs.length > 0) {
+            tbody.innerHTML = data.logs.map(log => {
+              const isShopee = (log.marketplace || '').toLowerCase().includes('shopee');
+              const dateStr = log.data_hora ? log.data_hora.replace('T', ' ').slice(0, 19) : '--';
+              return `
+                <tr class="hover:bg-slate-900/50 transition">
+                  <td class="p-2.5 font-mono text-slate-300 text-[11px] whitespace-nowrap">${dateStr}</td>
+                  <td class="p-2.5">
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${isShopee ? 'bg-orange-500/20 text-orange-300 border-orange-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'}">
+                      ${log.marketplace || 'Mercado Livre'}
+                    </span>
+                  </td>
+                  <td class="p-2.5">
+                    <div class="font-semibold text-white truncate max-w-[220px]" title="${log.produto_nome || ''}">
+                      ${log.produto_nome || 'Produto'}
+                    </div>
+                    <div class="font-mono text-[10px] text-slate-400">SKU: ${log.produto_sku || '--'}</div>
+                  </td>
+                  <td class="p-2.5 text-center font-bold text-rose-400 font-mono">
+                    -${log.creditos_debitados || 1}
+                  </td>
+                  <td class="p-2.5 text-right font-mono font-bold text-emerald-400">
+                    ${log.saldo_restante_na_hora}
+                  </td>
+                </tr>
+              `;
+            }).join('');
+          } else {
+            tbody.innerHTML = `
+              <tr>
+                <td colspan="5" class="p-6 text-center text-slate-400 text-xs">
+                  <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-2 text-slate-500">
+                    <i data-lucide="inbox" class="w-4 h-4"></i>
+                  </div>
+                  Nenhuma consulta realizada ainda. Seu saldo de créditos está intacto!
+                </td>
+              </tr>
+            `;
+          }
+          if (window.lucide) lucide.createIcons();
+        }
+      } catch(err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-rose-400 text-xs">Erro ao buscar extrato: ${err.message}</td></tr>`;
+      }
+    }
+
+    async function simulateUpgrade(plan, credits) {
+      try {
+        const userEmail = currentUser.email || 'admin@marketplacemanager.ai';
+        const res = await fetch('/api/v1/webhooks/pagamentos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'payment.approved',
+            user_email: userEmail,
+            plan: plan,
+            credits: credits
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          currentUser.plan = plan;
+          currentUser.monthly_credits = credits;
+          currentUser.credits_left = data.new_credits_left || credits;
+          currentUser.status = 'ativo';
+          updateCreditsUI(currentUser.plan, currentUser.credits_left, currentUser.monthly_credits, 'ativo');
+          closeUpgradeModal();
+          alert(`🎉 Assinatura confirmada com sucesso!\n\nSeu plano foi atualizado para ${plan.toUpperCase()} com ${currentUser.credits_left} créditos mensais disponíveis.`);
+        } else {
+          alert("Não foi possível processar o upgrade: " + (data.error || "Erro desconhecido"));
+        }
+      } catch(err) {
+        alert("Erro de comunicação com o webhook: " + err.message);
+      }
+    }
+
+    async function simulateRecharge(credits) {
+      try {
+        const userEmail = currentUser.email || 'admin@marketplacemanager.ai';
+        const res = await fetch('/api/v1/webhooks/pagamentos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'credit.recharge',
+            user_email: userEmail,
+            credits: credits
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          currentUser.credits_left = data.new_credits_left;
+          updateCreditsUI(currentUser.plan, currentUser.credits_left, currentUser.monthly_credits);
+          closeUpgradeModal();
+          alert(`⚡ Recarga confirmada com sucesso!\n\nForam adicionados +${credits} créditos ao seu saldo. Saldo atual: ${currentUser.credits_left} créditos.`);
+        } else {
+          alert("Não foi possível processar a recarga: " + (data.error || "Erro desconhecido"));
+        }
+      } catch(err) {
+        alert("Erro de comunicação com o webhook: " + err.message);
+      }
+    }
+
+    async function consumeCreditBeforeAnalysis(sku, title, marketplace) {
+      try {
+        const res = await fetch('/api/v1/credits/consume', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sku: sku || 'SKU-INDEFINIDO',
+            title: title || 'Produto sem título',
+            marketplace: marketplace || 'Mercado Livre'
+          })
+        });
+        const data = await res.json();
+
+        if (res.status === 402) {
+          // Limite atingido - Exibe paywall com a mensagem obrigatória
+          openUpgradeModal(true, "Você atingiu o limite de consultas do seu plano atual. Faça um upgrade ou recarregue seus créditos para continuar.");
+          return { allowed: false, reason: 'no_credits' };
+        }
+
+        if (res.status === 403) {
+          // Assinatura inativa ou suspensa
+          openUpgradeModal(true, data.error || "Sua assinatura está inativa ou pendente. Regularize seu pagamento para continuar.");
+          return { allowed: false, reason: 'inactive' };
+        }
+
+        if (!res.ok) {
+          alert("Falha na validação de créditos: " + (data.error || res.statusText));
+          return { allowed: false, reason: 'error' };
+        }
+
+        if (data.credits_left !== undefined) {
+          updateCreditsUI(data.plan, data.credits_left, data.monthly_credits);
+        }
+        return { allowed: true, data };
+      } catch(err) {
+        console.error("Erro na verificação de créditos:", err);
+        alert("Erro de conexão ao verificar créditos: " + err.message);
+        return { allowed: false, reason: 'network_error' };
       }
     }
 
@@ -2952,12 +3634,12 @@
           const data = await res.json();
           if (data.users && data.users.length > 0) {
             listEl.innerHTML = data.users.map(u => {
-              const isAdm = u.role === 'admin';
+              const isAdm = u.role === 'admin' || u.role === 'Admin';
               return `
                 <div class="flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-cardborder">
                   <div class="flex items-center space-x-2">
                     <span class="w-6 h-6 rounded-full ${isAdm ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400'} flex items-center justify-center font-bold text-[10px]">
-                      ${u.username.slice(0, 1).toUpperCase()}
+                      ${(u.username || 'U').slice(0, 1).toUpperCase()}
                     </span>
                     <span class="font-mono text-white text-xs font-semibold">${u.username}</span>
                   </div>
@@ -2983,7 +3665,17 @@
           const data = await res.json();
           if (data.authenticated) {
             document.getElementById('login-overlay').classList.add('hidden');
-            updateCurrentUserUI(data.user, data.role);
+            currentUser = {
+              user: data.user,
+              email: data.email || data.user,
+              role: data.role || 'Starter',
+              plan: data.plan || (data.role === 'admin' ? 'Admin' : 'Starter'),
+              credits_left: data.credits_left !== undefined ? data.credits_left : 50,
+              monthly_credits: data.monthly_credits !== undefined ? data.monthly_credits : 50,
+              status: data.status || 'ativo'
+            };
+            updateCurrentUserUI(currentUser.user, currentUser.role);
+            updateCreditsUI(currentUser.plan, currentUser.credits_left, currentUser.monthly_credits, currentUser.status);
             return true;
           }
         }
@@ -3018,7 +3710,17 @@
         if (res.ok && data.success) {
           btnText.innerText = "Autorizado! Entrando...";
           document.getElementById('login-overlay').classList.add('hidden');
-          updateCurrentUserUI(data.user, data.role);
+          currentUser = {
+            user: data.user,
+            email: data.email || data.user,
+            role: data.role || 'Starter',
+            plan: data.plan || (data.role === 'admin' ? 'Admin' : 'Starter'),
+            credits_left: data.credits_left !== undefined ? data.credits_left : 50,
+            monthly_credits: data.monthly_credits !== undefined ? data.monthly_credits : 50,
+            status: data.status || 'ativo'
+          };
+          updateCurrentUserUI(currentUser.user, currentUser.role);
+          updateCreditsUI(currentUser.plan, currentUser.credits_left, currentUser.monthly_credits, currentUser.status);
           loadMlStatus();
           loadShopeeStatus();
           openPlatformModal();
@@ -3033,6 +3735,68 @@
         errBox.classList.remove('hidden');
         btn.disabled = false;
         btnText.innerText = "Entrar no Sistema";
+      }
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      const errBox = document.getElementById('register-error');
+      const errText = document.getElementById('register-error-msg');
+      const btn = document.getElementById('btn-register-submit');
+      const btnText = document.getElementById('btn-register-text');
+
+      errBox.classList.add('hidden');
+      btn.disabled = true;
+      btnText.innerText = "Criando Conta...";
+
+      const nome = document.getElementById('register-name').value.trim();
+      const email = document.getElementById('register-email').value.trim();
+      const password = document.getElementById('register-password').value;
+
+      if (password.length < 6) {
+        errText.innerText = "A senha deve conter pelo menos 6 caracteres.";
+        errBox.classList.remove('hidden');
+        btn.disabled = false;
+        btnText.innerText = "Criar Conta & Ativar 50 Créditos";
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nome, email, password })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          btnText.innerText = "Conta Ativada!";
+          document.getElementById('login-overlay').classList.add('hidden');
+          currentUser = {
+            user: data.user || nome || email,
+            email: data.email || email,
+            role: data.role || 'Starter',
+            plan: data.plan || 'Starter',
+            credits_left: data.credits_left !== undefined ? data.credits_left : 50,
+            monthly_credits: data.monthly_credits !== undefined ? data.monthly_credits : 50,
+            status: data.status || 'ativo'
+          };
+          updateCurrentUserUI(currentUser.user, currentUser.role);
+          updateCreditsUI(currentUser.plan, currentUser.credits_left, currentUser.monthly_credits, currentUser.status);
+          loadMlStatus();
+          loadShopeeStatus();
+          openPlatformModal();
+          alert(`🎉 Bem-vindo ao Marketplace Manager AI!\n\nSua conta foi criada no Plano Starter e você já possui ${currentUser.credits_left} créditos mensais disponíveis para analisar o Mercado Livre e Shopee!`);
+        } else {
+          errText.innerText = data.error || "Erro ao realizar cadastro.";
+          errBox.classList.remove('hidden');
+          btn.disabled = false;
+          btnText.innerText = "Criar Conta & Ativar 50 Créditos";
+        }
+      } catch (err) {
+        errText.innerText = "Erro ao conectar com o servidor: " + err.message;
+        errBox.classList.remove('hidden');
+        btn.disabled = false;
+        btnText.innerText = "Criar Conta & Ativar 50 Créditos";
       }
     }
 
@@ -3758,6 +4522,15 @@ Dúvidas? Deixe sua pergunta no chat, respondemos em minutos! Boas compras!`;
           shipping_extra: 0.0,
           key_features: document.getElementById('shopee-input-features').value.split(',').map(s => s.trim()).filter(Boolean)
         };
+
+        // 0. Auditoria e Débito de Crédito SaaS
+        const creditCheck = await consumeCreditBeforeAnalysis(payload.sku, payload.title_raw, 'Shopee');
+        if (!creditCheck.allowed) {
+          btn.disabled = false;
+          btn.innerHTML = `<i data-lucide="calculator" class="w-4 h-4"></i> <span>Analisar Mercado na Shopee</span>`;
+          if (window.lucide) lucide.createIcons();
+          return;
+        }
 
         // 1. Busca Concorrentes na Shopee
         try {

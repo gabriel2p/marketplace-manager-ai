@@ -452,13 +452,31 @@
           </div>
         </div>
 
-        <div class="col-span-1 sm:col-span-2 lg:col-span-3">
-          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Reputação / Nível no Mercado Livre (Desconto de Frete Oficial) *</label>
-          <select id="input-reputation" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
-            <option value="green" selected>🟢 MercadoLíder / Reputação Verde (Até 50% de Desconto no Frete - Tabela Oficial)</option>
-            <option value="yellow">🟡 Reputação Amarela (40% de Desconto no Frete)</option>
-            <option value="orange">🟠 Reputação Laranja / Sem Reputação (Tabela Cheia sem Desconto)</option>
+        <div class="col-span-1">
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Modalidade Logística *</label>
+          <select id="input-logistics" onchange="onLogisticsChange()" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
+            <option value="mercado_envios" selected>📦 Mercado Envios (Coleta / Agência)</option>
+            <option value="full">⚡ Mercado Envios FULL (Fulfillment Oficial)</option>
           </select>
+        </div>
+
+        <div class="col-span-1 sm:col-span-2 lg:col-span-1">
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Reputação / Nível no ML *</label>
+          <select id="input-reputation" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
+            <option value="green" selected>🟢 MercadoLíder / Verde (-50% Frete)</option>
+            <option value="yellow">🟡 Reputação Amarela (-40% Frete)</option>
+            <option value="orange">🟠 Laranja / Sem Reputação (Tabela Cheia)</option>
+          </select>
+        </div>
+
+        <div id="full-logistics-notice" class="hidden col-span-1 sm:col-span-2 lg:col-span-4 bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-3.5 text-xs text-emerald-200 flex items-start space-x-3">
+          <i data-lucide="zap" class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5"></i>
+          <div class="space-y-1 text-slate-300 leading-relaxed">
+            <p class="font-bold text-emerald-300 text-xs">⚡ Mercado Envios FULL (Fulfillment Oficial do Mercado Livre) Ativado:</p>
+            <p>• <strong>Desconto de Frete:</strong> Benefício oficial de até <strong>10% de desconto adicional</strong> na tarifa de frete grátis para produtos a partir de R$ 79,00.</p>
+            <p>• <strong>Embalagem Inclusa:</strong> O Mercado Livre fornece as caixas e envelopes oficiais e realiza a separação no Centro de Distribuição (Embalagem ajustada para R$ 0,00).</p>
+            <p>• <strong>Política de Armazenagem Prolongada (Stock Aging Fee):</strong> Para evitar cobrança de permanência após 60/90 dias no CD, mantenha remessas planejadas para cobertura de 30 a 45 dias de vendas.</p>
+          </div>
         </div>
 
         <div class="col-span-1 sm:col-span-2 lg:col-span-3">
@@ -2111,7 +2129,8 @@
     // Tabela Oficial de Custos de Envios do Mercado Livre Brasil (ajuda/40538)
     // Descontos por reputação: até 50% de desconto para MercadoLíder/Verde (tabela base)
     // Amarela: 40% de desconto (fator 1.20) | Laranja/Sem reputação: 0% desconto (fator 2.00)
-    function calculateMercadoEnviosShipping(price, weight, reputation = 'green') {
+    // Mercado Envios Full (Fulfillment): 10% de desconto adicional oficial sobre a tarifa de frete grátis
+    function calculateMercadoEnviosShipping(price, weight, reputation = 'green', isFull = false) {
       const p = parseFloat(price);
       const w = parseFloat(weight);
       if (p < 79.0) return 0.0;
@@ -2146,7 +2165,12 @@
       ];
 
       const row = weightMatrix.find(r => w <= r.maxW) || weightMatrix[weightMatrix.length - 1];
-      const baseRate = row.rates[priceTier];
+      let baseRate = row.rates[priceTier];
+
+      if (isFull) {
+        // Benefício Oficial Mercado Envios Full: até 10% de desconto adicional na tarifa de frete grátis
+        baseRate = Math.round(baseRate * 0.90 * 100) / 100;
+      }
 
       let repMultiplier = 1.0;
       const rep = (reputation || 'green').toLowerCase();
@@ -2160,7 +2184,7 @@
     }
 
     // Motor Financeiro Determinístico Unitário (Oficial Mercado Livre Brasil)
-    function calculateUnitEconomics(price, cmv, weight, customPackaging, customReputation, customAdsRate, customMlRate, customTaxRate) {
+    function calculateUnitEconomics(price, cmv, weight, customPackaging, customReputation, customAdsRate, customMlRate, customTaxRate, isFull = false) {
       const p = parseFloat(price);
       const c = parseFloat(cmv);
       const w = parseFloat(weight);
@@ -2177,17 +2201,24 @@
         if (customPackaging.ads_rate !== undefined) ads_rate = parseFloat(customPackaging.ads_rate);
         if (customPackaging.ml_rate !== undefined) ml_rate = parseFloat(customPackaging.ml_rate);
         if (customPackaging.tax_rate !== undefined) tax_rate = parseFloat(customPackaging.tax_rate);
+        if (customPackaging.isFull !== undefined) isFull = Boolean(customPackaging.isFull);
       } else if (typeof customPackaging === 'number' && customPackaging > 0 && customPackaging < 1.0 && customReputation === undefined) {
-        // Suporte a chamadas legadas onde o 4º argumento era customAdsRate (ex: 0.065)
         ads_rate = customPackaging;
         pack = currentSessionData?.data?.payload_ref?.packaging_cost || 3.00;
         rep = currentSessionData?.data?.payload_ref?.reputation || 'green';
+        if (isFull === false && currentSessionData?.data?.payload_ref?.logistics_type === 'full') isFull = true;
       } else {
         pack = customPackaging !== undefined ? parseFloat(customPackaging) : (currentSessionData?.data?.payload_ref?.packaging_cost || 3.00);
         rep = customReputation || currentSessionData?.data?.payload_ref?.reputation || 'green';
         if (customAdsRate !== undefined) ads_rate = parseFloat(customAdsRate);
         if (customMlRate !== undefined) ml_rate = parseFloat(customMlRate);
         if (customTaxRate !== undefined) tax_rate = parseFloat(customTaxRate);
+        if (isFull === false && currentSessionData?.data?.payload_ref?.logistics_type === 'full') isFull = true;
+      }
+
+      // No Mercado Envios Full, o Mercado Livre embala o produto no CD com embalagens oficiais (custo de expedição para o lojista = R$ 0,00)
+      if (isFull && (pack === 3.00 || customPackaging === undefined)) {
+        pack = 0.00;
       }
 
       // Regra Oficial ML: >= R$ 79,00 tem frete grátis obrigatório custeado pelo vendedor (Mercado Envios)
@@ -2197,7 +2228,7 @@
       let fixedFee = 0.0;
 
       if (isFreeShipping) {
-        shipping = calculateMercadoEnviosShipping(p, w, rep);
+        shipping = calculateMercadoEnviosShipping(p, w, rep, isFull);
       } else {
         fixedFee = 6.00;
       }
@@ -2227,8 +2258,33 @@
         netProfit,
         netMargin,
         roi,
-        isFreeShipping
+        isFreeShipping,
+        isFull
       };
+    }
+
+    // Manipulador da troca de Modalidade Logística (Mercado Envios Tradicional vs Full)
+    function onLogisticsChange() {
+      const logSelect = document.getElementById('input-logistics');
+      const notice = document.getElementById('full-logistics-notice');
+      const packInput = document.getElementById('input-packaging');
+      if (!logSelect) return;
+      const isFull = logSelect.value === 'full';
+      if (notice) {
+        if (isFull) {
+          notice.classList.remove('hidden');
+        } else {
+          notice.classList.add('hidden');
+        }
+      }
+      if (packInput) {
+        if (isFull && (packInput.value === '' || packInput.value === '3' || packInput.value === '3.00' || packInput.value === '3,00')) {
+          packInput.value = '0.00';
+        } else if (!isFull && (packInput.value === '0' || packInput.value === '0.00' || packInput.value === '0,00')) {
+          packInput.value = '3.00';
+        }
+      }
+      if (window.lucide) lucide.createIcons();
     }
 
     // Helper universal para parsing seguro de valores decimais e monetários (suporta ponto e vírgula)
@@ -2250,6 +2306,10 @@
       document.getElementById('input-weight').value = '';
       document.getElementById('input-packaging').value = '';
       document.getElementById('input-features').value = '';
+      const logSelect = document.getElementById('input-logistics');
+      if (logSelect) logSelect.value = 'mercado_envios';
+      const notice = document.getElementById('full-logistics-notice');
+      if (notice) notice.classList.add('hidden');
       activeCompetitors = [];
       currentSessionData = null;
       const emptyState = document.getElementById('empty-state');
@@ -2290,6 +2350,7 @@
         stock_quantity: parseInt(document.getElementById('input-stock').value) || 1,
         weight_kg: parseFormNumber(document.getElementById('input-weight').value, 0.5),
         packaging_cost: parseFormNumber(document.getElementById('input-packaging').value, 3.00),
+        logistics_type: document.getElementById('input-logistics') ? document.getElementById('input-logistics').value : 'mercado_envios',
         reputation: document.getElementById('input-reputation').value || 'green',
         key_features: document.getElementById('input-features').value.split(',').map(s => s.trim()).filter(Boolean)
       };
@@ -2368,6 +2429,7 @@
       const weight = payload.weight_kg;
       const pack = payload.packaging_cost;
       const rep = payload.reputation;
+      const isFull = payload.logistics_type === 'full';
 
       // Fórmula determinística: Preço = (Custos Fixos) / (1 - Soma das Taxas Percentuais)
       const varRates = targetM + 0.13 + 0.06 + 0.05; // Margem + ML (13%) + Imposto (6%) + Ads (5%)
@@ -2375,16 +2437,16 @@
 
       let candidatePrice = (cmv + pack + 6.00) / safeDivisor;
       if (candidatePrice >= 79.0) {
-        let shipEst = calculateMercadoEnviosShipping(candidatePrice, weight, rep);
+        let shipEst = calculateMercadoEnviosShipping(candidatePrice, weight, rep, isFull);
         candidatePrice = (cmv + pack + shipEst) / safeDivisor;
-        shipEst = calculateMercadoEnviosShipping(candidatePrice, weight, rep);
+        shipEst = calculateMercadoEnviosShipping(candidatePrice, weight, rep, isFull);
         candidatePrice = (cmv + pack + shipEst) / safeDivisor;
       }
 
       // Alinhamento inteligente com o mercado (evitar precificar fora do padrão competitivo)
       if (avgCompPrice > 0) {
         if (candidatePrice > avgCompPrice * 1.15) {
-          const testAtAvg = calculateUnitEconomics(avgCompPrice, cmv, weight, pack, rep);
+          const testAtAvg = calculateUnitEconomics(avgCompPrice, cmv, weight, pack, rep, undefined, undefined, undefined, isFull);
           if (testAtAvg.netMargin >= 12.0) {
             candidatePrice = avgCompPrice;
           }
@@ -2398,7 +2460,7 @@
       let sellingPrice = Math.floor(candidatePrice) + 0.90;
       if (sellingPrice < cmv * 1.15) sellingPrice = Math.ceil(cmv * 1.25) + 0.90;
 
-      const econBase = calculateUnitEconomics(sellingPrice, cmv, weight, pack, rep);
+      const econBase = calculateUnitEconomics(sellingPrice, cmv, weight, pack, rep, undefined, undefined, undefined, isFull);
       const fee = econBase.mlTotalFee;
       const shipping = econBase.shipping;
       const tax = econBase.tax;
@@ -2410,16 +2472,16 @@
       // 4 Cenários de Estresse Totalmente Dinâmicos e Realistas
       // 1. Conservador: Preço premium (+14%), lucro máximo por unidade
       const priceCons = Math.round((sellingPrice * 1.14) * 10) / 10 + (Math.round((sellingPrice * 1.14) * 10) % 1 === 0 ? 0.90 : 0);
-      const econCons = calculateUnitEconomics(priceCons, cmv, weight, pack, rep);
+      const econCons = calculateUnitEconomics(priceCons, cmv, weight, pack, rep, undefined, undefined, undefined, isFull);
 
       // 2. Agressivo: Preço de penetração (-8%), ganha volume e Buy Box
       const priceAgr = Math.max(Math.round(cmv * 1.18) + 0.90, Math.round((sellingPrice * 0.92) * 10) / 10);
-      const econAgr = calculateUnitEconomics(priceAgr, cmv, weight, pack, rep);
+      const econAgr = calculateUnitEconomics(priceAgr, cmv, weight, pack, rep, undefined, undefined, undefined, isFull);
 
       // 3. Adverso (Stress Test Extremo): Guerra de preços (-10%), inflação de CMV (+10%) e CAC de Ads (+30%)
       const priceAdv = Math.round((sellingPrice * 0.90) * 10) / 10;
       const cmvAdv = Math.round(cmv * 1.10 * 100) / 100;
-      const econAdv = calculateUnitEconomics(priceAdv, cmvAdv, weight, pack, rep, 0.065); // Ads 6.5% (+30% sobre 5%)
+      const econAdv = calculateUnitEconomics(priceAdv, cmvAdv, weight, pack, rep, 0.065, undefined, undefined, isFull); // Ads 6.5% (+30% sobre 5%)
 
       const scenarios = [
         {
@@ -2487,8 +2549,8 @@
             { field: "margem_alvo_desejada", formatted_value: `${(targetM * 100).toFixed(0)}%`, evidence_type: "FATO", source: "Briefing do Lojista", confidence: 100, source_layer: "1. INTAKE" },
             { field: "preco_venda_calculado", formatted_value: `R$ ${sellingPrice.toFixed(2)}`, evidence_type: "CALCULO", source: "Financial Engine Determinístico", confidence: 99, source_layer: "7.4 FINANCIAL" },
             { field: "ml_comissao_calculada", formatted_value: `R$ ${fee.toFixed(2)} (${sellingPrice >= 79 ? '13%' : '13% + R$ 6,00 fixa'})`, evidence_type: "CALCULO", source: "Tabela Oficial Mercado Livre", confidence: 100, source_layer: "7.3 SPECIALIST" },
-            { field: "frete_mercado_envios", formatted_value: econBase.isFreeShipping ? `R$ ${shipping.toFixed(2)} (${weight}kg • ${rep === 'yellow' ? 'Amarela' : (rep === 'orange' ? 'Sem Reputação' : 'MercadoLíder')})` : `R$ 0,00 (Pago pelo Comprador)`, evidence_type: "CALCULO", source: `Tabela Oficial ML ajuda/40538 (${weight}kg)`, confidence: 100, source_layer: "7.3 SPECIALIST" },
-            { field: "custo_embalagem_protecao", formatted_value: `R$ ${pack.toFixed(2)}`, evidence_type: "FATO", source: "Briefing do Lojista", confidence: 100, source_layer: "1. INTAKE" },
+            { field: "frete_mercado_envios", formatted_value: econBase.isFreeShipping ? `R$ ${shipping.toFixed(2)} (${weight}kg • ${rep === 'yellow' ? 'Amarela' : (rep === 'orange' ? 'Sem Reputação' : 'MercadoLíder')}${isFull ? ' • FULL 10% OFF' : ''})` : `R$ 0,00 (Pago pelo Comprador)`, evidence_type: "CALCULO", source: isFull ? `Tabela Oficial ML FULL (10% Desconto Adicional)` : `Tabela Oficial ML ajuda/40538 (${weight}kg)`, confidence: 100, source_layer: "7.3 SPECIALIST" },
+            { field: "custo_embalagem_protecao", formatted_value: isFull ? `R$ 0,00 (Embalagem Inclusa pelo FULL)` : `R$ ${pack.toFixed(2)}`, evidence_type: "FATO", source: isFull ? "Mercado Envios FULL Oficial" : "Briefing do Lojista", confidence: 100, source_layer: "1. INTAKE" },
             { field: "lucro_liquido_unitario", formatted_value: `R$ ${netProfit.toFixed(2)} (${netMargin}%)`, evidence_type: "CALCULO", source: "Financial Engine Determinístico", confidence: 100, source_layer: "7.4 FINANCIAL" }
           ]
         },
@@ -2507,13 +2569,20 @@
             ratingLabel = "A - ALTAMENTE VIÁVEL (Compensa Plenamente)";
             gateReasons.push(`Preço sugerido de R$ ${sellingPrice.toFixed(2)} é altamente competitivo frente à concorrência (média de mercado em R$ ${avgCompPrice.toFixed(2)}).`);
             gateReasons.push(`Margem líquida de ${netMargin}% atinge ou supera a meta desejada de ${targetMarginPct.toFixed(0)}%, gerando lucro de R$ ${netProfit.toFixed(2)} por unidade vendida.`);
-            gateReasons.push(`Cálculo determinístico inclui comissão oficial de R$ ${fee.toFixed(2)} e ${econBase.isFreeShipping ? `frete Mercado Envios (${weight}kg: R$ ${shipping.toFixed(2)})` : `taxa fixa de R$ 6,00 (frete comprador)`}.`);
+            gateReasons.push(`Cálculo determinístico inclui comissão oficial de R$ ${fee.toFixed(2)} e ${econBase.isFreeShipping ? `frete ${isFull ? 'Mercado Envios FULL com 10% OFF' : 'Mercado Envios'} (${weight}kg: R$ ${shipping.toFixed(2)})` : `taxa fixa de R$ 6,00 (frete comprador)`}.`);
+            if (isFull) {
+              gateReasons.push(`⚡ Modalidade Mercado Envios FULL Ativada: 10% de desconto adicional no frete oficial e R$ 0,00 de custo de embalagem (fornecida pelo CD do Mercado Livre).`);
+              gateReasons.push(`📋 Política de Armazenagem Prolongada: Envie remessas calculadas para cobertura de 30 a 45 dias de vendas para evitar taxas de permanência após 60/90 dias.`);
+            }
             gateReasons.push(`Resistência a estresse comprovada: no pior cenário simulado (+10% CMV e -10% preço), o lucro unitário se mantém positivo em R$ ${econAdv.netProfit.toFixed(2)}.`);
           } else if (netMargin >= 10.0 && econAdv.netProfit >= -2.0) {
             rating = "B";
             ratingLabel = "B - VIÁVEL COM CONDIÇÕES (Ajustes Recomendados)";
             gateReasons.push(`Margem líquida base de ${netMargin}% é rentável, mas está abaixo da meta desejada (${targetMarginPct.toFixed(0)}%).`);
             gateReasons.push(`Vulnerabilidade em cenário adverso: sob guerra de preços e aumento de leilão, o lucro unitário recua para R$ ${econAdv.netProfit.toFixed(2)}.`);
+            if (isFull) {
+              gateReasons.push(`⚡ Oportunidade FULL: Frete reduzido em 10% e embalagem gratuita aumentam a competitividade no leilão.`);
+            }
             gateReasons.push(`[Condição Recomendada]: Limitar o ACOS de campanhas de publicidade em no máximo 15% para proteger a margem.`);
             gateReasons.push(`[Alternativa Estratégica]: Criar Kit/Combo com 2 unidades para diluir o custo de frete e embalagem.`);
           } else if (netMargin >= 4.0) {
@@ -2555,6 +2624,8 @@
           pack: pack,
           weight: weight,
           reputation: rep,
+          is_full: isFull,
+          logistics_type: payload.logistics_type,
           monthly_units: payload.stock_quantity,
           monthly_profit: Math.round(netProfit * payload.stock_quantity),
           monthly_revenue: Math.round(sellingPrice * payload.stock_quantity)
@@ -2634,7 +2705,10 @@
                     <span class="text-[10px] ${isItemLive ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-sky-500/20 text-sky-300 border-sky-500/30'} font-bold px-2 py-0.5 rounded border flex items-center gap-1">
                       <i data-lucide="${isItemLive ? 'check-circle-2' : 'shield-check'}" class="w-3 h-3 ${isItemLive ? 'text-emerald-400' : 'text-sky-400'}"></i> ${isItemLive ? 'Ao Vivo (Oficial)' : 'Catálogo Ativo'}
                     </span>
-                    ${c.free_shipping ? '<span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">Frete Grátis</span>' : ''}
+                    <div class="flex items-center gap-1">
+                      ${c.is_full ? '<span class="text-[9px] bg-amber-500/20 text-amber-300 font-extrabold px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-0.5"><i data-lucide="zap" class="w-2.5 h-2.5 text-amber-400"></i>FULL</span>' : ''}
+                      ${c.free_shipping ? '<span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">Frete Grátis</span>' : ''}
+                    </div>
                   </div>
 
                   <a href="${permalink}" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-slate-100 hover:text-amber-300 line-clamp-2 transition flex items-start gap-1" title="${c.title}">
@@ -2885,8 +2959,13 @@
 
       const shipLabel = document.getElementById('display-shipping-label');
       if (shipLabel) {
+        const isFull = Boolean(f.is_full || currentSessionData?.data?.payload_ref?.logistics_type === 'full');
         const repName = f.reputation === 'yellow' ? 'Amarela' : (f.reputation === 'orange' ? 'Sem Reputação' : 'MercadoLíder');
-        shipLabel.innerText = f.shipping > 0 ? `Frete Mercado Envios (${f.weight}kg • ${repName}):` : 'Taxa Fixa ML (< R$ 79):';
+        if (f.shipping > 0) {
+          shipLabel.innerText = isFull ? `Frete ML FULL ⚡ (${f.weight}kg • ${repName} • 10% OFF):` : `Frete Mercado Envios (${f.weight}kg • ${repName}):`;
+        } else {
+          shipLabel.innerText = 'Taxa Fixa ML (< R$ 79):';
+        }
       }
 
       const topbarElem = document.getElementById('topbar-competitors-mapped');
@@ -2926,7 +3005,8 @@
       }
 
       const f = currentSessionData.data.financial_summary || currentSessionData.data.prepared_listing;
-      const newEcon = calculateUnitEconomics(newPrice, f.cmv, f.weight, f.pack, f.reputation);
+      const isFull = Boolean(f.is_full || currentSessionData?.data?.payload_ref?.logistics_type === 'full');
+      const newEcon = calculateUnitEconomics(newPrice, f.cmv, f.weight, f.pack, f.reputation, undefined, undefined, undefined, isFull);
 
       f.suggested_price = newPrice;
       f.net_profit = newEcon.netProfit;
@@ -2935,6 +3015,7 @@
       f.shipping = newEcon.shipping;
       f.tax = newEcon.tax;
       f.pack = newEcon.pack;
+      f.is_full = isFull;
       f.monthly_profit = Math.round(newEcon.netProfit * (f.monthly_units || 1));
       f.monthly_revenue = Math.round(newPrice * (f.monthly_units || 1));
 
@@ -3170,7 +3251,8 @@
       const cmv = payload.cost_price;
       const targetM = payload.target_margin;
       const weight = payload.weight_kg;
-      const pack = payload.packaging_cost || currentSessionData?.data?.financial_summary?.pack || 3.00;
+      const isFull = payload.logistics_type === 'full' || currentSessionData?.data?.financial_summary?.is_full === true;
+      const pack = isFull ? 0.00 : (payload.packaging_cost || currentSessionData?.data?.financial_summary?.pack || 3.00);
       const rep = payload.reputation || currentSessionData?.data?.financial_summary?.reputation || 'green';
 
       const varRates = targetM + 0.13 + 0.06 + 0.05;
@@ -3178,15 +3260,15 @@
 
       let candidatePrice = (cmv + pack + 6.00) / safeDivisor;
       if (candidatePrice >= 79.0) {
-        let shipEst = calculateMercadoEnviosShipping(candidatePrice, weight, rep);
+        let shipEst = calculateMercadoEnviosShipping(candidatePrice, weight, rep, isFull);
         candidatePrice = (cmv + pack + shipEst) / safeDivisor;
-        shipEst = calculateMercadoEnviosShipping(candidatePrice, weight, rep);
+        shipEst = calculateMercadoEnviosShipping(candidatePrice, weight, rep, isFull);
         candidatePrice = (cmv + pack + shipEst) / safeDivisor;
       }
 
       if (avgCompPrice > 0) {
         if (candidatePrice > avgCompPrice * 1.15) {
-          const testAtAvg = calculateUnitEconomics(avgCompPrice, cmv, weight, pack, rep);
+          const testAtAvg = calculateUnitEconomics(avgCompPrice, cmv, weight, pack, rep, undefined, undefined, undefined, isFull);
           if (testAtAvg.netMargin >= 12.0) {
             candidatePrice = avgCompPrice;
           }
@@ -3198,7 +3280,7 @@
       let sellingPrice = Math.floor(candidatePrice) + 0.90;
       if (sellingPrice < cmv * 1.15) sellingPrice = Math.ceil(cmv * 1.25) + 0.90;
 
-      const econBase = calculateUnitEconomics(sellingPrice, cmv, weight, pack, rep);
+      const econBase = calculateUnitEconomics(sellingPrice, cmv, weight, pack, rep, undefined, undefined, undefined, isFull);
       const fee = econBase.mlTotalFee;
       const shipping = econBase.shipping;
       const tax = econBase.tax;
@@ -3209,14 +3291,14 @@
 
       // Cenários de Estresse Atualizados
       const priceCons = Math.round((sellingPrice * 1.14) * 10) / 10 + (Math.round((sellingPrice * 1.14) * 10) % 1 === 0 ? 0.90 : 0);
-      const econCons = calculateUnitEconomics(priceCons, cmv, weight, pack, rep);
+      const econCons = calculateUnitEconomics(priceCons, cmv, weight, pack, rep, undefined, undefined, undefined, isFull);
 
       const priceAgr = Math.max(Math.round(cmv * 1.18) + 0.90, Math.round((sellingPrice * 0.92) * 10) / 10);
-      const econAgr = calculateUnitEconomics(priceAgr, cmv, weight, pack, rep);
+      const econAgr = calculateUnitEconomics(priceAgr, cmv, weight, pack, rep, undefined, undefined, undefined, isFull);
 
       const priceAdv = Math.round((sellingPrice * 0.90) * 10) / 10;
       const cmvAdv = Math.round(cmv * 1.10 * 100) / 100;
-      const econAdv = calculateUnitEconomics(priceAdv, cmvAdv, weight, pack, rep, 0.065);
+      const econAdv = calculateUnitEconomics(priceAdv, cmvAdv, weight, pack, rep, 0.065, undefined, undefined, isFull);
 
       const scenarios = [
         {
@@ -3322,6 +3404,8 @@
         pack: pack,
         weight: weight,
         reputation: rep,
+        is_full: isFull,
+        logistics_type: payload.logistics_type || (isFull ? 'full' : 'mercado_envios'),
         monthly_units: payload.stock_quantity,
         monthly_profit: Math.round(netProfit * payload.stock_quantity),
         monthly_revenue: Math.round(sellingPrice * payload.stock_quantity)
@@ -3336,8 +3420,8 @@
           { field: "margem_alvo_desejada", formatted_value: `${(targetM * 100).toFixed(0)}%`, evidence_type: "FATO", source: "Briefing do Lojista", confidence: 100, source_layer: "1. INTAKE" },
           { field: "preco_venda_calculado", formatted_value: `R$ ${sellingPrice.toFixed(2)}`, evidence_type: "CALCULO", source: "Financial Engine Determinístico", confidence: 99, source_layer: "7.4 FINANCIAL" },
           { field: "ml_comissao_calculada", formatted_value: `R$ ${fee.toFixed(2)} (${sellingPrice >= 79 ? '13%' : '13% + R$ 6,00 fixa'})`, evidence_type: "CALCULO", source: "Tabela Oficial Mercado Livre", confidence: 100, source_layer: "7.3 SPECIALIST" },
-          { field: "frete_mercado_envios", formatted_value: econBase.isFreeShipping ? `R$ ${shipping.toFixed(2)} (${weight}kg • ${rep === 'yellow' ? 'Amarela' : (rep === 'orange' ? 'Sem Reputação' : 'MercadoLíder')})` : `R$ 0,00 (Pago pelo Comprador)`, evidence_type: "CALCULO", source: `Tabela Oficial ML ajuda/40538 (${weight}kg)`, confidence: 100, source_layer: "7.3 SPECIALIST" },
-          { field: "custo_embalagem_protecao", formatted_value: `R$ ${pack.toFixed(2)}`, evidence_type: "FATO", source: "Briefing do Lojista", confidence: 100, source_layer: "1. INTAKE" },
+          { field: "frete_mercado_envios", formatted_value: econBase.isFreeShipping ? `R$ ${shipping.toFixed(2)} (${weight}kg • ${rep === 'yellow' ? 'Amarela' : (rep === 'orange' ? 'Sem Reputação' : 'MercadoLíder')}${isFull ? ' • FULL 10% OFF' : ''})` : `R$ 0,00 (Pago pelo Comprador)`, evidence_type: "CALCULO", source: isFull ? `Tabela Oficial ML FULL (10% Desconto Adicional)` : `Tabela Oficial ML ajuda/40538 (${weight}kg)`, confidence: 100, source_layer: "7.3 SPECIALIST" },
+          { field: "custo_embalagem_protecao", formatted_value: isFull ? `R$ 0,00 (Embalagem Inclusa pelo FULL)` : `R$ ${pack.toFixed(2)}`, evidence_type: "FATO", source: isFull ? "Mercado Envios FULL Oficial" : "Briefing do Lojista", confidence: 100, source_layer: "1. INTAKE" },
           { field: "lucro_liquido_unitario", formatted_value: `R$ ${netProfit.toFixed(2)} (${netMargin}%)`, evidence_type: "CALCULO", source: "Financial Engine Determinístico", confidence: 100, source_layer: "7.4 FINANCIAL" }
         ]
       };

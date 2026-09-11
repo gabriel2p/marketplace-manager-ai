@@ -119,6 +119,7 @@ class MainOrchestrator:
         # 3. Motor Financeiro Determinístico (Camada 7.4)
         # -------------------------------------------------------------
         rep = getattr(intake, "reputation", "green")
+        is_full = getattr(intake, "is_full", False) or getattr(intake, "logistics_type", "") == "full"
         ideal_price = FinancialEngine.calculate_ideal_selling_price(
             cost_price=intake.cost_price,
             target_margin=intake.target_margin,
@@ -126,7 +127,8 @@ class MainOrchestrator:
             tax_rate=intake.tax_rate,
             packaging_cost=intake.packaging_cost,
             listing_type=ml_spec["listing_type_recommended"],
-            reputation=rep
+            reputation=rep,
+            is_full=is_full
         )
 
         ctx.evidence_store.record_evidence(
@@ -153,7 +155,8 @@ class MainOrchestrator:
             listing_type=ml_spec["listing_type_recommended"],
             base_ad_spend_unit=5.0,
             estimated_monthly_demand=intake.stock_quantity,
-            reputation=rep
+            reputation=rep,
+            is_full=is_full
         )
         ctx.log("9. STRESS_TEST", "SCENARIOS_GENERATED", "4 cenários gerados (Conservador, Base, Agressivo, Adverso).")
 

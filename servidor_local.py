@@ -547,6 +547,8 @@ def scrape_mercadolivre_live(query: str, brand: str = ""):
                 id_m = re.search(r'MLB-?(\d+)', permalink)
                 mlb_id = f"MLB{id_m.group(1)}" if id_m else "MLB"
 
+                is_full_badge = bool(re.search(r'ui-search-item__fulfillment|poly-component__shipped-by|\bfull\b', block, re.IGNORECASE))
+
                 items.append({
                     "id": mlb_id,
                     "title": title,
@@ -560,7 +562,8 @@ def scrape_mercadolivre_live(query: str, brand: str = ""):
                     "seller": seller,
                     "is_official_api": True,
                     "available": True,
-                    "stock_status": "in_stock"
+                    "stock_status": "in_stock",
+                    "is_full": is_full_badge
                 })
 
                 if len(items) >= 6:
@@ -914,6 +917,8 @@ def get_guaranteed_competitors(query: str):
     for item in results:
         item["source"] = "catalogo_garantido"
         item["is_live"] = False
+        if "is_full" not in item:
+            item["is_full"] = bool(item.get("free_shipping", False))
     return results
 
 
@@ -1162,6 +1167,7 @@ def search_official_ml_api(query: str, access_token: str = "", cfg: dict = None,
                         if first_item.get("original_price"):
                             orig_price = float(first_item.get("original_price"))
                         free_shipping = first_item.get("shipping", {}).get("free_shipping", False) or price >= 79.0
+                        is_full = first_item.get("shipping", {}).get("logistic_type") == "fulfillment" or "fulfillment" in first_item.get("shipping", {}).get("tags", [])
                         if first_item.get("condition") == "used":
                             condition = "Usado"
 
@@ -1225,7 +1231,8 @@ def search_official_ml_api(query: str, access_token: str = "", cfg: dict = None,
                     "is_official_api": True,
                     "available": True,
                     "stock_status": "in_stock",
-                    "score": relevance_score
+                    "score": relevance_score,
+                    "is_full": is_full
                 })
 
             if len(all_items) >= 25:

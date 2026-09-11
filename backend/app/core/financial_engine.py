@@ -34,13 +34,15 @@ class FinancialEngine:
         price: Decimal,
         weight_kg: Decimal,
         reputation: str = "green",
-        marketplace: str = "mercadolivre"
+        marketplace: str = "mercadolivre",
+        is_full: bool = False
     ) -> Decimal:
         """
         Calcula o custo oficial de Mercado Envios conforme tabela ajuda/40538 do Mercado Livre:
         - Produtos abaixo de R$ 79,00: frete pago pelo comprador -> Custo para o lojista = R$ 0,00
         - Produtos a partir de R$ 79,00: frete grátis obrigatório subsidiado pelo lojista,
           com base na matriz 2D de peso x faixa de preço x desconto de reputação.
+        - Mercado Envios Full (Fulfillment): 10% de desconto adicional oficial na tarifa de frete grátis.
         """
         if price < cls.THRESHOLD_FRETE_GRATIS:
             return Decimal("0.00")
@@ -84,6 +86,9 @@ class FinancialEngine:
                 break
 
         base_rate = rates[price_tier]
+        if is_full:
+            # Benefício Oficial Mercado Envios Full: até 10% de desconto adicional na tarifa de frete grátis
+            base_rate = round(base_rate * 0.90, 2)
 
         rep = (reputation or "green").lower()
         if "yellow" in rep or "amarel" in rep:
@@ -122,23 +127,26 @@ class FinancialEngine:
         packaging_cost: float = 3.00,
         listing_type: str = "gold_special",
         ad_spend_per_unit: float = 0.0,
-        reputation: str = "green"
+        reputation: str = "green",
+        is_full: bool = False
     ) -> Dict[str, Any]:
         """
         Calcula os economics unitários completos com precisão determinística.
+        Suporta modalidade convencional e Mercado Envios Full (Fulfillment).
         """
         p = Decimal(str(selling_price))
         cmv = Decimal(str(cost_price))
         weight = Decimal(str(weight_kg))
         tax_r = Decimal(str(tax_rate))
-        pack = Decimal(str(packaging_cost))
+        # No Full, o Mercado Livre fornece a embalagem oficial na expedição (custo unitário do lojista = R$ 0,00)
+        pack = Decimal("0.00") if (is_full and packaging_cost == 3.00) else Decimal(str(packaging_cost))
         ads = Decimal(str(ad_spend_per_unit))
 
         # 1. Tarifas Marketplace
         fee_total, fixed_fee = cls.calculate_marketplace_fee(p, listing_type)
 
-        # 2. Frete do vendedor
-        shipping = cls.calculate_shipping_cost(p, weight, reputation=reputation)
+        # 2. Frete do vendedor (com desconto oficial de 10% no Full)
+        shipping = cls.calculate_shipping_cost(p, weight, reputation=reputation, is_full=is_full)
 
         # 3. Impostos (Simples Nacional incide sobre o faturamento bruto)
         taxes = cls._round_currency(p * tax_r)
@@ -181,7 +189,8 @@ class FinancialEngine:
             "contribution_margin_percent": float(contrib_margin_pct),
             "roi_percent": float(roi_pct),
             "break_even_acos_percent": float(break_even_acos),
-            "is_profitable": net_profit > Decimal("0.00")
+            "is_profitable": net_profit > Decimal("0.00"),
+            "is_full": is_full
         }
 
     @classmethod
@@ -193,19 +202,17 @@ class FinancialEngine:
         tax_rate: float = 0.06,
         packaging_cost: float = 3.00,
         listing_type: str = "gold_special",
-        reputation: str = "green"
+        reputation: str = "green",
+        is_full: bool = False
     ) -> float:
         """
         Resolve deterministicamente o preço ideal de venda necessário para atingir
         a margem líquida alvo (target_margin) considerando as descontinuidades da tabela
-        do Mercado Livre (faixa de R$ 79,00 com taxa fixa vs frete grátis).
+        do Mercado Livre (faixa de R$ 79,00 com taxa fixa vs frete grátis e desconto Full).
         """
-        # Testa candidatos em busca do ponto de equilíbrio com a margem desejada
-        # Faz uma busca iterativa centavo a centavo (simulação determinística exata)
         cmv = Decimal(str(cost_price))
         target_m = Decimal(str(target_margin))
 
-        # Ponto de partida estimativo
         current_candidate = (cmv * Decimal("1.8")).quantize(Decimal("1.00"))
         if current_candidate < Decimal("15.00"):
             current_candidate = Decimal("15.00")
@@ -213,7 +220,6 @@ class FinancialEngine:
         best_price = current_candidate
         min_margin_diff = Decimal("9999.00")
 
-        # Varre uma faixa de preços razoáveis com passo de R$ 0.50 e depois refinamento
         for p_int in range(int(cmv * 100), int(cmv * 600), 50):
             p = Decimal(p_int) / Decimal(100)
             econ = cls.compute_unit_economics(
@@ -223,7 +229,8 @@ class FinancialEngine:
                 tax_rate=tax_rate,
                 packaging_cost=packaging_cost,
                 listing_type=listing_type,
-                reputation=reputation
+                reputation=reputation,
+                is_full=is_full
             )
             margin_pct = Decimal(str(econ["net_margin_percent"]))
             diff = abs(margin_pct - (target_m * Decimal("100.00")))

@@ -337,11 +337,16 @@ Ficou com alguma dúvida? Envie sua pergunta abaixo, nossa equipe especializada 
             "dados_fiscais_declarados": True
         }
 
+        is_full = getattr(intake, "is_full", False) or getattr(intake, "logistics_type", "") == "full"
+        logistics_type = getattr(intake, "logistics_type", "full" if is_full else "mercado_envios")
+
         return PreparedListing(
             sku=intake.sku,
             marketplace="mercadolivre",
             title_optimized=title,
             listing_type="gold_special" if suggested_price < 120 else "gold_pro",
+            logistics_type=logistics_type,
+            is_full=is_full,
             suggested_price=suggested_price,
             min_price_floor=round(suggested_price * 0.92, 2),
             max_price_ceiling=round(suggested_price * 1.15, 2),

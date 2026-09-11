@@ -27,7 +27,8 @@ class StressTestEngine:
         listing_type: str = "gold_special",
         base_ad_spend_unit: float = 5.00,
         estimated_monthly_demand: int = 80,
-        reputation: str = "green"
+        reputation: str = "green",
+        is_full: bool = False
     ) -> List[ScenarioResult]:
         scenarios = []
 
@@ -47,7 +48,8 @@ class StressTestEngine:
             packaging_cost=packaging_cost,
             listing_type=listing_type,
             ad_spend_per_unit=ads_cons,
-            reputation=reputation
+            reputation=reputation,
+            is_full=is_full
         )
         rev_cons = round(p_cons * vol_cons, 2)
         profit_cons = round(econ_cons["net_profit"] * vol_cons, 2)
@@ -91,7 +93,8 @@ class StressTestEngine:
             packaging_cost=packaging_cost,
             listing_type=listing_type,
             ad_spend_per_unit=ads_base,
-            reputation=reputation
+            reputation=reputation,
+            is_full=is_full
         )
         rev_base = round(p_base * vol_base, 2)
         profit_base = round(econ_base["net_profit"] * vol_base, 2)
@@ -135,7 +138,8 @@ class StressTestEngine:
             packaging_cost=packaging_cost,
             listing_type=listing_type,
             ad_spend_per_unit=ads_agr,
-            reputation=reputation
+            reputation=reputation,
+            is_full=is_full
         )
         rev_agr = round(p_agr * vol_agr, 2)
         profit_agr = round(econ_agr["net_profit"] * vol_agr, 2)
@@ -181,7 +185,8 @@ class StressTestEngine:
             packaging_cost=packaging_cost,
             listing_type=listing_type,
             ad_spend_per_unit=ads_adv,
-            reputation=reputation
+            reputation=reputation,
+            is_full=is_full
         )
         
         # Custo de devolução estimado de 5% sobre as vendas

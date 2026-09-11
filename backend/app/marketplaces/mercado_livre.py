@@ -75,6 +75,7 @@ class MercadoLivreAdapter(BaseMarketplaceAdapter):
             },
             "shipping": {
                 "mode": "me2",
+                "logistic_type": "fulfillment" if getattr(listing, "is_full", False) else "drop_off",
                 "local_pick_up": False,
                 "free_shipping": listing.suggested_price >= 79.00
             },

@@ -21,6 +21,39 @@ PLANS_CONFIG = {
 
 SIGNUP_DEFAULT_CREDITS = 3
 
+DISPOSABLE_EMAIL_DOMAINS = {
+    "10minutemail.com", "10minutemail.net", "10minutemail.org", "20minutemail.com",
+    "burnermail.io", "crazymailing.com", "disposablemail.com", "dispostable.com",
+    "dropmail.me", "emailondeck.com", "fake-box.com", "fakeinbox.com", "fakemailgenerator.com",
+    "getairmail.com", "getnada.com", "guerrillamail.biz", "guerrillamail.com",
+    "guerrillamail.net", "guerrillamail.org", "guerrillamailblock.com", "inboxkitten.com",
+    "jetable.org", "mailcatch.com", "maildrop.cc", "mailinator.com", "mailinator2.com",
+    "mohmal.com", "mytemp.email", "nada.ltd", "sharklasers.com", "grr.la",
+    "temp-mail.io", "temp-mail.org", "tempail.com", "tempmail.com", "tempmail.net",
+    "throwawaymail.com", "trashmail.com", "trashmail.me", "trashmail.net", "yopmail.com",
+    "yopmail.fr", "yopmail.net", "cool.fr.nf", "jetable.fr.nf", "courriel.fr.nf",
+    "moncourrier.fr.nf", "monemail.fr.nf", "monmail.fr.nf", "guerrillamail.info",
+    "pokemail.net", "spam4.me", "bccto.me", "chacuo.net", "0-mail.com", "mytempemail.com",
+    "generator.email", "emailfake.com", "guerrillamail.de"
+}
+
+
+def is_disposable_email(email: str) -> bool:
+    """Verifica se o e-mail pertence a serviços de e-mail temporários/descartáveis."""
+    if not email or "@" not in email:
+        return False
+    domain = email.split("@")[-1].strip().lower()
+    if domain in DISPOSABLE_EMAIL_DOMAINS:
+        return True
+    for disp in DISPOSABLE_EMAIL_DOMAINS:
+        if domain == disp or domain.endswith("." + disp):
+            return True
+    suspicious_keywords = ["tempmail", "throwaway", "disposable", "fakemail", "trashmail", "guerrillamail", "10minutemail"]
+    for kw in suspicious_keywords:
+        if kw in domain:
+            return True
+    return False
+
 IS_POSTGRES = bool(DATABASE_URL and (DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://")))
 
 if IS_POSTGRES and DATABASE_URL.startswith("postgres://"):
@@ -72,7 +105,7 @@ def get_brasilia_now():
 
 
 def init_db():
-    """Inicializa as tabelas 'usuarios' e 'logs_consumo_creditos'."""
+    """Inicializa as tabelas 'usuarios' e 'logs_consumo_creditos' e aplica migrações de segurança."""
     conn, engine = get_connection()
     cur = conn.cursor()
     try:
@@ -88,7 +121,10 @@ def init_db():
                     creditos_restantes INTEGER DEFAULT 50,
                     status_assinatura VARCHAR(50) DEFAULT 'ativo',
                     data_renovacao TIMESTAMP WITH TIME ZONE,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    ip_origem VARCHAR(64) DEFAULT '',
+                    device_id VARCHAR(128) DEFAULT '',
+                    trial_granted BOOLEAN DEFAULT TRUE
                 );
             """)
             cur.execute("""
@@ -105,6 +141,12 @@ def init_db():
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_logs_usuario_id ON logs_consumo_creditos(usuario_id);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);")
+            # Migrações idempotentes para schemas Postgres pré-existentes
+            cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS ip_origem VARCHAR(64) DEFAULT '';")
+            cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS device_id VARCHAR(128) DEFAULT '';")
+            cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS trial_granted BOOLEAN DEFAULT TRUE;")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_usuarios_ip ON usuarios(ip_origem);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_usuarios_device_id ON usuarios(device_id);")
         else:
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS usuarios (
@@ -117,7 +159,10 @@ def init_db():
                     creditos_restantes INTEGER DEFAULT 50,
                     status_assinatura TEXT DEFAULT 'ativo',
                     data_renovacao TEXT,
-                    created_at TEXT
+                    created_at TEXT,
+                    ip_origem TEXT DEFAULT '',
+                    device_id TEXT DEFAULT '',
+                    trial_granted INTEGER DEFAULT 1
                 );
             """)
             cur.execute("""
@@ -135,6 +180,17 @@ def init_db():
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_logs_usuario_id ON logs_consumo_creditos(usuario_id);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);")
+            # Migrações idempotentes para tabelas SQLite existentes
+            cur.execute("PRAGMA table_info(usuarios);")
+            col_names = [col[1] for col in cur.fetchall()]
+            if "ip_origem" not in col_names:
+                cur.execute("ALTER TABLE usuarios ADD COLUMN ip_origem TEXT DEFAULT '';")
+            if "device_id" not in col_names:
+                cur.execute("ALTER TABLE usuarios ADD COLUMN device_id TEXT DEFAULT '';")
+            if "trial_granted" not in col_names:
+                cur.execute("ALTER TABLE usuarios ADD COLUMN trial_granted INTEGER DEFAULT 1;")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_usuarios_ip ON usuarios(ip_origem);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_usuarios_device_id ON usuarios(device_id);")
 
         conn.commit()
         print(f"[DB] Banco de dados inicializado com sucesso (Engine: {engine}).")
@@ -160,14 +216,13 @@ def seed_default_admin(admin_user: str = "admin", admin_password: str = "admin12
         if not row:
             hashed = hash_password(admin_password)
             cur.execute(
-                f"""INSERT INTO usuarios (email, senha_hash, nome, plano, creditos_mensais, creditos_restantes, status_assinatura, data_renovacao, created_at)
-                    VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})""",
-                (admin_user, hashed, "Administrador Mestre", "Admin", 999999, 999999, "ativo", now_str, now_str)
+                f"""INSERT INTO usuarios (email, senha_hash, nome, plano, creditos_mensais, creditos_restantes, status_assinatura, data_renovacao, created_at, ip_origem, device_id, trial_granted)
+                    VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})""",
+                (admin_user, hashed, "Administrador Mestre", "Admin", 999999, 999999, "ativo", now_str, now_str, "127.0.0.1", "admin_device", True if engine == "postgres" else 1)
             )
             conn.commit()
             print(f"[DB] Usuário Admin Mestre '{admin_user}' criado com sucesso no banco de dados.")
         else:
-            # Garante que o admin tenha plano Admin e status ativo
             cur.execute(
                 f"UPDATE usuarios SET plano = 'Admin', creditos_mensais = 999999, status_assinatura = 'ativo' WHERE email = {ph}",
                 (admin_user,)
@@ -181,19 +236,106 @@ def seed_default_admin(admin_user: str = "admin", admin_password: str = "admin12
         conn.close()
 
 
-def create_user(email: str, password: str, nome: str = "", plano: str = "Starter", creditos: int = None) -> dict:
-    """Cria um novo usuário cliente na plataforma com 3 créditos gratuitos para teste e validação."""
+def check_trial_eligibility(ip_origem: str = "", device_id: str = "", trial_claimed: bool = False) -> tuple[bool, str]:
+    """
+    Verifica se o novo cadastro é elegível aos 3 créditos gratuitos do Free Trial.
+    Regras anti-abuso:
+    1. Marcador no cliente (trial_claimed == True) -> Inelegível.
+    2. Identificador de dispositivo (device_id) já vinculado a conta anterior com trial -> Inelegível.
+    3. IP de origem com conta criada nas últimas 72 horas com trial (exceto localhost) -> Inelegível.
+    """
+    if trial_claimed:
+        return False, "O teste gratuito de 3 créditos já foi utilizado neste dispositivo anteriormente."
+
+    conn, engine = get_connection()
+    cur = conn.cursor()
+    ph = "%s" if engine == "postgres" else "?"
+    try:
+        # Camada 2: Verificação por device_id persistente
+        dev = (device_id or "").strip()
+        if dev:
+            cur.execute(
+                f"SELECT id, email FROM usuarios WHERE device_id = {ph} AND (trial_granted = {ph} OR creditos_mensais > 0) LIMIT 1",
+                (dev, True if engine == "postgres" else 1)
+            )
+            row = cur.fetchone()
+            if row:
+                return False, "O teste gratuito de 3 créditos já foi resgatado neste dispositivo."
+
+        # Camada 3: Verificação por IP de Origem (Rate limit de 72h por IP)
+        ip_clean = (ip_origem or "").strip()
+        ignored_ips = {"127.0.0.1", "::1", "localhost", "testclient"}
+        if ip_clean and ip_clean not in ignored_ips:
+            if engine == "postgres":
+                cur.execute(
+                    f"""SELECT id, email FROM usuarios 
+                        WHERE ip_origem = {ph} AND (trial_granted = TRUE OR creditos_mensais > 0)
+                        AND (created_at >= NOW() - INTERVAL '72 hours')
+                        LIMIT 1""",
+                    (ip_clean,)
+                )
+                row_ip = cur.fetchone()
+                if row_ip:
+                    return False, "O teste gratuito de 3 créditos já foi resgatado nesta conexão de rede nas últimas 72 horas."
+            else:
+                cur.execute(
+                    f"SELECT id, email, created_at FROM usuarios WHERE ip_origem = {ph} AND (trial_granted = 1 OR creditos_mensais > 0) ORDER BY id DESC LIMIT 1",
+                    (ip_clean,)
+                )
+                row_ip = cur.fetchone()
+                if row_ip:
+                    created_raw = row_ip[2] if isinstance(row_ip, tuple) else row_ip["created_at"]
+                    try:
+                        created_dt = datetime.fromisoformat(created_raw)
+                        if (get_brasilia_now() - created_dt).total_seconds() < 72 * 3600:
+                            return False, "O teste gratuito de 3 créditos já foi resgatado nesta conexão de rede nas últimas 72 horas."
+                    except Exception:
+                        return False, "O teste gratuito de 3 créditos já foi resgatado nesta conexão de rede recentemente."
+
+        return True, "Elegível ao teste gratuito."
+    except Exception as e:
+        print(f"[DB] Erro ao checar elegibilidade do trial: {e}")
+        return True, "Elegível por fallback."
+    finally:
+        cur.close()
+        conn.close()
+
+
+def create_user(email: str, password: str, nome: str = "", plano: str = "Starter", creditos: int = None,
+                ip_origem: str = "", device_id: str = "", trial_claimed: bool = False) -> dict:
+    """Cria um novo usuário na plataforma com defesa anti-abuso em 3 camadas."""
     email_clean = email.strip().lower()
     if not email_clean or not password:
         return {"success": False, "error": "E-mail e senha são obrigatórios."}
-    
+
+    # Camada 1: Bloqueio de e-mails descartáveis / temporários
+    if is_disposable_email(email_clean):
+        return {
+            "success": False,
+            "error": "Por favor, utilize um e-mail corporativo ou pessoal válido (Gmail, Outlook, Yahoo, domínio próprio, etc.). E-mails descartáveis ou temporários não são permitidos para ativação do teste gratuito."
+        }
+
+    # Determinação de créditos e validação de elegibilidade do Free Trial
     if creditos is not None:
         credits = int(creditos)
+        trial_granted = True
+        trial_msg = "Créditos atribuídos manualmente."
     elif plano in ("Starter", "Free Trial"):
-        credits = SIGNUP_DEFAULT_CREDITS
+        is_eligible, reason = check_trial_eligibility(ip_origem=ip_origem, device_id=device_id, trial_claimed=trial_claimed)
+        if is_eligible:
+            credits = SIGNUP_DEFAULT_CREDITS
+            trial_granted = True
+            trial_msg = "Parabéns! 3 créditos gratuitos foram concedidos para você testar e validar o software na prática."
+        else:
+            credits = 0
+            trial_granted = False
+            trial_msg = reason
     else:
         plan_info = PLANS_CONFIG.get(plano, PLANS_CONFIG["Starter"])
         credits = plan_info["creditos"]
+        trial_granted = True
+        trial_msg = f"Plano {plano} ativado com {credits} créditos contratados."
+
     hashed = hash_password(password)
     now_dt = get_brasilia_now()
     renovacao_dt = now_dt + timedelta(days=30)
@@ -209,13 +351,13 @@ def create_user(email: str, password: str, nome: str = "", plano: str = "Starter
             return {"success": False, "error": "Este e-mail já está cadastrado no sistema."}
 
         cur.execute(
-            f"""INSERT INTO usuarios (email, senha_hash, nome, plano, creditos_mensais, creditos_restantes, status_assinatura, data_renovacao, created_at)
-                VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})""",
-            (email_clean, hashed, nome or email_clean.split("@")[0], plano, credits, credits, "ativo", renovacao_str, now_str)
+            f"""INSERT INTO usuarios (email, senha_hash, nome, plano, creditos_mensais, creditos_restantes, status_assinatura, data_renovacao, created_at, ip_origem, device_id, trial_granted)
+                VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})""",
+            (email_clean, hashed, nome or email_clean.split("@")[0], plano, credits, credits, "ativo", renovacao_str, now_str, ip_origem or "", device_id or "", trial_granted if engine == "postgres" else (1 if trial_granted else 0))
         )
         conn.commit()
 
-        cur.execute(f"SELECT id, email, nome, plano, creditos_mensais, creditos_restantes, status_assinatura, data_renovacao FROM usuarios WHERE email = {ph}", (email_clean,))
+        cur.execute(f"SELECT id, email, nome, plano, creditos_mensais, creditos_restantes, status_assinatura, data_renovacao, ip_origem, device_id, trial_granted FROM usuarios WHERE email = {ph}", (email_clean,))
         user_row = cur.fetchone()
         user_dict = dict(user_row) if engine == "sqlite" else {
             "id": user_row[0],
@@ -225,9 +367,17 @@ def create_user(email: str, password: str, nome: str = "", plano: str = "Starter
             "creditos_mensais": user_row[4],
             "creditos_restantes": user_row[5],
             "status_assinatura": user_row[6],
-            "data_renovacao": str(user_row[7])
+            "data_renovacao": str(user_row[7]),
+            "ip_origem": user_row[8],
+            "device_id": user_row[9],
+            "trial_granted": bool(user_row[10])
         }
-        return {"success": True, "user": user_dict}
+        return {
+            "success": True,
+            "user": user_dict,
+            "trial_granted": trial_granted,
+            "trial_message": trial_msg
+        }
     except Exception as e:
         conn.rollback()
         return {"success": False, "error": str(e)}
@@ -242,7 +392,7 @@ def get_user_by_email(email: str) -> dict:
     cur = conn.cursor()
     ph = "%s" if engine == "postgres" else "?"
     try:
-        cur.execute(f"SELECT id, email, senha_hash, nome, plano, creditos_mensais, creditos_restantes, status_assinatura, data_renovacao FROM usuarios WHERE email = {ph}", (email.strip().lower(),))
+        cur.execute(f"SELECT id, email, senha_hash, nome, plano, creditos_mensais, creditos_restantes, status_assinatura, data_renovacao, ip_origem, device_id, trial_granted FROM usuarios WHERE email = {ph}", (email.strip().lower(),))
         row = cur.fetchone()
         if not row:
             return None
@@ -257,7 +407,10 @@ def get_user_by_email(email: str) -> dict:
             "creditos_mensais": row[5],
             "creditos_restantes": row[6],
             "status_assinatura": row[7],
-            "data_renovacao": str(row[8])
+            "data_renovacao": str(row[8]),
+            "ip_origem": row[9] if len(row) > 9 else "",
+            "device_id": row[10] if len(row) > 10 else "",
+            "trial_granted": bool(row[11]) if len(row) > 11 else True
         }
     finally:
         cur.close()
@@ -270,7 +423,7 @@ def get_user_by_id(user_id: int) -> dict:
     cur = conn.cursor()
     ph = "%s" if engine == "postgres" else "?"
     try:
-        cur.execute(f"SELECT id, email, senha_hash, nome, plano, creditos_mensais, creditos_restantes, status_assinatura, data_renovacao FROM usuarios WHERE id = {ph}", (user_id,))
+        cur.execute(f"SELECT id, email, senha_hash, nome, plano, creditos_mensais, creditos_restantes, status_assinatura, data_renovacao, ip_origem, device_id, trial_granted FROM usuarios WHERE id = {ph}", (user_id,))
         row = cur.fetchone()
         if not row:
             return None
@@ -285,7 +438,10 @@ def get_user_by_id(user_id: int) -> dict:
             "creditos_mensais": row[5],
             "creditos_restantes": row[6],
             "status_assinatura": row[7],
-            "data_renovacao": str(row[8])
+            "data_renovacao": str(row[8]),
+            "ip_origem": row[9] if len(row) > 9 else "",
+            "device_id": row[10] if len(row) > 10 else "",
+            "trial_granted": bool(row[11]) if len(row) > 11 else True
         }
     finally:
         cur.close()

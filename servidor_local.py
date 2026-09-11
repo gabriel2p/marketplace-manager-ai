@@ -1636,6 +1636,15 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                 password = str(data.get("password", ""))
                 nome = str(data.get("nome", "")).strip()
                 plano = str(data.get("plano", "Starter")).strip()
+                device_id = str(data.get("device_id", "")).strip()
+                trial_claimed = bool(data.get("trial_claimed", False))
+
+                # Extração de IP com suporte a proxy reverso do Render (X-Forwarded-For)
+                xff = self.headers.get("X-Forwarded-For", "")
+                if xff:
+                    client_ip = xff.split(",")[0].strip()
+                else:
+                    client_ip = self.headers.get("X-Real-IP", "") or (self.client_address[0] if self.client_address else "127.0.0.1")
 
                 if not email or not password:
                     self.send_response(400)
@@ -1644,7 +1653,15 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                     self.wfile.write(json.dumps({"success": False, "error": "E-mail e senha são obrigatórios."}).encode('utf-8'))
                     return
 
-                res = database.create_user(email, password, nome=nome, plano=plano)
+                res = database.create_user(
+                    email, 
+                    password, 
+                    nome=nome, 
+                    plano=plano,
+                    ip_origem=client_ip,
+                    device_id=device_id,
+                    trial_claimed=trial_claimed
+                )
                 if not res.get("success"):
                     self.send_response(400)
                     self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -1653,6 +1670,9 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                     return
 
                 user_info = res["user"]
+                trial_granted = bool(res.get("trial_granted", True))
+                trial_message = res.get("trial_message", "")
+
                 token = secrets.token_hex(24)
                 ACTIVE_SESSIONS[token] = {
                     "user_id": user_info["id"],
@@ -1662,11 +1682,13 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                     "role": "user",
                     "plano": user_info["plano"]
                 }
-                print(f"[AUTH] Novo usuário registrado com sucesso: '{email}' (Plano: {user_info['plano']})")
+                print(f"[AUTH] Novo usuário registrado: '{email}' (Plano: {user_info['plano']} | Trial Concedido: {trial_granted} | Créditos: {user_info['creditos_restantes']} | IP: {client_ip})")
 
                 self.send_response(201)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.send_header("Set-Cookie", f"session_token={token}; Path=/; HttpOnly; SameSite=Lax")
+                if trial_granted:
+                    self.send_header("Set-Cookie", "mm_trial_claimed=1; Path=/; Max-Age=31536000; SameSite=Lax")
                 self.end_headers()
                 self.wfile.write(json.dumps({
                     "success": True,
@@ -1682,7 +1704,9 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                     "creditos_mensais": user_info["creditos_mensais"],
                     "monthly_credits": user_info["creditos_mensais"],
                     "status_assinatura": user_info.get("status_assinatura", "ativo"),
-                    "status": user_info.get("status_assinatura", "ativo")
+                    "status": user_info.get("status_assinatura", "ativo"),
+                    "trial_granted": trial_granted,
+                    "trial_message": trial_message
                 }, ensure_ascii=False).encode('utf-8'))
             except Exception as e:
                 self.send_response(400)

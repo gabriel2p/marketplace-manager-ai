@@ -3686,6 +3686,44 @@
       return false;
     }
 
+    // ============================================================
+    // MECANISMOS DE FINGERPRINT & PREVENÇÃO DE ABUSO DO TRIAL
+    // ============================================================
+    function getOrCreateDeviceId() {
+      let devId = '';
+      try {
+        devId = localStorage.getItem('mm_device_id');
+        if (!devId) {
+          const match = document.cookie.match(/(?:^|;\s*)mm_device_id=([^;]+)/);
+          if (match) devId = decodeURIComponent(match[1]);
+        }
+        if (!devId) {
+          devId = 'dev_' + Math.random().toString(36).substring(2, 12) + '_' + Date.now().toString(36);
+          localStorage.setItem('mm_device_id', devId);
+          document.cookie = `mm_device_id=${encodeURIComponent(devId)}; Path=/; Max-Age=31536000; SameSite=Lax`;
+        }
+      } catch (e) {
+        devId = 'dev_' + Date.now().toString(36);
+      }
+      return devId;
+    }
+
+    function hasTrialBeenClaimedLocally() {
+      try {
+        if (localStorage.getItem('mm_trial_claimed') === 'true') return true;
+        const match = document.cookie.match(/(?:^|;\s*)mm_trial_claimed=([^;]+)/);
+        if (match && (match[1] === '1' || match[1] === 'true')) return true;
+      } catch (e) {}
+      return false;
+    }
+
+    function markTrialClaimedLocally() {
+      try {
+        localStorage.setItem('mm_trial_claimed', 'true');
+        document.cookie = 'mm_trial_claimed=1; Path=/; Max-Age=31536000; SameSite=Lax';
+      } catch (e) {}
+    }
+
     async function handleLogin(e) {
       e.preventDefault();
       const errBox = document.getElementById('login-error');
@@ -3708,6 +3746,7 @@
         });
         const data = await res.json();
         if (res.ok && data.success) {
+          markTrialClaimedLocally();
           btnText.innerText = "Autorizado! Entrando...";
           document.getElementById('login-overlay').classList.add('hidden');
           currentUser = {
@@ -3761,14 +3800,26 @@
         return;
       }
 
+      const deviceId = getOrCreateDeviceId();
+      const trialClaimed = hasTrialBeenClaimedLocally();
+
       try {
         const res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nome, email, password })
+          body: JSON.stringify({ 
+            nome, 
+            email, 
+            password,
+            device_id: deviceId,
+            trial_claimed: trialClaimed
+          })
         });
         const data = await res.json();
         if (res.ok && data.success) {
+          // Marca persistentemente no navegador que o teste foi requisitado neste dispositivo
+          markTrialClaimedLocally();
+
           btnText.innerText = "Conta Ativada!";
           document.getElementById('login-overlay').classList.add('hidden');
           currentUser = {
@@ -3776,8 +3827,8 @@
             email: data.email || email,
             role: data.role || 'Starter',
             plan: data.plan || 'Starter',
-            credits_left: data.credits_left !== undefined ? data.credits_left : 3,
-            monthly_credits: data.monthly_credits !== undefined ? data.monthly_credits : 3,
+            credits_left: data.credits_left !== undefined ? data.credits_left : 0,
+            monthly_credits: data.monthly_credits !== undefined ? data.monthly_credits : 0,
             status: data.status || 'ativo'
           };
           updateCurrentUserUI(currentUser.user, currentUser.role);
@@ -3785,7 +3836,14 @@
           loadMlStatus();
           loadShopeeStatus();
           openPlatformModal();
-          alert(`🎉 Bem-vindo ao Marketplace Manager AI!\n\nSua conta foi criada e você já possui ${currentUser.credits_left} créditos gratuitos para testar e validar o software na prática no Mercado Livre e Shopee!`);
+
+          if (data.trial_granted && currentUser.credits_left > 0) {
+            alert(`🎉 Bem-vindo ao Marketplace Manager AI!\n\nSua conta foi criada e você já possui ${currentUser.credits_left} créditos gratuitos para testar e validar o software na prática no Mercado Livre e Shopee!`);
+          } else {
+            // Defesa anti-abuso: conta criada com 0 créditos e direcionada ao upgrade
+            alert(`⚠️ Atenção: ${data.trial_message || "O teste gratuito de 3 créditos já foi utilizado anteriormente neste dispositivo ou conexão de rede."}\n\nSua conta foi criada com sucesso com saldo 0. Para começar suas análises de mercado, escolha um plano comercial ou recarregue seus créditos.`);
+            openUpgradeModal(true);
+          }
         } else {
           errText.innerText = data.error || "Erro ao realizar cadastro.";
           errBox.classList.remove('hidden');

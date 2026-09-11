@@ -473,7 +473,8 @@
           <i data-lucide="zap" class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5"></i>
           <div class="space-y-1 text-slate-300 leading-relaxed">
             <p class="font-bold text-emerald-300 text-xs">⚡ Mercado Envios FULL (Fulfillment Oficial do Mercado Livre) Ativado:</p>
-            <p>• <strong>Desconto de Frete:</strong> Benefício oficial de até <strong>10% de desconto adicional</strong> na tarifa de frete grátis para produtos a partir de R$ 79,00.</p>
+            <p>• <strong>Desconto de Frete (≥ R$ 79,00):</strong> Benefício oficial de até <strong>10% de desconto adicional</strong> na tarifa de frete grátis do lojista.</p>
+            <p>• <strong>Entrega Grátis a partir de R$ 19/R$ 29 (< R$ 79,00):</strong> No Full, o comprador tem benefício de frete grátis somando itens ao carrinho (Meli+). <strong>Esse frete é 100% pago pelo Mercado Livre</strong> — você lojista NÃO paga frete (apenas a taxa fixa de R$ 6,00), usufruindo de altíssima conversão de vendas!</p>
             <p>• <strong>Embalagem Inclusa:</strong> O Mercado Livre fornece as caixas e envelopes oficiais e realiza a separação no Centro de Distribuição (Embalagem ajustada para R$ 0,00).</p>
             <p>• <strong>Política de Armazenagem Prolongada (Stock Aging Fee):</strong> Para evitar cobrança de permanência após 60/90 dias no CD, mantenha remessas planejadas para cobertura de 30 a 45 dias de vendas.</p>
           </div>
@@ -2571,7 +2572,11 @@
             gateReasons.push(`Margem líquida de ${netMargin}% atinge ou supera a meta desejada de ${targetMarginPct.toFixed(0)}%, gerando lucro de R$ ${netProfit.toFixed(2)} por unidade vendida.`);
             gateReasons.push(`Cálculo determinístico inclui comissão oficial de R$ ${fee.toFixed(2)} e ${econBase.isFreeShipping ? `frete ${isFull ? 'Mercado Envios FULL com 10% OFF' : 'Mercado Envios'} (${weight}kg: R$ ${shipping.toFixed(2)})` : `taxa fixa de R$ 6,00 (frete comprador)`}.`);
             if (isFull) {
-              gateReasons.push(`⚡ Modalidade Mercado Envios FULL Ativada: 10% de desconto adicional no frete oficial e R$ 0,00 de custo de embalagem (fornecida pelo CD do Mercado Livre).`);
+              if (sellingPrice < 79.0) {
+                gateReasons.push(`⚡ Alavanca FULL (< R$ 79,00): Elegível ao frete grátis do comprador a partir de R$ 19/R$ 29 no carrinho Meli+. Você NÃO paga o frete (apenas a taxa fixa de R$ 6,00) e a embalagem é R$ 0,00!`);
+              } else {
+                gateReasons.push(`⚡ Modalidade Mercado Envios FULL Ativada: 10% de desconto adicional no frete oficial e R$ 0,00 de custo de embalagem (fornecida pelo CD do Mercado Livre).`);
+              }
               gateReasons.push(`📋 Política de Armazenagem Prolongada: Envie remessas calculadas para cobertura de 30 a 45 dias de vendas para evitar taxas de permanência após 60/90 dias.`);
             }
             gateReasons.push(`Resistência a estresse comprovada: no pior cenário simulado (+10% CMV e -10% preço), o lucro unitário se mantém positivo em R$ ${econAdv.netProfit.toFixed(2)}.`);
@@ -2581,7 +2586,11 @@
             gateReasons.push(`Margem líquida base de ${netMargin}% é rentável, mas está abaixo da meta desejada (${targetMarginPct.toFixed(0)}%).`);
             gateReasons.push(`Vulnerabilidade em cenário adverso: sob guerra de preços e aumento de leilão, o lucro unitário recua para R$ ${econAdv.netProfit.toFixed(2)}.`);
             if (isFull) {
-              gateReasons.push(`⚡ Oportunidade FULL: Frete reduzido em 10% e embalagem gratuita aumentam a competitividade no leilão.`);
+              if (sellingPrice < 79.0) {
+                gateReasons.push(`⚡ Oportunidade FULL: Frete grátis do comprador a partir de R$ 19/R$ 29 sem custo de frete para você (apenas taxa fixa R$ 6,00) acelera o giro de estoque.`);
+              } else {
+                gateReasons.push(`⚡ Oportunidade FULL: Frete reduzido em 10% e embalagem gratuita aumentam a competitividade no leilão.`);
+              }
             }
             gateReasons.push(`[Condição Recomendada]: Limitar o ACOS de campanhas de publicidade em no máximo 15% para proteger a margem.`);
             gateReasons.push(`[Alternativa Estratégica]: Criar Kit/Combo com 2 unidades para diluir o custo de frete e embalagem.`);
@@ -3356,13 +3365,28 @@
         ratingLabel = "A - ALTAMENTE VIÁVEL (Compensa Plenamente)";
         gateReasons.push(`Preço sugerido de R$ ${sellingPrice.toFixed(2)} é altamente competitivo frente à concorrência (média de mercado em R$ ${avgCompPrice.toFixed(2)}).`);
         gateReasons.push(`Margem líquida de ${netMargin}% atinge ou supera a meta desejada de ${targetMarginPct.toFixed(0)}%, gerando lucro de R$ ${netProfit.toFixed(2)} por unidade vendida.`);
-        gateReasons.push(`Cálculo determinístico inclui comissão oficial de R$ ${fee.toFixed(2)} e ${econBase.isFreeShipping ? `frete Mercado Envios (${weight}kg: R$ ${shipping.toFixed(2)})` : `taxa fixa de R$ 6,00 (frete comprador)`}.`);
+        gateReasons.push(`Cálculo determinístico inclui comissão oficial de R$ ${fee.toFixed(2)} e ${econBase.isFreeShipping ? `frete ${isFull ? 'Mercado Envios FULL com 10% OFF' : 'Mercado Envios'} (${weight}kg: R$ ${shipping.toFixed(2)})` : `taxa fixa de R$ 6,00 (frete comprador)`}.`);
+        if (isFull) {
+          if (sellingPrice < 79.0) {
+            gateReasons.push(`⚡ Alavanca FULL (< R$ 79,00): Elegível ao frete grátis do comprador a partir de R$ 19/R$ 29 no carrinho Meli+. Você NÃO paga o frete (apenas a taxa fixa de R$ 6,00) e a embalagem é R$ 0,00!`);
+          } else {
+            gateReasons.push(`⚡ Modalidade Mercado Envios FULL Ativada: 10% de desconto adicional no frete oficial e R$ 0,00 de custo de embalagem (fornecida pelo CD do Mercado Livre).`);
+          }
+          gateReasons.push(`📋 Política de Armazenagem Prolongada: Envie remessas calculadas para cobertura de 30 a 45 dias de vendas para evitar taxas de permanência após 60/90 dias.`);
+        }
         gateReasons.push(`Resistência a estresse comprovada: no pior cenário simulado (+10% CMV e -10% preço), o lucro unitário se mantém positivo em R$ ${econAdv.netProfit.toFixed(2)}.`);
       } else if (netMargin >= 10.0 && econAdv.netProfit >= -2.0) {
         rating = "B";
         ratingLabel = "B - VIÁVEL COM CONDIÇÕES (Ajustes Recomendados)";
         gateReasons.push(`Margem líquida base de ${netMargin}% é rentável, mas está abaixo da meta desejada (${targetMarginPct.toFixed(0)}%).`);
         gateReasons.push(`Vulnerabilidade em cenário adverso: sob guerra de preços e aumento de leilão, o lucro unitário recua para R$ ${econAdv.netProfit.toFixed(2)}.`);
+        if (isFull) {
+          if (sellingPrice < 79.0) {
+            gateReasons.push(`⚡ Oportunidade FULL: Frete grátis do comprador a partir de R$ 19/R$ 29 sem custo de frete para você (apenas taxa fixa R$ 6,00) acelera o giro de estoque.`);
+          } else {
+            gateReasons.push(`⚡ Oportunidade FULL: Frete reduzido em 10% e embalagem gratuita aumentam a competitividade no leilão.`);
+          }
+        }
         gateReasons.push(`[Condição Recomendada]: Limitar o ACOS de campanhas de publicidade em no máximo 15% para proteger a margem.`);
         gateReasons.push(`[Alternativa Estratégica]: Criar Kit/Combo com 2 unidades para diluir o custo de frete e embalagem.`);
       } else if (netMargin >= 4.0) {

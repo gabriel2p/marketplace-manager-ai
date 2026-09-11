@@ -1581,20 +1581,27 @@
           </div>
         </div>
 
-        <!-- Pacotes de Recarga Avulsa -->
-        <div class="bg-slate-900/60 border border-cardborder rounded-xl p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div>
-            <h5 class="font-bold text-white text-xs flex items-center gap-1.5">
-              <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
-              <span>Precisa apenas de uma recarga avulsa de créditos?</span>
+        <!-- Pacotes de Recarga Avulsa (Exibido apenas para Assinantes Ativos que já contrataram um plano) -->
+        <div id="upgrade-recharge-section" class="hidden bg-slate-900/90 border border-emerald-500/30 rounded-xl p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md shadow-emerald-500/5">
+          <div class="space-y-1">
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded border border-emerald-500/30 uppercase tracking-wide">
+                Exclusivo para Assinantes
+              </span>
+            </div>
+            <h5 class="font-bold text-white text-xs sm:text-sm flex items-center gap-1.5">
+              <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400 flex-shrink-0"></i>
+              <span>Precisa de mais análises no ciclo atual?</span>
             </h5>
-            <p class="text-[11px] text-slate-400 mt-0.5">Adicione créditos ao seu saldo atual sem alterar o plano contratado.</p>
+            <p id="recharge-section-subtitle" class="text-[11px] text-slate-400">
+              Adicione créditos extras ao seu saldo atual sem alterar a data de renovação do plano contratado.
+            </p>
           </div>
-          <div class="flex items-center gap-2 w-full sm:w-auto">
-            <button onclick="simulateRecharge(50)" class="flex-1 sm:flex-none bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-bold px-3 py-1.5 rounded-lg text-xs transition">
+          <div class="flex items-center gap-2 w-full sm:w-auto flex-shrink-0">
+            <button onclick="simulateRecharge(50)" class="flex-1 sm:flex-none bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-bold px-3 py-2 rounded-lg text-xs transition">
               +50 Créditos (R$ 39)
             </button>
-            <button onclick="simulateRecharge(100)" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs transition">
+            <button onclick="simulateRecharge(100)" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-3 py-2 rounded-lg text-xs transition shadow-md shadow-emerald-500/20">
               +100 Créditos (R$ 69)
             </button>
           </div>
@@ -3453,14 +3460,94 @@
       const modal = document.getElementById('upgrade-modal');
       const alertBox = document.getElementById('upgrade-paywall-alert');
       const alertMsg = document.getElementById('upgrade-paywall-msg');
+      const rechargeSection = document.getElementById('upgrade-recharge-section');
+      const rechargeSub = document.getElementById('recharge-section-subtitle');
 
+      // Assinante pago ativo possui cota mensal contratada (>= 50 créditos/mês)
+      const isPaidSubscriber = Boolean(
+        currentUser.monthly_credits >= 50 && 
+        (currentUser.status === 'ativo' || currentUser.status === 'active') && 
+        currentUser.plan !== 'Free Trial' &&
+        currentUser.plan !== 'Admin'
+      );
+
+      // CONTROLE DE NEGÓCIO SAAS:
+      // Pacotes de recarga avulsa SÓ aparecem para quem JÁ É assinante ativo!
+      // Para quem está no Free Trial ou sem plano pago, a recarga fica 100% oculta para não canibalizar a assinatura do Starter.
+      if (rechargeSection) {
+        if (isPaidSubscriber) {
+          rechargeSection.classList.remove('hidden');
+          if (rechargeSub) {
+            rechargeSub.innerText = `Como você já é assinante do plano ${currentUser.plan}, adicione créditos extras ao ciclo atual sem alterar sua assinatura.`;
+          }
+        } else {
+          rechargeSection.classList.add('hidden');
+        }
+      }
+
+      // Alerta de Paywall / Limite Atingido
       if (fromPaywall) {
         if (alertBox) alertBox.classList.remove('hidden');
         if (alertMsg) {
-          alertMsg.innerText = message || "Você atingiu o limite de consultas do seu plano atual. Faça um upgrade ou recarregue seus créditos para continuar.";
+          if (message) {
+            alertMsg.innerText = message;
+          } else if (isPaidSubscriber) {
+            alertMsg.innerText = `Você atingiu o limite de créditos do seu plano ${currentUser.plan}. Faça um upgrade para um plano maior ou adquira uma recarga avulsa de créditos abaixo.`;
+          } else {
+            alertMsg.innerText = "Você utilizou seus créditos gratuitos de validação. Escolha um dos planos de assinatura abaixo para continuar utilizando o Marketplace Manager AI:";
+          }
         }
       } else {
         if (alertBox) alertBox.classList.add('hidden');
+      }
+
+      // Adapta os botões dos planos se o usuário já tiver um plano ativo
+      const btnStarter = document.querySelector("button[onclick*=\"simulateUpgrade('Starter'\"]");
+      const btnPro = document.querySelector("button[onclick*=\"simulateUpgrade('Pro'\"]");
+      const btnAdv = document.querySelector("button[onclick*=\"simulateUpgrade('Advanced'\"]");
+
+      if (btnStarter) {
+        if (isPaidSubscriber && currentUser.plan === 'Starter') {
+          btnStarter.innerText = "✓ Seu Plano Atual";
+          btnStarter.className = "w-full mt-4 bg-emerald-600/20 text-emerald-300 font-bold py-2.5 px-3 rounded-lg border border-emerald-500/40 text-xs cursor-default";
+          btnStarter.disabled = true;
+        } else {
+          btnStarter.innerText = "Assinar Starter";
+          btnStarter.className = "w-full mt-4 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-3 rounded-lg border border-cardborder text-xs transition min-h-[40px]";
+          btnStarter.disabled = false;
+        }
+      }
+
+      if (btnPro) {
+        if (isPaidSubscriber && currentUser.plan === 'Pro') {
+          btnPro.innerText = "✓ Seu Plano Atual";
+          btnPro.className = "w-full mt-4 bg-amber-500/20 text-amber-300 font-bold py-2.5 px-3 rounded-lg border border-amber-500/40 text-xs cursor-default";
+          btnPro.disabled = true;
+        } else if (isPaidSubscriber && currentUser.plan === 'Starter') {
+          btnPro.innerText = "Upgrade para Pro (250 análises)";
+          btnPro.className = "w-full mt-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold py-2.5 px-3 rounded-lg shadow-lg shadow-amber-500/20 text-xs transition min-h-[40px]";
+          btnPro.disabled = false;
+        } else {
+          btnPro.innerText = "Assinar Plano Pro";
+          btnPro.className = "w-full mt-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold py-2.5 px-3 rounded-lg shadow-lg shadow-amber-500/20 text-xs transition min-h-[40px]";
+          btnPro.disabled = false;
+        }
+      }
+
+      if (btnAdv) {
+        if (isPaidSubscriber && currentUser.plan === 'Advanced') {
+          btnAdv.innerText = "✓ Seu Plano Atual";
+          btnAdv.className = "w-full mt-4 bg-purple-600/20 text-purple-300 font-bold py-2.5 px-3 rounded-lg border border-purple-500/40 text-xs cursor-default";
+          btnAdv.disabled = true;
+        } else if (isPaidSubscriber) {
+          btnAdv.innerText = "Upgrade para Advanced (1.000 análises)";
+          btnAdv.className = "w-full mt-4 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 px-3 rounded-lg text-xs transition min-h-[40px]";
+          btnAdv.disabled = false;
+        } else {
+          btnAdv.innerText = "Assinar Plano Advanced";
+          btnAdv.className = "w-full mt-4 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 px-3 rounded-lg text-xs transition min-h-[40px]";
+          btnAdv.disabled = false;
+        }
       }
 
       if (modal) modal.classList.remove('hidden');

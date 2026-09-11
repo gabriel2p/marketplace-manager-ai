@@ -1973,8 +1973,22 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode('utf-8'))
             return
 
-        # Salvar credenciais do Mercado Livre
+        # Salvar credenciais globais do Mercado Livre (Apenas Administrador)
         if parsed.path == "/api/ml/credentials":
+            sess = self.get_current_user_session()
+            if not sess:
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": "Autenticação necessária."}).encode('utf-8'))
+                return
+            if sess.get("role") != "admin":
+                self.send_response(403)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": "Apenas administradores podem configurar as credenciais globais da plataforma."}).encode('utf-8'))
+                return
+
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length).decode('utf-8')
             try:
@@ -1986,37 +2000,74 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                     cfg["client_secret"] = str(data["client_secret"]).strip()
                 if "access_token" in data:
                     cfg["access_token"] = str(data["access_token"]).strip()
+                    try:
+                        database.save_user_ml_credentials(sess["user_id"], cfg["access_token"])
+                    except Exception as err:
+                        print(f"[ML Admin] Erro ao salvar token no banco: {err}", flush=True)
 
                 save_ml_config(cfg)
                 self.send_response(200)
-                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.end_headers()
-                self.wfile.write(json.dumps({"success": True, "message": "Credenciais salvas com sucesso!"}).encode('utf-8'))
+                self.wfile.write(json.dumps({"success": True, "message": "Credenciais globais salvas com sucesso!"}).encode('utf-8'))
             except Exception as e:
                 self.send_response(400)
-                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode('utf-8'))
             return
 
-        # Salvar Access Token diretamente (persistência via localStorage)
+        # Salvar Access Token diretamente (isolamento estrito multi-tenant no banco de dados)
         if parsed.path == "/api/ml/save-token":
+            sess = self.get_current_user_session()
+            if not sess:
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": "Autenticação necessária."}).encode('utf-8'))
+                return
+
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length).decode('utf-8') if content_length > 0 else "{}"
             try:
                 data = json.loads(body)
                 token = data.get("token", "").strip()
                 if token:
-                    cfg = load_ml_config()
-                    cfg["access_token"] = token
-                    save_ml_config(cfg)
+                    database.save_user_ml_credentials(sess["user_id"], token)
+                    if sess.get("role") == "admin":
+                        cfg = load_ml_config()
+                        cfg["access_token"] = token
+                        save_ml_config(cfg)
                 self.send_response(200)
-                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.end_headers()
-                self.wfile.write(json.dumps({"success": True}).encode('utf-8'))
+                self.wfile.write(json.dumps({"success": True, "message": "Token do Mercado Livre conectado à sua conta com sucesso!"}).encode('utf-8'))
             except Exception as e:
                 self.send_response(400)
-                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode('utf-8'))
+            return
+
+        # Desconectar conta do Mercado Livre do usuário autenticado
+        if parsed.path == "/api/ml/disconnect":
+            sess = self.get_current_user_session()
+            if not sess:
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": "Autenticação necessária."}).encode('utf-8'))
+                return
+
+            try:
+                database.disconnect_user_ml(sess["user_id"])
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "message": "Conta do Mercado Livre desconectada com sucesso!"}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode('utf-8'))
             return
@@ -2084,6 +2135,14 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
 
         # Trocar código de autorização pelo token oficial
         if parsed.path == "/api/ml/exchange-code":
+            sess = self.get_current_user_session()
+            if not sess:
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": "Autenticação necessária."}).encode('utf-8'))
+                return
+
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length).decode('utf-8')
             try:
@@ -2092,15 +2151,17 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
 
                 # Se o usuário colou diretamente um Access Token (ex: APP_USR-...)
                 if raw_code.startswith("APP_USR-") or raw_code.startswith("APP_"):
-                    cfg = load_ml_config()
-                    cfg["access_token"] = raw_code
-                    if data.get("app_id"):
-                        cfg["app_id"] = str(data["app_id"]).strip()
-                    if data.get("client_secret"):
-                        cfg["client_secret"] = str(data["client_secret"]).strip()
-                    save_ml_config(cfg)
+                    database.save_user_ml_credentials(sess["user_id"], raw_code)
+                    if sess.get("role") == "admin":
+                        cfg = load_ml_config()
+                        cfg["access_token"] = raw_code
+                        if data.get("app_id"):
+                            cfg["app_id"] = str(data["app_id"]).strip()
+                        if data.get("client_secret"):
+                            cfg["client_secret"] = str(data["client_secret"]).strip()
+                        save_ml_config(cfg)
                     self.send_response(200)
-                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
                     self.end_headers()
                     self.wfile.write(json.dumps({"success": True, "message": "Access Token salvo e conectado com sucesso!"}).encode('utf-8'))
                     return
@@ -2120,24 +2181,31 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
 
                 token_res = exchange_code_for_token(raw_code, app_id, client_secret, redirect_uri)
                 if "access_token" in token_res:
-                    cfg["app_id"] = app_id
-                    cfg["client_secret"] = client_secret
-                    cfg["access_token"] = token_res["access_token"]
-                    cfg["refresh_token"] = token_res.get("refresh_token", "")
-                    cfg["user_id"] = token_res.get("user_id")
-                    save_ml_config(cfg)
+                    acc_token = token_res["access_token"]
+                    ref_token = token_res.get("refresh_token", "")
+                    ml_uid = str(token_res.get("user_id", ""))
+                    database.save_user_ml_credentials(sess["user_id"], acc_token, ref_token, ml_uid)
+
+                    if sess.get("role") == "admin":
+                        cfg["app_id"] = app_id
+                        cfg["client_secret"] = client_secret
+                        cfg["access_token"] = acc_token
+                        cfg["refresh_token"] = ref_token
+                        cfg["user_id"] = ml_uid
+                        save_ml_config(cfg)
+
                     self.send_response(200)
-                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
                     self.end_headers()
                     self.wfile.write(json.dumps({"success": True, "message": "Autenticação concluída com sucesso!"}).encode('utf-8'))
                 else:
                     self.send_response(400)
-                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
                     self.end_headers()
                     self.wfile.write(json.dumps({"success": False, "error": token_res}).encode('utf-8'))
             except Exception as e:
                 self.send_response(500)
-                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode('utf-8'))
         # 5. Salvar credenciais da Shopee
@@ -2301,24 +2369,47 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
 
         # 1. Consulta de status das credenciais do Mercado Livre
         if parsed.path == "/api/ml/status":
+            sess = self.get_current_user_session()
             cfg = load_ml_config()
             has_app_id = bool(cfg.get("app_id"))
             has_secret = bool(cfg.get("client_secret"))
-            has_token = bool(cfg.get("access_token"))
+
+            user_creds = {"connected": False, "access_token": "", "ml_user_id": "", "connected_at": ""}
+            if sess and sess.get("user_id"):
+                try:
+                    user_creds = database.get_user_ml_credentials(sess["user_id"])
+                except Exception as e:
+                    print(f"[ML Status] Erro ao consultar credenciais do usuario {sess.get('user_id')}: {e}", flush=True)
+
+            is_connected = False
+            if sess:
+                if user_creds.get("connected"):
+                    is_connected = True
+                elif sess.get("role") == "admin" and bool(cfg.get("access_token")):
+                    is_connected = True
+            else:
+                is_connected = bool(cfg.get("access_token"))
 
             host = self.headers.get('Host', 'localhost:8000')
             proto = self.headers.get('X-Forwarded-Proto', 'https' if ('onrender.com' in host or not host.startswith('localhost')) else 'http')
             redirect_uri = f"{proto}://{host}/api/auth/callback"
             encoded_redirect = urllib.parse.quote(redirect_uri, safe='')
 
+            state_val = str(sess.get("user_id", "")) if sess else ""
+            auth_url = f"https://auth.mercadolivre.com.br/authorization?response_type=code&client_id={cfg.get('app_id', '')}&redirect_uri={encoded_redirect}"
+            if state_val:
+                auth_url += f"&state={state_val}"
+
             masked_app = cfg["app_id"][:4] + "****" if len(cfg.get("app_id", "")) > 4 else ""
             res = {
-                "connected": has_token,
+                "connected": is_connected,
                 "has_credentials": has_app_id and has_secret,
                 "app_id": cfg.get("app_id", ""),
                 "app_id_masked": masked_app,
                 "redirect_uri": redirect_uri,
-                "auth_url": f"https://auth.mercadolivre.com.br/authorization?response_type=code&client_id={cfg.get('app_id', '')}&redirect_uri={encoded_redirect}" if has_app_id else None
+                "auth_url": auth_url if has_app_id else None,
+                "ml_user_id": user_creds.get("ml_user_id", ""),
+                "connected_at": user_creds.get("connected_at", "")
             }
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -2330,6 +2421,7 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/auth/callback":
             query_params = urllib.parse.parse_qs(parsed.query)
             code = query_params.get("code", [""])[0]
+            state_param = query_params.get("state", [""])[0]
             error_param = query_params.get("error", [""])[0]
             error_desc = query_params.get("error_description", [""])[0]
 
@@ -2358,15 +2450,31 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
             token_res = exchange_code_for_token(code, cfg.get("app_id", ""), cfg.get("client_secret", ""), redirect_uri)
 
             if "access_token" in token_res:
-                cfg["access_token"] = token_res["access_token"]
-                cfg["refresh_token"] = token_res.get("refresh_token", "")
-                cfg["user_id"] = token_res.get("user_id")
-                save_ml_config(cfg)
-                print(f"[ML Auth] Autenticacao concluida com sucesso para o User ID: {cfg['user_id']}!")
+                acc_token = token_res["access_token"]
+                ref_token = token_res.get("refresh_token", "")
+                ml_uid = str(token_res.get("user_id", ""))
 
-                # Redireciona de volta para a tela inicial do dashboard com o token
+                # Determina o usuario destinatario (sessao ativa ou state param)
+                sess = self.get_current_user_session()
+                target_uid = None
+                if sess and sess.get("user_id"):
+                    target_uid = sess["user_id"]
+                elif state_param and state_param.isdigit():
+                    target_uid = int(state_param)
+
+                if target_uid:
+                    database.save_user_ml_credentials(target_uid, acc_token, ref_token, ml_uid)
+                    print(f"[ML Auth] Credenciais salvas no banco para o usuario ID {target_uid} (ML User: {ml_uid})!", flush=True)
+
+                if (sess and sess.get("role") == "admin") or not cfg.get("access_token"):
+                    cfg["access_token"] = acc_token
+                    cfg["refresh_token"] = ref_token
+                    cfg["user_id"] = ml_uid
+                    save_ml_config(cfg)
+
+                # Redireciona com seguranca sem vazar o access_token na URL (protecao contra vazamento)
                 self.send_response(302)
-                self.send_header("Location", f"/?ml_connected=true&access_token={token_res['access_token']}")
+                self.send_header("Location", "/?ml_connected=true")
                 self.end_headers()
                 return
             else:
@@ -2389,6 +2497,14 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
 
         # 3. Busca de Concorrentes via API Oficial
         if parsed.path == "/api/competitors":
+            sess = self.get_current_user_session()
+            if not sess:
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": "Autenticação necessária para consultar concorrentes."}).encode('utf-8'))
+                return
+
             query_params = urllib.parse.parse_qs(parsed.query)
             search_query = query_params.get("q", [""])[0]
             brand_query = query_params.get("brand", [""])[0]
@@ -2399,6 +2515,7 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
 
             if not search_query:
                 self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.end_headers()
                 self.wfile.write(b'{"error": "Parametro q obrigatorio"}')
                 return
@@ -2409,9 +2526,22 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
             bearer_token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else ""
             ml_bearer = bearer_token if (bearer_token and bearer_token not in ACTIVE_SESSIONS) else ""
             token_from_param = query_params.get("token", [""])[0].strip()
-            access_token = token_from_ml_header or ml_bearer or token_from_param or cfg.get("access_token", "")
 
-            print(f"[API] Buscando no Mercado Livre: '{search_query}' (Marca: '{brand_query}', Token ativo: {bool(access_token)}, CMV: R$ {cmv_val:.2f})...")
+            # Resolução de Token com Isolamento Multi-Tenant:
+            # 1. Token individual do usuário armazenado no banco de dados
+            user_token = ""
+            try:
+                user_creds = database.get_user_ml_credentials(sess["user_id"])
+                if user_creds.get("connected"):
+                    user_token = user_creds.get("access_token", "")
+            except Exception as e:
+                print(f"[Competitors] Erro ao buscar token do usuario {sess.get('user_id')}: {e}", flush=True)
+
+            # 2. Token explícito no header ou query (se fornecido)
+            # 3. Fallback para token global da plataforma (garante busca para quem ainda não conectou conta de vendedor)
+            access_token = user_token or token_from_ml_header or ml_bearer or token_from_param or cfg.get("access_token", "")
+
+            print(f"[API] Buscando no Mercado Livre para usuário {sess.get('user_id')} ({sess.get('email')}): '{search_query}' (Marca: '{brand_query}', Token individual: {bool(user_token)}, Token ativo: {bool(access_token)}, CMV: R$ {cmv_val:.2f})...", flush=True)
             items = search_official_ml_api(search_query, access_token, cfg, cmv=cmv_val, brand=brand_query)
 
             is_live = any(it.get("is_live", False) for it in items)

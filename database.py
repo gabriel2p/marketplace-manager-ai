@@ -142,7 +142,11 @@ def init_db():
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                     ip_origem VARCHAR(64) DEFAULT '',
                     device_id VARCHAR(128) DEFAULT '',
-                    trial_granted BOOLEAN DEFAULT TRUE
+                    trial_granted BOOLEAN DEFAULT TRUE,
+                    ml_user_id VARCHAR(64) DEFAULT '',
+                    ml_access_token TEXT DEFAULT '',
+                    ml_refresh_token TEXT DEFAULT '',
+                    ml_connected_at TIMESTAMP WITH TIME ZONE
                 );
             """)
             cur.execute("""
@@ -163,6 +167,10 @@ def init_db():
             cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS ip_origem VARCHAR(64) DEFAULT '';")
             cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS device_id VARCHAR(128) DEFAULT '';")
             cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS trial_granted BOOLEAN DEFAULT TRUE;")
+            cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS ml_user_id VARCHAR(64) DEFAULT '';")
+            cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS ml_access_token TEXT DEFAULT '';")
+            cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS ml_refresh_token TEXT DEFAULT '';")
+            cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS ml_connected_at TIMESTAMP WITH TIME ZONE;")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_usuarios_ip ON usuarios(ip_origem);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_usuarios_device_id ON usuarios(device_id);")
         else:
@@ -180,7 +188,11 @@ def init_db():
                     created_at TEXT,
                     ip_origem TEXT DEFAULT '',
                     device_id TEXT DEFAULT '',
-                    trial_granted INTEGER DEFAULT 1
+                    trial_granted INTEGER DEFAULT 1,
+                    ml_user_id TEXT DEFAULT '',
+                    ml_access_token TEXT DEFAULT '',
+                    ml_refresh_token TEXT DEFAULT '',
+                    ml_connected_at TEXT DEFAULT ''
                 );
             """)
             cur.execute("""
@@ -207,6 +219,14 @@ def init_db():
                 cur.execute("ALTER TABLE usuarios ADD COLUMN device_id TEXT DEFAULT '';")
             if "trial_granted" not in col_names:
                 cur.execute("ALTER TABLE usuarios ADD COLUMN trial_granted INTEGER DEFAULT 1;")
+            if "ml_user_id" not in col_names:
+                cur.execute("ALTER TABLE usuarios ADD COLUMN ml_user_id TEXT DEFAULT '';")
+            if "ml_access_token" not in col_names:
+                cur.execute("ALTER TABLE usuarios ADD COLUMN ml_access_token TEXT DEFAULT '';")
+            if "ml_refresh_token" not in col_names:
+                cur.execute("ALTER TABLE usuarios ADD COLUMN ml_refresh_token TEXT DEFAULT '';")
+            if "ml_connected_at" not in col_names:
+                cur.execute("ALTER TABLE usuarios ADD COLUMN ml_connected_at TEXT DEFAULT '';")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_usuarios_ip ON usuarios(ip_origem);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_usuarios_device_id ON usuarios(device_id);")
 
@@ -706,4 +726,68 @@ def update_user(user_id: int, **fields) -> bool:
     finally:
         cur.close()
         conn.close()
+
+
+def get_user_ml_credentials(user_id: int) -> dict:
+    """Retorna as credenciais individuais da conta do Mercado Livre vinculadas a um usuário específico."""
+    if not user_id:
+        return {"connected": False, "access_token": "", "refresh_token": "", "ml_user_id": "", "connected_at": ""}
+    conn, engine = get_connection()
+    cur = conn.cursor()
+    ph = "%s" if engine == "postgres" else "?"
+    try:
+        cur.execute(f"SELECT ml_access_token, ml_refresh_token, ml_user_id, ml_connected_at FROM usuarios WHERE id = {ph}", (user_id,))
+        row = cur.fetchone()
+        if row:
+            token = row[0] if engine == "postgres" else (row["ml_access_token"] if "ml_access_token" in row.keys() else row[0])
+            refresh = row[1] if engine == "postgres" else (row["ml_refresh_token"] if "ml_refresh_token" in row.keys() else row[1])
+            ml_uid = row[2] if engine == "postgres" else (row["ml_user_id"] if "ml_user_id" in row.keys() else row[2])
+            conn_at = row[3] if engine == "postgres" else (row["ml_connected_at"] if "ml_connected_at" in row.keys() else row[3])
+            token_str = (token or "").strip()
+            return {
+                "connected": bool(token_str),
+                "access_token": token_str,
+                "refresh_token": (refresh or "").strip(),
+                "ml_user_id": str(ml_uid or ""),
+                "connected_at": str(conn_at or "")
+            }
+        return {"connected": False, "access_token": "", "refresh_token": "", "ml_user_id": "", "connected_at": ""}
+    except Exception as e:
+        print(f"[DB] Erro ao buscar credenciais ML do usuario {user_id}: {e}", flush=True)
+        return {"connected": False, "access_token": "", "refresh_token": "", "ml_user_id": "", "connected_at": ""}
+    finally:
+        cur.close()
+        conn.close()
+
+
+def save_user_ml_credentials(user_id: int, access_token: str, refresh_token: str = "", ml_user_id: str = "") -> bool:
+    """Salva com segurança as credenciais do Mercado Livre de forma isolada para o lojista."""
+    if not user_id:
+        return False
+    conn, engine = get_connection()
+    cur = conn.cursor()
+    ph = "%s" if engine == "postgres" else "?"
+    now_str = get_brasilia_now().isoformat()
+    try:
+        cur.execute(
+            f"""UPDATE usuarios 
+                SET ml_access_token = {ph}, ml_refresh_token = {ph}, ml_user_id = {ph}, ml_connected_at = {ph}
+                WHERE id = {ph}""",
+            (access_token.strip(), (refresh_token or "").strip(), str(ml_user_id or ""), now_str, user_id)
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"[DB] Erro ao salvar credenciais ML do usuario {user_id}: {e}", flush=True)
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
+
+def disconnect_user_ml(user_id: int) -> bool:
+    """Desconecta a conta do Mercado Livre do lojista, limpando os tokens com segurança."""
+    return save_user_ml_credentials(user_id, "", "", "")
+
 

@@ -1764,12 +1764,12 @@
         <form id="ml-credentials-form" onsubmit="saveMlCredentials(event)" class="space-y-3 text-xs">
           <div>
             <label class="block text-slate-300 font-semibold mb-1">App ID (Client ID):</label>
-            <input type="text" id="ml-input-appid" required placeholder="Ex: 6387440238837653" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-white font-mono text-base sm:text-xs focus:border-blue-400 focus:outline-none min-h-[44px]">
+            <input type="text" id="ml-input-appid" placeholder="Ex: 6387440238837653" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-white font-mono text-base sm:text-xs focus:border-blue-400 focus:outline-none min-h-[44px]">
           </div>
 
           <div>
             <label class="block text-slate-300 font-semibold mb-1">Secret Key (Client Secret):</label>
-            <input type="password" id="ml-input-secret" required placeholder="Ex: aBcDeFgHiJkLmNoPqRsTuVwXyZ123456" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-white font-mono text-base sm:text-xs focus:border-blue-400 focus:outline-none min-h-[44px]">
+            <input type="password" id="ml-input-secret" placeholder="Ex: aBcDeFgHiJkLmNoPqRsTuVwXyZ123456" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-white font-mono text-base sm:text-xs focus:border-blue-400 focus:outline-none min-h-[44px]">
           </div>
 
           <div>
@@ -1781,7 +1781,13 @@
           </div>
 
           <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-3 border-t border-cardborder">
-            <button type="button" onclick="closeMlConfigModal()" class="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-xs min-h-[40px] flex items-center justify-center">Fechar</button>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="closeMlConfigModal()" class="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-xs min-h-[40px] flex items-center justify-center">Fechar</button>
+              <button type="button" id="btn-ml-disconnect" onclick="disconnectMl()" class="hidden px-3.5 py-2 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-500/40 font-bold text-xs flex items-center justify-center space-x-1 transition min-h-[40px]">
+                <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                <span>Desconectar Conta</span>
+              </button>
+            </div>
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <button type="button" id="btn-oauth-authorize" onclick="authorizeWithMercadoLivre()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 font-bold text-xs flex items-center justify-center space-x-1 transition min-h-[42px]">
                 <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
@@ -1961,6 +1967,15 @@
         }
       }
 
+      const disconnectBtn = document.getElementById('btn-ml-disconnect');
+      if (disconnectBtn) {
+        if (mlConfig.connected) {
+          disconnectBtn.classList.remove('hidden');
+        } else {
+          disconnectBtn.classList.add('hidden');
+        }
+      }
+
       if (mlConfig.auth_url) {
         authBtn.disabled = false;
         authBtn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -1977,28 +1992,64 @@
       const access_token = document.getElementById('ml-input-token').value.trim();
 
       try {
+        let directTokenSaved = false;
         if (access_token) {
           try { localStorage.setItem('ml_access_token', access_token); } catch(e) {}
-        }
-        const res = await fetch('/api/ml/credentials', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ app_id, client_secret, access_token })
-        });
-        const json = await res.json();
-        if (json.success) {
-          if (access_token) {
-            alert("🎉 Access Token salvo com sucesso!\n\nSua conexão com a API Oficial do Mercado Livre foi ativada com sucesso!");
-            closeMlConfigModal();
-          } else {
-            alert("✅ Credenciais salvas com sucesso no servidor!\n\nAgora você já pode clicar em 'Autorizar via ML (OAuth)' para conectar sua conta.");
+          const saveRes = await fetch('/api/ml/save-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: access_token })
+          });
+          if (saveRes.ok) {
+            directTokenSaved = true;
           }
+        }
+
+        if (app_id || client_secret) {
+          const res = await fetch('/api/ml/credentials', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ app_id, client_secret, access_token })
+          });
+          const json = await res.json();
+          if (json.success) {
+            alert(access_token ? "🎉 Credenciais e token salvos com sucesso!" : "✅ Credenciais da plataforma salvas com sucesso!");
+            closeMlConfigModal();
+            await loadMlStatus();
+            return;
+          } else if (!directTokenSaved) {
+            alert("Aviso: " + (json.error || "Falha ao salvar credenciais globais"));
+            return;
+          }
+        }
+
+        if (directTokenSaved) {
+          alert("🎉 Access Token vinculado com sucesso à sua conta!\n\nSua conexão oficial com o Mercado Livre está ativa.");
+          closeMlConfigModal();
           await loadMlStatus();
-          // Dispara busca atualizada
           const form = document.getElementById('intake-form');
           if (form) form.dispatchEvent(new Event('submit'));
+        } else if (!app_id && !client_secret && !access_token) {
+          alert("Por favor, informe ao menos o Access Token ou as credenciais de desenvolvedor.");
+        }
+      } catch (err) {
+        alert("Erro ao comunicar com o servidor: " + err.message);
+      }
+    }
+
+    async function disconnectMl() {
+      if (!confirm("Tem certeza que deseja desconectar sua conta do Mercado Livre?")) return;
+      try {
+        const res = await fetch('/api/ml/disconnect', { method: 'POST' });
+        const json = await res.json();
+        if (json.success) {
+          try { localStorage.removeItem('ml_access_token'); } catch(e) {}
+          const tokenInput = document.getElementById('ml-input-token');
+          if (tokenInput) tokenInput.value = '';
+          alert("Conta do Mercado Livre desconectada com sucesso!");
+          await loadMlStatus();
         } else {
-          alert("Erro: " + (json.error || "Falha ao salvar"));
+          alert("Erro ao desconectar: " + (json.error || "Erro desconhecido"));
         }
       } catch (err) {
         alert("Erro ao comunicar com o servidor: " + err.message);
@@ -2158,8 +2209,8 @@
 
       const totalCost = Math.round((c + pack + shipping + mlTotalFee + tax + ads) * 100) / 100;
       const netProfit = Math.round((p - totalCost) * 100) / 100;
-      const netMargin = Math.round((netProfit / p) * 1000) / 10;
-      const roi = Math.round((netProfit / (c + pack)) * 1000) / 10;
+      const netMargin = p > 0 ? Math.round((netProfit / p) * 1000) / 10 : 0.0;
+      const roi = (c + pack) > 0 ? Math.round((netProfit / (c + pack)) * 1000) / 10 : 0.0;
 
       return {
         price: p,

@@ -1105,18 +1105,43 @@ def list_sku_products(user_id: int, marketplace: str = "mercadolivre", limit: in
         conn.close()
 
 
+def get_default_admin_user_id() -> int:
+    """Retorna o ID do primeiro usuário admin ou o primeiro usuário cadastrado."""
+    conn, engine = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM usuarios WHERE plano = 'Admin' ORDER BY id ASC LIMIT 1")
+        row = cur.fetchone()
+        if row:
+            return row["id"] if engine == "sqlite" else row[0]
+        cur.execute("SELECT id FROM usuarios ORDER BY id ASC LIMIT 1")
+        row = cur.fetchone()
+        if row:
+            return row["id"] if engine == "sqlite" else row[0]
+        return 1
+    except Exception:
+        return 1
+    finally:
+        cur.close()
+        conn.close()
+
+
 def save_competitor_feedback(user_id: int, query: str, product_id: str, status: str, sku: str = "", item_data: dict = None) -> dict:
     """
     Salva ou atualiza a classificação de um concorrente ('direct' ou 'ignored') para um termo de busca e SKU.
     """
-    if not user_id or not query or not product_id:
+    if not user_id:
+        user_id = get_default_admin_user_id()
+    if not query and not sku:
         return {"success": False, "error": "Parametros obrigatorios ausentes"}
+    if not product_id:
+        return {"success": False, "error": "product_id obrigatorio"}
     
     conn, engine = get_connection()
     cur = conn.cursor()
     ph = "%s" if engine == "postgres" else "?"
     now_str = get_brasilia_now().isoformat()
-    q_norm = query.strip().lower()
+    q_norm = query.strip().lower() if query else sku.strip().lower()
     item_data = item_data or {}
 
     p_title = str(item_data.get("title") or item_data.get("product_title") or "").strip()
@@ -1195,7 +1220,9 @@ def save_competitor_feedback(user_id: int, query: str, product_id: str, status: 
 
 def remove_competitor_feedback(user_id: int, query: str, product_id: str) -> dict:
     """Remove a marcação de um concorrente (volta ao estado neutro de potencial concorrente)."""
-    if not user_id or not query:
+    if not user_id:
+        user_id = get_default_admin_user_id()
+    if not query:
         return {"success": False, "error": "Parametros invalidos"}
     conn, engine = get_connection()
     cur = conn.cursor()
@@ -1220,45 +1247,38 @@ def remove_competitor_feedback(user_id: int, query: str, product_id: str) -> dic
 def get_competitor_feedback_for_query(user_id: int, query: str, sku: str = "") -> dict:
     """
     Retorna as listas de concorrentes validados ('direct') e ignorados ('ignored') para a busca / SKU.
+    Suporta correspondência flexível (exata, sem espaços e SKU cruzado).
     """
     result = {"direct": [], "ignored": []}
-    if not user_id or (not query and not sku):
+    if not user_id:
+        user_id = get_default_admin_user_id()
+    if not query and not sku:
         return result
+
     conn, engine = get_connection()
     cur = conn.cursor()
     ph = "%s" if engine == "postgres" else "?"
     q_norm = query.strip().lower() if query else ""
     sku_norm = sku.strip()
+    q_compact = re.sub(r'[^a-z0-9]', '', q_norm)
+    sku_compact = re.sub(r'[^a-zA-Z0-9]', '', sku_norm).upper()
     seen_ids = set()
-    try:
-        if q_norm and sku_norm:
-            sql = f"""SELECT product_id, status, product_title, product_price, product_seller,
-                             product_permalink, product_thumbnail, is_full, free_shipping
-                      FROM concorrentes_feedback
-                      WHERE usuario_id = {ph} AND (query = {ph} OR (sku != '' AND sku = {ph}))
-                      ORDER BY updated_at DESC"""
-            params = (user_id, q_norm, sku_norm)
-        elif sku_norm:
-            sql = f"""SELECT product_id, status, product_title, product_price, product_seller,
-                             product_permalink, product_thumbnail, is_full, free_shipping
-                      FROM concorrentes_feedback
-                      WHERE usuario_id = {ph} AND sku = {ph}
-                      ORDER BY updated_at DESC"""
-            params = (user_id, sku_norm)
-        else:
-            sql = f"""SELECT product_id, status, product_title, product_price, product_seller,
-                             product_permalink, product_thumbnail, is_full, free_shipping
-                      FROM concorrentes_feedback
-                      WHERE usuario_id = {ph} AND query = {ph}
-                      ORDER BY updated_at DESC"""
-            params = (user_id, q_norm)
 
-        cur.execute(sql, params)
+    try:
+        sql = f"""SELECT product_id, status, product_title, product_price, product_seller,
+                         product_permalink, product_thumbnail, is_full, free_shipping, query, sku
+                  FROM concorrentes_feedback
+                  WHERE usuario_id = {ph}
+                  ORDER BY updated_at DESC"""
+        cur.execute(sql, (user_id,))
         rows = cur.fetchall()
+
         for r in rows:
             if engine == "sqlite":
                 p_id = r["product_id"]
                 st = r["status"]
+                r_query = (r["query"] or "").strip().lower()
+                r_sku = (r["sku"] or "").strip()
                 item = {
                     "id": p_id,
                     "title": r["product_title"],
@@ -1275,6 +1295,8 @@ def get_competitor_feedback_for_query(user_id: int, query: str, sku: str = "") -
             else:
                 p_id = r[0]
                 st = r[1]
+                r_query = (r[9] or "").strip().lower()
+                r_sku = (r[10] or "").strip()
                 item = {
                     "id": p_id,
                     "title": r[2],
@@ -1288,6 +1310,27 @@ def get_competitor_feedback_for_query(user_id: int, query: str, sku: str = "") -
                     "available": True,
                     "stock_status": "in_stock"
                 }
+
+            # Verificação de correspondência inteligente:
+            r_q_compact = re.sub(r'[^a-z0-9]', '', r_query)
+            r_sku_compact = re.sub(r'[^a-zA-Z0-9]', '', r_sku).upper()
+
+            matches = False
+            # 1. Busca por Query exata ou normalizada
+            if q_norm and (r_query == q_norm or (q_compact and r_q_compact == q_compact)):
+                matches = True
+            # 2. Busca por SKU exato ou normalizado
+            elif sku_norm and (r_sku.upper() == sku_norm.upper() or (sku_compact and r_sku_compact == sku_compact)):
+                matches = True
+            # 3. Cruzamento: usuário buscou com SKU no campo de título ou com título no campo de SKU
+            elif q_compact and r_sku_compact and (r_sku_compact == q_compact.upper()):
+                matches = True
+            elif sku_compact and r_q_compact and (r_q_compact == sku_compact.lower()):
+                matches = True
+
+            if not matches:
+                continue
+
             if p_id in seen_ids:
                 continue
             seen_ids.add(p_id)

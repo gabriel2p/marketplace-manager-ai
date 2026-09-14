@@ -2508,6 +2508,27 @@
               activeCompetitors._is_live = compData.is_live;
               activeCompetitors._source = compData.source;
             }
+            // Sincronização e Fallback com LocalStorage (Garantia Dupla)
+            try {
+              const normKey = (payload.sku || payload.title_raw || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+              if (normKey) {
+                const localDirect = JSON.parse(localStorage.getItem('mm_direct_' + normKey) || '[]');
+                const localIgnored = JSON.parse(localStorage.getItem('mm_ignored_' + normKey) || '[]');
+                if (localIgnored.length > 0) {
+                  activeCompetitors = activeCompetitors.filter(c => !localIgnored.includes(c.id));
+                }
+                localDirect.forEach(d => {
+                  const targetId = typeof d === 'string' ? d : d.id;
+                  const existing = activeCompetitors.find(c => c.id === targetId);
+                  if (existing) {
+                    existing.is_direct = true;
+                  } else if (typeof d === 'object' && d.id) {
+                    d.is_direct = true;
+                    activeCompetitors.unshift(d);
+                  }
+                });
+              }
+            } catch (e) {}
           }
         }
       } catch (err) {
@@ -2523,6 +2544,19 @@
           const fbData = await fbRes.json();
           if (fbData && Array.isArray(fbData.ignored)) {
             ignoredCompetitorsMap[qNorm] = fbData.ignored;
+            // Garante descarte na lista ativa caso algum tenha passado
+            activeCompetitors = activeCompetitors.filter(c => !fbData.ignored.includes(c.id));
+          }
+          if (fbData && Array.isArray(fbData.direct)) {
+            fbData.direct.forEach(d => {
+              const existing = activeCompetitors.find(c => c.id === d.id);
+              if (existing) {
+                existing.is_direct = true;
+              } else if (d.id) {
+                d.is_direct = true;
+                activeCompetitors.unshift(d);
+              }
+            });
           }
           updateCompetitorFeedbackBanner(qNorm, skuNorm, fbData?.direct_count, fbData?.ignored_count);
         }
@@ -3556,6 +3590,28 @@
         ignoredCompetitorsMap[qNorm] = ignoredCompetitorsMap[qNorm].filter(id => id !== productId);
       }
 
+      // Persistência em LocalStorage (dupla camada para garantia imediata no navegador)
+      try {
+        const normKey = (sku || query || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (normKey) {
+          let localDirect = JSON.parse(localStorage.getItem('mm_direct_' + normKey) || '[]');
+          if (willBeDirect) {
+            if (!localDirect.some(x => (typeof x === 'string' ? x === productId : x.id === productId))) {
+              localDirect.push(comp);
+            }
+          } else {
+            localDirect = localDirect.filter(x => (typeof x === 'string' ? x !== productId : x.id !== productId));
+          }
+          localStorage.setItem('mm_direct_' + normKey, JSON.stringify(localDirect));
+
+          if (willBeDirect) {
+            let localIgnored = JSON.parse(localStorage.getItem('mm_ignored_' + normKey) || '[]');
+            localIgnored = localIgnored.filter(id => id !== productId);
+            localStorage.setItem('mm_ignored_' + normKey, JSON.stringify(localIgnored));
+          }
+        }
+      } catch (e) {}
+
       // Envia ao backend para persistência contínua
       try {
         const action = willBeDirect ? 'mark_direct' : 'unmark_direct';
@@ -3611,6 +3667,22 @@
         ignoredCompetitorsMap[qNorm].push(productId);
       }
 
+      // Persistência em LocalStorage (dupla camada imediata)
+      try {
+        const normKey = (sku || query || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (normKey) {
+          let localIgnored = JSON.parse(localStorage.getItem('mm_ignored_' + normKey) || '[]');
+          if (!localIgnored.includes(productId)) {
+            localIgnored.push(productId);
+          }
+          localStorage.setItem('mm_ignored_' + normKey, JSON.stringify(localIgnored));
+
+          let localDirect = JSON.parse(localStorage.getItem('mm_direct_' + normKey) || '[]');
+          localDirect = localDirect.filter(x => (typeof x === 'string' ? x !== productId : x.id !== productId));
+          localStorage.setItem('mm_direct_' + normKey, JSON.stringify(localDirect));
+        }
+      } catch (e) {}
+
       // 1. Remove da lista de concorrentes ativos
       activeCompetitors = (activeCompetitors || []).filter(c => c.id !== productId);
       if (currentSessionData?.data?.live_market?.competitors) {
@@ -3646,6 +3718,14 @@
       const query = (document.getElementById('input-title')?.value || currentSessionData?.data?.payload_ref?.title_raw || "").trim();
       const sku = (document.getElementById('input-sku')?.value || currentSessionData?.data?.payload_ref?.sku || "").trim();
       const qNorm = query.toLowerCase();
+
+      // Limpa no LocalStorage
+      try {
+        const normKey = (sku || query || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (normKey) {
+          localStorage.removeItem('mm_ignored_' + normKey);
+        }
+      } catch (e) {}
 
       try {
         await fetch('/api/competitors/feedback', {

@@ -403,7 +403,7 @@
       <form id="intake-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
         <div class="col-span-1">
           <label class="block text-xs font-semibold text-slate-300 mb-1.5">SKU / Código do Produto *</label>
-          <input type="text" id="input-sku" value="" required placeholder="Ex: SEU-SKU-01" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
+          <input type="text" id="input-sku" value="" required placeholder="Ex: SEU-SKU-01" onblur="lookupSkuProduct(this.value)" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
         </div>
 
         <div class="col-span-1 sm:col-span-2 lg:col-span-2">
@@ -542,16 +542,20 @@
                 <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0"></i>
                 <span id="competitors-source-text"><strong>100% Automatizado via API Oficial:</strong> Produtos, fotos, preços reais e links canônicos obtidos diretamente do Mercado Livre em tempo real.</span>
               </span>
-              <!-- Badge de Aprendizado e Concorrentes Ignorados -->
+              <!-- Badge de Aprendizado, Concorrentes Diretos e Ignorados -->
               <div id="ignored-badge-container" class="hidden mt-2.5 flex items-center gap-2 flex-wrap">
-                <span class="text-xs bg-rose-500/15 text-rose-300 border border-rose-500/30 px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-medium">
-                  <i data-lucide="brain" class="w-3.5 h-3.5 text-rose-400"></i>
+                <span id="direct-badge-pill" class="hidden text-xs bg-amber-500/20 text-amber-300 border border-amber-500/50 px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-bold shadow-sm">
+                  <i data-lucide="star" class="w-3.5 h-3.5 fill-amber-400 text-amber-400"></i>
+                  <span id="direct-badge-text">0 diretos validados</span>
+                </span>
+                <span id="ignored-badge-pill" class="hidden text-xs bg-rose-500/15 text-rose-300 border border-rose-500/30 px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-medium">
+                  <i data-lucide="eye-off" class="w-3.5 h-3.5 text-rose-400"></i>
                   <span id="ignored-badge-text">0 anúncios descartados</span>
                   <button type="button" onclick="restoreIgnoredCompetitors()" class="underline hover:text-white font-bold ml-1.5 text-[11px] bg-rose-500/25 hover:bg-rose-500/40 px-2 py-0.5 rounded transition">
                     Restaurar Todos
                   </button>
                 </span>
-                <span class="text-[11px] text-slate-400 italic">O agente memorizou os descartes e não sugerirá mais esses anúncios.</span>
+                <span id="feedback-benchmark-hint" class="text-[11px] text-slate-400 italic">O agente memorizou os descartes e prioriza os concorrentes diretos.</span>
               </div>
             </p>
           </div>
@@ -2464,7 +2468,8 @@
           headers['Authorization'] = 'Bearer ' + storedToken;
           headers['X-ML-Token'] = storedToken;
         }
-        const res = await fetch(`/api/competitors?q=${q}&cmv=${cmvVal}&brand=${brandVal}`, { headers });
+        const skuVal = (payload.sku || '').trim();
+        const res = await fetch(`/api/competitors?q=${q}&cmv=${cmvVal}&brand=${brandVal}&sku=${encodeURIComponent(skuVal)}`, { headers });
         if (res.ok) {
           const compData = await res.json();
           if (compData.results && compData.results.length > 0) {
@@ -2472,6 +2477,7 @@
             const wantsAcc = /capa|capinha|case|pel[ií]cula|cabo|carregador|toalha|suporte|adesivo|skin|refil|tampa/.test(qLow);
             const inStock = compData.results.filter(c => {
               if (c.available === false || c.is_available === false || c.status === 'inactive' || c.status === 'paused') return false;
+              if (c.is_direct) return true; // Concorrente direto validado pelo lojista tem prioridade absoluta e nunca é descartado
               if (!wantsAcc) {
                 const titleLow = (c.title || '').toLowerCase();
                 if (/^(capa|capinha|case|pel[ií]cula|toalha de mesa|caminho de mesa|protetor de|adesivo|skin)\b/i.test(titleLow) || /compat[ií]vel com|transforme seu/i.test(titleLow)) return false;
@@ -2483,7 +2489,7 @@
               activeCompetitors = inStock;
               activeCompetitors._is_live = compData.is_live;
               activeCompetitors._source = compData.source;
-              console.log(`[Oficial API] ${inStock.length} produtos reais carregados (Ao vivo: ${compData.is_live})!`);
+              console.log(`[Oficial API] ${inStock.length} produtos reais carregados (Diretos: ${compData.direct_count || 0}, Ao vivo: ${compData.is_live})!`);
             }
           }
         }
@@ -2491,16 +2497,17 @@
         console.warn("Consulta da API em background não retornou, mantendo lista atual.", err);
       }
 
-      // Consulta se há anúncios ignorados previamente para atualizar o badge de aprendizado
+      // Consulta se há anúncios ignorados ou diretos previamente para atualizar o badge de aprendizado
       try {
         const qNorm = (payload.title_raw || '').trim().toLowerCase();
-        const fbRes = await fetch(`/api/competitors/feedback?q=${encodeURIComponent(qNorm)}`);
+        const skuNorm = (payload.sku || '').trim();
+        const fbRes = await fetch(`/api/competitors/feedback?q=${encodeURIComponent(qNorm)}&sku=${encodeURIComponent(skuNorm)}`);
         if (fbRes.ok) {
           const fbData = await fbRes.json();
           if (fbData && Array.isArray(fbData.ignored)) {
             ignoredCompetitorsMap[qNorm] = fbData.ignored;
-            updateIgnoredBadge(qNorm);
           }
+          updateCompetitorFeedbackBanner(qNorm, skuNorm, fbData?.direct_count, fbData?.ignored_count);
         }
       } catch (err) {}
 
@@ -2533,8 +2540,35 @@
         candidatePrice = (cmv + pack + shipEst) / safeDivisor;
       }
 
-      // Alinhamento inteligente com o mercado (evitar precificar fora do padrão competitivo)
-      if (avgCompPrice > 0) {
+      // Alinhamento inteligente com o mercado
+      // PRIORIDADE MÁXIMA: Concorrentes Diretos Validados pelo lojista
+      const directCompetitors = validCompetitors.filter(c => c.is_direct);
+      let directBenchmarkInfo = null;
+
+      if (directCompetitors.length > 0) {
+        const directPrices = directCompetitors.map(c => c.price).filter(p => p > 0);
+        if (directPrices.length > 0) {
+          const minDirect = Math.min(...directPrices);
+          const avgDirect = directPrices.reduce((a, b) => a + b, 0) / directPrices.length;
+          directBenchmarkInfo = { min: minDirect, avg: avgDirect, count: directCompetitors.length };
+
+          // Disputa agressiva e calibrada contra os concorrentes idênticos reais
+          if (candidatePrice > minDirect) {
+            const testAtMin = calculateUnitEconomics(minDirect, cmv, weight, pack, rep, undefined, undefined, undefined, isFull);
+            if (testAtMin.netMargin >= 10.0) {
+              candidatePrice = minDirect;
+            } else {
+              const testAtAvg = calculateUnitEconomics(avgDirect, cmv, weight, pack, rep, undefined, undefined, undefined, isFull);
+              if (testAtAvg.netMargin >= 10.0) {
+                candidatePrice = avgDirect;
+              }
+            }
+          } else if (candidatePrice < minDirect * 0.85) {
+            // Evita subprecificar excessivamente quando já estamos bem abaixo do rival direto
+            candidatePrice = minDirect * 0.95;
+          }
+        }
+      } else if (avgCompPrice > 0) {
         if (candidatePrice > avgCompPrice * 1.15) {
           const testAtAvg = calculateUnitEconomics(avgCompPrice, cmv, weight, pack, rep, undefined, undefined, undefined, isFull);
           if (testAtAvg.netMargin >= 12.0) {
@@ -2766,6 +2800,30 @@
       currentSessionData = { session_id: "sess_real_" + Date.now().toString().slice(-6), data: pipelineData };
       renderPipelineResults(pipelineData, currentSessionData.session_id);
 
+      // Persistência contínua do SKU e precificação no banco de dados
+      if (payload.sku) {
+        saveSkuProductData({
+          sku: payload.sku,
+          titulo: payload.title_raw,
+          categoria: payload.category_id || 'MLB',
+          marketplace: 'mercadolivre',
+          cmv: cmv,
+          margem_alvo: targetM,
+          peso_kg: weight,
+          embalagem_custo: pack,
+          logistica_tipo: payload.logistics_type,
+          reputacao: rep,
+          preco_venda_sugerido: sellingPrice,
+          lucro_liquido_unitario: netProfit,
+          margem_liquida_percentual: parseFloat(netMargin),
+          comissao_ml: fee,
+          frete_estimado: shipping,
+          imposto_estimado: tax,
+          estoque_qtd: payload.stock_quantity,
+          veredito_gate: pipelineData.decision_gate.rating
+        });
+      }
+
       btn.disabled = false;
       btn.innerHTML = `<i data-lucide="search" class="w-4 h-4"></i><span>Analisar Mercado & Viabilidade</span>`;
       lucide.createIcons();
@@ -2822,33 +2880,43 @@
           `;
           if (window.lucide) lucide.createIcons();
         } else {
+          activeOnly.sort((a, b) => {
+            if (a.is_direct && !b.is_direct) return -1;
+            if (!a.is_direct && b.is_direct) return 1;
+            return (a.price || 0) - (b.price || 0);
+          });
+
           compGrid.innerHTML = activeOnly.map((c, index) => {
             const permalink = c.permalink || (c.id ? `https://produto.mercadolivre.com.br/${c.id}` : 'https://www.mercadolivre.com.br');
             const isItemLive = Boolean(c.is_live || isLiveMarket);
+            const isDirect = Boolean(c.is_direct);
             return `
-            <div class="bg-slate-900/90 rounded-xl p-4 border border-blue-500/30 hover:border-emerald-400 bg-gradient-to-b from-slate-900/90 to-slate-950/90 flex flex-col justify-between transition space-y-3 shadow-lg group">
+            <div class="rounded-xl p-4 transition space-y-3 shadow-lg group ${isDirect ? 'border-2 border-amber-400/90 bg-gradient-to-b from-amber-950/30 to-slate-950/95 ring-1 ring-amber-400/40 shadow-amber-950/50' : 'border border-blue-500/30 hover:border-emerald-400 bg-gradient-to-b from-slate-900/90 to-slate-950/90'} flex flex-col justify-between">
               <div class="flex space-x-3 items-start">
-                <div class="w-16 h-16 bg-slate-800 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center border border-slate-700/80 p-0.5">
+                <div class="w-16 h-16 bg-slate-800 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center border ${isDirect ? 'border-amber-400/70' : 'border-slate-700/80'} p-0.5">
                   ${c.thumbnail ? `<img src="${c.thumbnail}" alt="" class="w-full h-full object-contain" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-slate-500\\'><i data-lucide=\\'package\\' class=\\'w-7 h-7\\'></i></div>';if(window.lucide)lucide.createIcons();">` : `<i data-lucide="package" class="w-7 h-7 text-slate-500"></i>`}
                 </div>
                 <div class="flex-1 min-w-0">
-                  <div class="flex items-center justify-between gap-1 mb-1">
-                    <span class="text-[10px] ${isItemLive ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-sky-500/20 text-sky-300 border-sky-500/30'} font-bold px-2 py-0.5 rounded border flex items-center gap-1">
-                      <i data-lucide="${isItemLive ? 'check-circle-2' : 'shield-check'}" class="w-3 h-3 ${isItemLive ? 'text-emerald-400' : 'text-sky-400'}"></i> ${isItemLive ? 'Ao Vivo (Oficial)' : 'Catálogo Ativo'}
-                    </span>
+                  <div class="flex items-center justify-between gap-1 mb-1 flex-wrap">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      ${isDirect ? '<span class="text-[9px] bg-amber-500/30 text-amber-200 font-extrabold px-2 py-0.5 rounded border border-amber-400/80 flex items-center gap-1 shadow-sm"><i data-lucide="star" class="w-3 h-3 fill-amber-400 text-amber-400"></i>⭐ CONCORRENTE DIRETO VALIDADO</span>' : ''}
+                      <span class="text-[10px] ${isItemLive ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-sky-500/20 text-sky-300 border-sky-500/30'} font-bold px-2 py-0.5 rounded border flex items-center gap-1">
+                        <i data-lucide="${isItemLive ? 'check-circle-2' : 'shield-check'}" class="w-3 h-3 ${isItemLive ? 'text-emerald-400' : 'text-sky-400'}"></i> ${isItemLive ? 'Ao Vivo' : 'Catálogo Ativo'}
+                      </span>
+                    </div>
                     <div class="flex items-center gap-1">
                       ${c.is_full ? '<span class="text-[9px] bg-amber-500/20 text-amber-300 font-extrabold px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-0.5"><i data-lucide="zap" class="w-2.5 h-2.5 text-amber-400"></i>FULL</span>' : ''}
                       ${c.free_shipping ? '<span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">Frete Grátis</span>' : ''}
                     </div>
                   </div>
 
-                  <a href="${permalink}" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-slate-100 hover:text-amber-300 line-clamp-2 transition flex items-start gap-1" title="${c.title}">
+                  <a href="${permalink}" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold ${isDirect ? 'text-amber-100 hover:text-amber-300' : 'text-slate-100 hover:text-amber-300'} line-clamp-2 transition flex items-start gap-1" title="${c.title}">
                     <span>${c.title}</span>
                     <i data-lucide="external-link" class="w-3 h-3 flex-shrink-0 text-amber-400 opacity-80 group-hover:opacity-100 mt-0.5"></i>
                   </a>
 
                   <div class="flex items-baseline space-x-2 mt-1.5">
-                    <span class="text-base font-bold text-amber-400">R$ ${c.price.toFixed(2)}</span>
+                    <span class="text-base font-bold ${isDirect ? 'text-amber-300 font-black' : 'text-amber-400'}">R$ ${c.price.toFixed(2)}</span>
                     ${c.original_price && c.original_price > c.price ? `<span class="text-[10px] text-slate-500 line-through">R$ ${c.original_price.toFixed(2)}</span>` : ''}
                     ${c.discount ? `<span class="text-[10px] bg-emerald-500/20 text-emerald-400 font-bold px-1.5 py-0.2 rounded border border-emerald-500/30">${c.discount}</span>` : ''}
                   </div>
@@ -2859,10 +2927,21 @@
                 </div>
               </div>
 
-              <!-- Ação Oficial: Botão direto para o Anúncio Real e Botão de Ignorar -->
+              <!-- Ação Oficial: Marcar Direto, Ignorar e Link Oficial -->
               <div class="pt-2.5 border-t border-slate-800 flex items-center justify-between gap-2">
                 <span class="text-[10px] text-slate-500 font-mono truncate">${c.id || 'MLB'}</span>
                 <div class="flex items-center gap-1.5 flex-wrap sm:flex-nowrap justify-end">
+                  ${isDirect ? `
+                    <button type="button" onclick="toggleDirectCompetitor('${c.id}', this)" title="Desmarcar este concorrente direto" class="bg-amber-500/30 hover:bg-amber-500/40 text-amber-300 font-bold px-2.5 py-1.5 rounded-lg border border-amber-400/80 text-xs flex items-center space-x-1 transition min-h-[36px] shadow-sm">
+                      <i data-lucide="star" class="w-3.5 h-3.5 fill-amber-400 text-amber-400"></i>
+                      <span>⭐ Direto</span>
+                    </button>
+                  ` : `
+                    <button type="button" onclick="toggleDirectCompetitor('${c.id}', this)" title="Marcar como Concorrente Direto (mesmo produto exato para calibrar o preço)" class="bg-slate-800 hover:bg-amber-950/60 hover:border-amber-500/50 text-slate-300 hover:text-amber-300 font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 text-xs flex items-center space-x-1 transition min-h-[36px]">
+                      <i data-lucide="star" class="w-3.5 h-3.5 text-slate-400"></i>
+                      <span>Marcar Direto</span>
+                    </button>
+                  `}
                   <button type="button" onclick="ignoreCompetitor('${c.id}', '${encodeURIComponent(c.title || '')}', this)" title="Ignorar este anúncio (o agente memoriza e recalcula viabilidade)" class="bg-slate-800 hover:bg-rose-950/60 hover:border-rose-500/50 text-slate-400 hover:text-rose-300 font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 text-xs flex items-center space-x-1 transition min-h-[36px]">
                     <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
                     <span>Ignorar</span>
@@ -3273,12 +3352,86 @@
 
       closeAdjustModal();
       renderPipelineResults(currentSessionData.data, currentSessionData.session_id);
+
+      // Auto-save do SKU ajustado no banco de dados
+      if (currentSessionData?.data?.payload_ref?.sku) {
+        const pRef = currentSessionData.data.payload_ref;
+        saveSkuProductData({
+          sku: pRef.sku,
+          titulo: pRef.title_raw,
+          categoria: pRef.category_id || 'MLB',
+          marketplace: 'mercadolivre',
+          cmv: f.cmv,
+          margem_alvo: pRef.target_margin,
+          peso_kg: f.weight,
+          embalagem_custo: f.pack,
+          logistica_tipo: pRef.logistics_type,
+          reputacao: f.reputation,
+          preco_venda_sugerido: newPrice,
+          lucro_liquido_unitario: newEcon.netProfit,
+          margem_liquida_percentual: parseFloat(newEcon.netMargin),
+          comissao_ml: newEcon.mlTotalFee,
+          frete_estimado: newEcon.shipping,
+          imposto_estimado: newEcon.tax,
+          estoque_qtd: f.monthly_units || 1,
+          veredito_gate: dg.rating
+        });
+      }
     }
 
     // ============================================================
-    // APRENDIZADO CONTÍNUO & FEEDBACK DO LOJISTA
+    // APRENDIZADO CONTÍNUO, CONCORRENTES DIRETOS & SKU PERSISTENCE
     // ============================================================
     let ignoredCompetitorsMap = {};
+
+    async function saveSkuProductData(skuData) {
+      if (!skuData || !skuData.sku) return;
+      try {
+        const res = await fetch('/api/products/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(skuData)
+        });
+        if (res.ok) {
+          console.log(`[SKU] Dados do SKU '${skuData.sku}' persistidos no banco de dados.`);
+        }
+      } catch (err) {
+        console.warn("[SKU] Falha ao persistir SKU:", err);
+      }
+    }
+
+    async function lookupSkuProduct(skuVal) {
+      const cleanSku = (skuVal || '').trim();
+      if (!cleanSku || cleanSku.length < 2) return;
+      try {
+        const res = await fetch(`/api/products/sku/${encodeURIComponent(cleanSku)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.found && data.product) {
+          const p = data.product;
+          const titleInput = document.getElementById('input-title');
+          const costInput = document.getElementById('input-cost');
+          const marginInput = document.getElementById('input-margin');
+          const stockInput = document.getElementById('input-stock');
+
+          if (titleInput && (!titleInput.value || titleInput.value.trim() === '')) {
+            titleInput.value = p.titulo || '';
+          }
+          if (costInput && (!costInput.value || parseFloat(costInput.value) <= 0)) {
+            costInput.value = p.cmv || '';
+          }
+          if (marginInput && p.margem_alvo) {
+            marginInput.value = p.margem_alvo.toString();
+          }
+          if (stockInput && p.estoque_qtd) {
+            stockInput.value = p.estoque_qtd;
+          }
+          showToast(`📦 SKU '${cleanSku}' identificado no histórico! Preço salvo: R$ ${(p.preco_venda_sugerido || 0).toFixed(2)} (${(p.margem_liquida_percentual || 0).toFixed(1)}% margem)`, "package");
+        }
+      } catch (err) {
+        console.warn("[SKU] Erro ao consultar SKU:", err);
+      }
+    }
 
     function showToast(message, icon = 'sparkles') {
       let toastContainer = document.getElementById('app-toast-container');
@@ -3312,24 +3465,126 @@
       }, 4500);
     }
 
-    function updateIgnoredBadge(qNorm) {
-      const count = (ignoredCompetitorsMap[qNorm] || []).length;
+    function updateCompetitorFeedbackBanner(qNorm, skuNorm = "", directCount = null, ignoredCount = null) {
       const container = document.getElementById('ignored-badge-container');
-      const textElem = document.getElementById('ignored-badge-text');
-      if (container && textElem) {
-        if (count > 0) {
+      const directPill = document.getElementById('direct-badge-pill');
+      const directText = document.getElementById('direct-badge-text');
+      const ignoredPill = document.getElementById('ignored-badge-pill');
+      const ignoredText = document.getElementById('ignored-badge-text');
+      const hintText = document.getElementById('feedback-benchmark-hint');
+
+      const dCount = directCount !== null ? directCount : (activeCompetitors || []).filter(c => c.is_direct).length;
+      const iCount = ignoredCount !== null ? ignoredCount : (ignoredCompetitorsMap[qNorm] || []).length;
+
+      if (container) {
+        if (dCount > 0 || iCount > 0) {
           container.classList.remove('hidden');
           container.classList.add('flex');
-          textElem.innerText = `${count} ${count === 1 ? 'anúncio descartado' : 'anúncios descartados'}`;
         } else {
           container.classList.add('hidden');
           container.classList.remove('flex');
         }
       }
+
+      if (directPill && directText) {
+        if (dCount > 0) {
+          directPill.classList.remove('hidden');
+          directPill.classList.add('flex');
+          directText.innerText = `${dCount} ${dCount === 1 ? 'concorrente direto validado' : 'concorrentes diretos validados'}`;
+        } else {
+          directPill.classList.add('hidden');
+          directPill.classList.remove('flex');
+        }
+      }
+
+      if (ignoredPill && ignoredText) {
+        if (iCount > 0) {
+          ignoredPill.classList.remove('hidden');
+          ignoredPill.classList.add('flex');
+          ignoredText.innerText = `${iCount} ${iCount === 1 ? 'anúncio descartado' : 'anúncios descartados'}`;
+        } else {
+          ignoredPill.classList.add('hidden');
+          ignoredPill.classList.remove('flex');
+        }
+      }
+
+      if (hintText) {
+        if (dCount > 0) {
+          hintText.innerText = `🎯 Precificação e Buy Box calibrados com base nos ${dCount} concorrente(s) direto(s) validados.`;
+        } else if (iCount > 0) {
+          hintText.innerText = `O agente memorizou os descartes e não sugerirá mais esses anúncios.`;
+        } else {
+          hintText.innerText = ``;
+        }
+      }
+    }
+
+    function updateIgnoredBadge(qNorm) {
+      updateCompetitorFeedbackBanner(qNorm);
+    }
+
+    async function toggleDirectCompetitor(productId, btn) {
+      const query = (document.getElementById('input-title')?.value || currentSessionData?.data?.payload_ref?.title_raw || "").trim();
+      const sku = (document.getElementById('input-sku')?.value || currentSessionData?.data?.payload_ref?.sku || "").trim();
+      const qNorm = query.toLowerCase();
+
+      const comp = (activeCompetitors || []).find(c => c.id === productId);
+      if (!comp) return;
+
+      const willBeDirect = !comp.is_direct;
+      comp.is_direct = willBeDirect;
+
+      // Se for marcado como direto, garante que não esteja nos ignorados
+      if (willBeDirect && ignoredCompetitorsMap[qNorm]) {
+        ignoredCompetitorsMap[qNorm] = ignoredCompetitorsMap[qNorm].filter(id => id !== productId);
+      }
+
+      // Envia ao backend para persistência contínua
+      try {
+        const action = willBeDirect ? 'mark_direct' : 'unmark_direct';
+        const permalink = comp.permalink || (comp.id ? `https://produto.mercadolivre.com.br/${comp.id}` : '');
+        await fetch('/api/competitors/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: action,
+            query: query,
+            sku: sku,
+            product_id: productId,
+            product_title: comp.title,
+            product_price: comp.price,
+            product_seller: comp.seller,
+            product_permalink: permalink,
+            product_thumbnail: comp.thumbnail,
+            is_full: comp.is_full,
+            free_shipping: comp.free_shipping
+          })
+        });
+      } catch (err) {
+        console.warn("[Feedback] Falha ao persistir status de concorrente direto:", err);
+      }
+
+      // Atualiza o banner de feedback
+      updateCompetitorFeedbackBanner(qNorm, sku);
+
+      // Recalcula o pipeline financeiro com prioridade no concorrente direto
+      recalculatePipelineFromCurrentCompetitors();
+
+      // Re-renderiza concorrentes com nova ordenação
+      if (currentSessionData && currentSessionData.data) {
+        renderPipelineResults(currentSessionData.data, currentSessionData.session_id);
+      }
+
+      if (willBeDirect) {
+        showToast(`⭐ Concorrente ${productId} marcado como DIRETO! Preço e margem calibrados.`, "star");
+      } else {
+        showToast(`Concorrente ${productId} desmarcado de direto.`, "info");
+      }
     }
 
     async function ignoreCompetitor(productId, encodedTitle, btn) {
       const query = (document.getElementById('input-title')?.value || currentSessionData?.data?.payload_ref?.title_raw || "").trim();
+      const sku = (document.getElementById('input-sku')?.value || currentSessionData?.data?.payload_ref?.sku || "").trim();
       const qNorm = query.toLowerCase();
 
       if (!ignoredCompetitorsMap[qNorm]) {
@@ -3345,8 +3600,8 @@
         currentSessionData.data.live_market.competitors = currentSessionData.data.live_market.competitors.filter(c => c.id !== productId);
       }
 
-      // 2. Atualiza badge de aprendizado
-      updateIgnoredBadge(qNorm);
+      // 2. Atualiza banner de feedback
+      updateCompetitorFeedbackBanner(qNorm, sku);
 
       // 3. Recalcula imediatamente métricas de mercado, margens e portão de decisão
       recalculatePipelineFromCurrentCompetitors();
@@ -3359,6 +3614,7 @@
           body: JSON.stringify({
             action: 'ignore',
             query: query,
+            sku: sku,
             product_id: productId
           })
         });
@@ -3371,6 +3627,7 @@
 
     async function restoreIgnoredCompetitors() {
       const query = (document.getElementById('input-title')?.value || currentSessionData?.data?.payload_ref?.title_raw || "").trim();
+      const sku = (document.getElementById('input-sku')?.value || currentSessionData?.data?.payload_ref?.sku || "").trim();
       const qNorm = query.toLowerCase();
 
       try {
@@ -3380,6 +3637,7 @@
           body: JSON.stringify({
             action: 'restore',
             query: query,
+            sku: sku,
             product_id: 'all'
           })
         });
@@ -3388,7 +3646,7 @@
       }
 
       delete ignoredCompetitorsMap[qNorm];
-      updateIgnoredBadge(qNorm);
+      updateCompetitorFeedbackBanner(qNorm, sku);
 
       showToast("🔄 Anúncios restaurados! Atualizando concorrência oficial...", "refresh-cw");
 
@@ -3441,7 +3699,35 @@
         candidatePrice = (cmv + pack + shipEst) / safeDivisor;
       }
 
-      if (avgCompPrice > 0) {
+      // Alinhamento inteligente com o mercado
+      // PRIORIDADE MÁXIMA: Concorrentes Diretos Validados pelo lojista
+      const directCompetitors = validCompetitors.filter(c => c.is_direct);
+      let directBenchmarkInfo = null;
+
+      if (directCompetitors.length > 0) {
+        const directPrices = directCompetitors.map(c => c.price).filter(p => p > 0);
+        if (directPrices.length > 0) {
+          const minDirect = Math.min(...directPrices);
+          const avgDirect = directPrices.reduce((a, b) => a + b, 0) / directPrices.length;
+          directBenchmarkInfo = { min: minDirect, avg: avgDirect, count: directCompetitors.length };
+
+          // Disputa agressiva e calibrada contra os concorrentes idênticos reais
+          if (candidatePrice > minDirect) {
+            const testAtMin = calculateUnitEconomics(minDirect, cmv, weight, pack, rep, undefined, undefined, undefined, isFull);
+            if (testAtMin.netMargin >= 10.0) {
+              candidatePrice = minDirect;
+            } else {
+              const testAtAvg = calculateUnitEconomics(avgDirect, cmv, weight, pack, rep, undefined, undefined, undefined, isFull);
+              if (testAtAvg.netMargin >= 10.0) {
+                candidatePrice = avgDirect;
+              }
+            }
+          } else if (candidatePrice < minDirect * 0.85) {
+            // Evita subprecificar excessivamente quando já estamos bem abaixo do rival direto
+            candidatePrice = minDirect * 0.95;
+          }
+        }
+      } else if (avgCompPrice > 0) {
         if (candidatePrice > avgCompPrice * 1.15) {
           const testAtAvg = calculateUnitEconomics(avgCompPrice, cmv, weight, pack, rep, undefined, undefined, undefined, isFull);
           if (testAtAvg.netMargin >= 12.0) {
@@ -3617,6 +3903,30 @@
       };
 
       renderPipelineResults(currentSessionData.data, currentSessionData.session_id);
+
+      // Persiste a precificação atualizada do SKU no banco de dados
+      if (payload.sku) {
+        saveSkuProductData({
+          sku: payload.sku,
+          titulo: payload.title_raw,
+          categoria: payload.category_id || 'MLB',
+          marketplace: 'mercadolivre',
+          cmv: cmv,
+          margem_alvo: targetM,
+          peso_kg: weight,
+          embalagem_custo: pack,
+          logistica_tipo: payload.logistics_type,
+          reputacao: rep,
+          preco_venda_sugerido: sellingPrice,
+          lucro_liquido_unitario: netProfit,
+          margem_liquida_percentual: parseFloat(netMargin),
+          comissao_ml: fee,
+          frete_estimado: shipping,
+          imposto_estimado: tax,
+          estoque_qtd: payload.stock_quantity,
+          veredito_gate: rating
+        });
+      }
     }
 
     // ============================================================

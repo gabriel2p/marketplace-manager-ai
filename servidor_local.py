@@ -2079,7 +2079,7 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode('utf-8'))
             return
 
-        # Feedback e Aprendizado Contínuo (Ignorar / Restaurar Concorrentes)
+        # Feedback e Aprendizado Contínuo (Concorrentes Diretos Validados / Ignorar / Restaurar)
         if parsed.path == "/api/competitors/feedback":
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length).decode('utf-8') if content_length > 0 else "{}"
@@ -2088,28 +2088,73 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                 query = str(data.get("query", "")).strip().lower()
                 pid = str(data.get("product_id", "")).strip()
                 action = str(data.get("action", "ignore")).strip().lower()
+                sku = str(data.get("sku", "")).strip()
+
+                sess = self.get_current_user_session()
+                user_id = sess.get("user_id") if sess else None
 
                 memory = load_feedback_memory()
                 if "ignored_by_query" not in memory:
                     memory["ignored_by_query"] = {}
 
-                if action == "ignore" and pid:
+                if action == "mark_direct" and pid:
+                    if user_id:
+                        database.save_competitor_feedback(user_id, query, pid, status="direct", sku=sku, item_data=data)
+                    if query in memory.get("ignored_by_query", {}) and pid in memory["ignored_by_query"][query]:
+                        memory["ignored_by_query"][query].remove(pid)
+                        save_feedback_memory(memory)
+                    print(f"[Feedback] Concorrente {pid} MARCADO COMO DIRETO para a busca '{query}' (SKU: '{sku}').", flush=True)
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({
+                        "success": True,
+                        "action": "mark_direct",
+                        "product_id": pid,
+                        "is_direct": True,
+                        "message": f"Produto {pid} marcado como Concorrente Direto Validado."
+                    }).encode('utf-8'))
+                    return
+
+                elif action == "unmark_direct" and pid:
+                    if user_id:
+                        database.remove_competitor_feedback(user_id, query, pid)
+                    print(f"[Feedback] Concorrente {pid} DESMARCADO de direto para a busca '{query}'.", flush=True)
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({
+                        "success": True,
+                        "action": "unmark_direct",
+                        "product_id": pid,
+                        "is_direct": False,
+                        "message": f"Produto {pid} desmarcado de concorrente direto."
+                    }).encode('utf-8'))
+                    return
+
+                elif action == "ignore" and pid:
+                    if user_id:
+                        database.save_competitor_feedback(user_id, query, pid, status="ignored", sku=sku, item_data=data)
                     if query not in memory["ignored_by_query"]:
                         memory["ignored_by_query"][query] = []
                     if pid not in memory["ignored_by_query"][query]:
                         memory["ignored_by_query"][query].append(pid)
                     save_feedback_memory(memory)
-                    print(f"[Feedback] Concorrente {pid} ignorado para a busca '{query}'. Memória atualizada!")
+                    print(f"[Feedback] Concorrente {pid} ignorado para a busca '{query}'. Memória atualizada!", flush=True)
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json; charset=utf-8")
                     self.end_headers()
                     self.wfile.write(json.dumps({
                         "success": True, 
+                        "action": "ignore",
                         "message": f"Produto {pid} adicionado aos ignorados.",
                         "ignored": memory["ignored_by_query"][query]
                     }).encode('utf-8'))
                     return
+
                 elif action == "restore":
+                    if user_id:
+                        database.remove_competitor_feedback(user_id, query, pid if pid else "all")
                     if query in memory["ignored_by_query"]:
                         if pid and pid != "all":
                             if pid in memory["ignored_by_query"][query]:
@@ -2117,12 +2162,13 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                         else:
                             memory["ignored_by_query"][query] = []
                         save_feedback_memory(memory)
-                    print(f"[Feedback] Concorrentes restaurados para '{query}'.")
+                    print(f"[Feedback] Concorrentes restaurados para '{query}'.", flush=True)
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json; charset=utf-8")
                     self.end_headers()
                     self.wfile.write(json.dumps({
                         "success": True, 
+                        "action": "restore",
                         "message": "Concorrentes restaurados.",
                         "ignored": memory["ignored_by_query"].get(query, [])
                     }).encode('utf-8'))
@@ -2138,6 +2184,40 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+                return
+
+        # Salvar / Atualizar Precificação de SKU
+        if parsed.path == "/api/products/save":
+            sess = self.get_current_user_session()
+            if not sess:
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": "Autenticação necessária."}).encode('utf-8'))
+                return
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8') if content_length > 0 else "{}"
+            try:
+                data = json.loads(body)
+                sku = str(data.get("sku", "")).strip()
+                if not sku:
+                    self.send_response(400)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"success": False, "error": "SKU obrigatório."}).encode('utf-8'))
+                    return
+
+                res = database.upsert_sku_product(sess["user_id"], sku, data)
+                self.send_response(200 if res.get("success") else 500)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps(res, ensure_ascii=False).encode('utf-8'))
+                return
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode('utf-8'))
                 return
 
         # Trocar código de autorização pelo token oficial
@@ -2515,6 +2595,7 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
             query_params = urllib.parse.parse_qs(parsed.query)
             search_query = query_params.get("q", [""])[0]
             brand_query = query_params.get("brand", [""])[0]
+            sku_param = query_params.get("sku", [""])[0].strip()
             try:
                 cmv_val = float(query_params.get("cmv", ["0"])[0] or 0.0)
             except (ValueError, TypeError):
@@ -2537,22 +2618,77 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
             # Resolução de Token com Isolamento Multi-Tenant:
             # 1. Token individual do usuário armazenado no banco de dados
             user_token = ""
+            user_id = sess.get("user_id")
             try:
-                user_creds = database.get_user_ml_credentials(sess["user_id"])
+                user_creds = database.get_user_ml_credentials(user_id)
                 if user_creds.get("connected"):
                     user_token = user_creds.get("access_token", "")
             except Exception as e:
-                print(f"[Competitors] Erro ao buscar token do usuario {sess.get('user_id')}: {e}", flush=True)
+                print(f"[Competitors] Erro ao buscar token do usuario {user_id}: {e}", flush=True)
 
             # 2. Token explícito no header ou query (se fornecido)
             # 3. Fallback para token global da plataforma (garante busca para quem ainda não conectou conta de vendedor)
             access_token = user_token or token_from_ml_header or ml_bearer or token_from_param or cfg.get("access_token", "")
 
-            print(f"[API] Buscando no Mercado Livre para usuário {sess.get('user_id')} ({sess.get('email')}): '{search_query}' (Marca: '{brand_query}', Token individual: {bool(user_token)}, Token ativo: {bool(access_token)}, CMV: R$ {cmv_val:.2f})...", flush=True)
+            # Busca Concorrentes Diretos Validados e Ignorados no Banco de Dados
+            direct_items = []
+            ignored_ids = set()
+            if user_id:
+                try:
+                    fb = database.get_competitor_feedback_for_query(user_id, search_query, sku=sku_param)
+                    direct_items = fb.get("direct", [])
+                    ignored_ids = set(fb.get("ignored", []))
+                except Exception as e:
+                    print(f"[Competitors] Erro ao buscar feedback do banco para usuario {user_id}: {e}", flush=True)
+
+            # Incorpora memória em arquivo/cache para contingência
+            try:
+                memory = load_feedback_memory()
+                q_norm = search_query.strip().lower()
+                for mem_id in memory.get("ignored_by_query", {}).get(q_norm, []):
+                    ignored_ids.add(mem_id)
+                for mem_id in memory.get("ignored_global", []):
+                    ignored_ids.add(mem_id)
+            except Exception:
+                pass
+
+            print(f"[API] Buscando no Mercado Livre para usuário {user_id} ({sess.get('email')}): '{search_query}' (Marca: '{brand_query}', SKU: '{sku_param}', Diretos salvos: {len(direct_items)}, Ignorados: {len(ignored_ids)}, CMV: R$ {cmv_val:.2f})...", flush=True)
             items = search_official_ml_api(search_query, access_token, cfg, cmv=cmv_val, brand=brand_query)
 
             is_live = any(it.get("is_live", False) for it in items)
             source_type = items[0].get("source", "catalogo_garantido") if items else "catalogo_garantido"
+
+            # Merge inteligente:
+            # 1. Concorrentes Diretos Validados ficam fixados no topo com is_direct: True
+            direct_ids = {d.get("id") for d in direct_items if d.get("id")}
+            for d in direct_items:
+                d["is_direct"] = True
+                d["available"] = True
+                d["stock_status"] = "in_stock"
+
+            # 2. Novos Anúncios / Potenciais Concorrentes (excluindo os ignorados e os que já são diretos)
+            new_potential_items = []
+            for it in items:
+                p_id = it.get("id")
+                if not p_id or p_id in ignored_ids:
+                    continue
+                if p_id in direct_ids:
+                    # Atualiza dados dinâmicos ao vivo no item direto se disponível
+                    for d in direct_items:
+                        if d.get("id") == p_id:
+                            if it.get("price") and it.get("price") > 0:
+                                d["price"] = it.get("price")
+                            if it.get("thumbnail"):
+                                d["thumbnail"] = it.get("thumbnail")
+                            if "is_full" in it:
+                                d["is_full"] = it.get("is_full")
+                            if "free_shipping" in it:
+                                d["free_shipping"] = it.get("free_shipping")
+                    continue
+                it["is_direct"] = False
+                new_potential_items.append(it)
+
+            merged_results = direct_items + new_potential_items
 
             payload = {
                 "success": True,
@@ -2560,8 +2696,11 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                 "source": source_type,
                 "is_official_api": bool(access_token) or is_live,
                 "query": search_query,
-                "count": len(items),
-                "results": items
+                "sku": sku_param,
+                "count": len(merged_results),
+                "direct_count": len(direct_items),
+                "ignored_count": len(ignored_ids),
+                "results": merged_results
             }
 
             self.send_response(200)
@@ -2570,18 +2709,91 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
             return
 
-        # 4. Consulta de itens ignorados pelo lojista (Feedback memory)
+        # 4. Consulta de itens ignorados e diretos pelo lojista (Feedback memory)
         if parsed.path == "/api/competitors/feedback":
+            sess = self.get_current_user_session()
+            user_id = sess.get("user_id") if sess else None
             query_params = urllib.parse.parse_qs(parsed.query)
             q = query_params.get("q", [""])[0].strip().lower()
+            sku = query_params.get("sku", [""])[0].strip()
+
             memory = load_feedback_memory()
-            ignored_list = memory.get("ignored_by_query", {}).get(q, []) if q else memory.get("ignored_by_query", {})
+            ignored_list = list(memory.get("ignored_by_query", {}).get(q, [])) if q else []
+            direct_list = []
+
+            if user_id:
+                try:
+                    db_fb = database.get_competitor_feedback_for_query(user_id, q, sku=sku)
+                    direct_list = db_fb.get("direct", [])
+                    db_ignored = db_fb.get("ignored", [])
+                    ignored_list = list(set(ignored_list + db_ignored))
+                except Exception as e:
+                    print(f"[Feedback] Erro ao consultar banco: {e}", flush=True)
+
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
             self.wfile.write(json.dumps({
                 "success": True,
                 "query": q,
-                "ignored": ignored_list
+                "sku": sku,
+                "ignored": ignored_list,
+                "direct": direct_list,
+                "direct_count": len(direct_list),
+                "ignored_count": len(ignored_list)
+            }, ensure_ascii=False).encode('utf-8'))
+            return
+
+        # Consulta de histórico e precificação salva de um SKU
+        if parsed.path.startswith("/api/products/sku/"):
+            sess = self.get_current_user_session()
+            if not sess:
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": "Autenticação necessária."}).encode('utf-8'))
+                return
+            raw_sku = parsed.path[len("/api/products/sku/"):].strip()
+            sku = urllib.parse.unquote(raw_sku)
+            query_params = urllib.parse.parse_qs(parsed.query)
+            marketplace = query_params.get("marketplace", ["mercadolivre"])[0].strip()
+
+            product = database.get_sku_product(sess["user_id"], sku, marketplace=marketplace)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "success": True,
+                "found": bool(product),
+                "sku": sku,
+                "product": product
+            }, ensure_ascii=False).encode('utf-8'))
+            return
+
+        # Listagem de produtos precificados salvos para o usuário
+        if parsed.path == "/api/products":
+            sess = self.get_current_user_session()
+            if not sess:
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": "Autenticação necessária."}).encode('utf-8'))
+                return
+            query_params = urllib.parse.parse_qs(parsed.query)
+            marketplace = query_params.get("marketplace", ["mercadolivre"])[0].strip()
+            try:
+                limit = int(query_params.get("limit", [50])[0])
+            except (ValueError, TypeError):
+                limit = 50
+
+            products = database.list_sku_products(sess["user_id"], marketplace=marketplace, limit=limit)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "success": True,
+                "count": len(products),
+                "products": products
             }, ensure_ascii=False).encode('utf-8'))
             return
 

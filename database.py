@@ -173,6 +173,61 @@ def init_db():
             cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS ml_connected_at TIMESTAMP WITH TIME ZONE;")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_usuarios_ip ON usuarios(ip_origem);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_usuarios_device_id ON usuarios(device_id);")
+
+            # Tabela de Produtos e Preços por SKU (PostgreSQL)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS produtos_precificados (
+                    id SERIAL PRIMARY KEY,
+                    usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    sku VARCHAR(100) NOT NULL,
+                    titulo VARCHAR(255) DEFAULT '',
+                    categoria VARCHAR(100) DEFAULT '',
+                    marketplace VARCHAR(50) DEFAULT 'mercadolivre',
+                    cmv NUMERIC(10, 2) DEFAULT 0.00,
+                    margem_alvo NUMERIC(5, 4) DEFAULT 0.20,
+                    peso_kg NUMERIC(8, 3) DEFAULT 0.50,
+                    embalagem_custo NUMERIC(10, 2) DEFAULT 3.00,
+                    logistica_tipo VARCHAR(50) DEFAULT 'both',
+                    reputacao VARCHAR(50) DEFAULT 'green',
+                    preco_venda_sugerido NUMERIC(10, 2) NOT NULL,
+                    lucro_liquido_unitario NUMERIC(10, 2) DEFAULT 0.00,
+                    margem_liquida_percentual NUMERIC(6, 2) DEFAULT 0.00,
+                    comissao_ml NUMERIC(10, 2) DEFAULT 0.00,
+                    frete_estimado NUMERIC(10, 2) DEFAULT 0.00,
+                    imposto_estimado NUMERIC(10, 2) DEFAULT 0.00,
+                    estoque_qtd INTEGER DEFAULT 1,
+                    veredito_gate VARCHAR(50) DEFAULT 'A',
+                    dados_extras TEXT DEFAULT '{}',
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(usuario_id, sku, marketplace)
+                );
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_produtos_precificados_user_sku ON produtos_precificados(usuario_id, sku);")
+
+            # Tabela de Concorrentes Validados e Ignorados (PostgreSQL)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS concorrentes_feedback (
+                    id SERIAL PRIMARY KEY,
+                    usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    query VARCHAR(255) NOT NULL,
+                    sku VARCHAR(100) DEFAULT '',
+                    product_id VARCHAR(100) NOT NULL,
+                    status VARCHAR(20) NOT NULL,
+                    product_title VARCHAR(255) DEFAULT '',
+                    product_price NUMERIC(10, 2) DEFAULT 0.00,
+                    product_seller VARCHAR(100) DEFAULT '',
+                    product_permalink TEXT DEFAULT '',
+                    product_thumbnail TEXT DEFAULT '',
+                    is_full BOOLEAN DEFAULT FALSE,
+                    free_shipping BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(usuario_id, query, product_id)
+                );
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_concorrentes_feedback_user_query ON concorrentes_feedback(usuario_id, query);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_concorrentes_feedback_user_sku ON concorrentes_feedback(usuario_id, sku);")
         else:
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS usuarios (
@@ -210,6 +265,64 @@ def init_db():
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_logs_usuario_id ON logs_consumo_creditos(usuario_id);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);")
+
+            # Tabela de Produtos e Preços por SKU (SQLite)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS produtos_precificados (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    usuario_id INTEGER NOT NULL,
+                    sku TEXT NOT NULL,
+                    titulo TEXT DEFAULT '',
+                    categoria TEXT DEFAULT '',
+                    marketplace TEXT DEFAULT 'mercadolivre',
+                    cmv REAL DEFAULT 0.00,
+                    margem_alvo REAL DEFAULT 0.20,
+                    peso_kg REAL DEFAULT 0.50,
+                    embalagem_custo REAL DEFAULT 3.00,
+                    logistica_tipo TEXT DEFAULT 'both',
+                    reputacao TEXT DEFAULT 'green',
+                    preco_venda_sugerido REAL NOT NULL,
+                    lucro_liquido_unitario REAL DEFAULT 0.00,
+                    margem_liquida_percentual REAL DEFAULT 0.00,
+                    comissao_ml REAL DEFAULT 0.00,
+                    frete_estimado REAL DEFAULT 0.00,
+                    imposto_estimado REAL DEFAULT 0.00,
+                    estoque_qtd INTEGER DEFAULT 1,
+                    veredito_gate TEXT DEFAULT 'A',
+                    dados_extras TEXT DEFAULT '{}',
+                    created_at TEXT,
+                    updated_at TEXT,
+                    FOREIGN KEY(usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+                    UNIQUE(usuario_id, sku, marketplace)
+                );
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_produtos_precificados_user_sku ON produtos_precificados(usuario_id, sku);")
+
+            # Tabela de Concorrentes Validados e Ignorados (SQLite)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS concorrentes_feedback (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    usuario_id INTEGER NOT NULL,
+                    query TEXT NOT NULL,
+                    sku TEXT DEFAULT '',
+                    product_id TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    product_title TEXT DEFAULT '',
+                    product_price REAL DEFAULT 0.00,
+                    product_seller TEXT DEFAULT '',
+                    product_permalink TEXT DEFAULT '',
+                    product_thumbnail TEXT DEFAULT '',
+                    is_full INTEGER DEFAULT 0,
+                    free_shipping INTEGER DEFAULT 0,
+                    created_at TEXT,
+                    updated_at TEXT,
+                    FOREIGN KEY(usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+                    UNIQUE(usuario_id, query, product_id)
+                );
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_concorrentes_feedback_user_query ON concorrentes_feedback(usuario_id, query);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_concorrentes_feedback_user_sku ON concorrentes_feedback(usuario_id, sku);")
+
             # Migrações idempotentes para tabelas SQLite existentes
             cur.execute("PRAGMA table_info(usuarios);")
             col_names = [col[1] for col in cur.fetchall()]
@@ -789,5 +902,382 @@ def save_user_ml_credentials(user_id: int, access_token: str, refresh_token: str
 def disconnect_user_ml(user_id: int) -> bool:
     """Desconecta a conta do Mercado Livre do lojista, limpando os tokens com segurança."""
     return save_user_ml_credentials(user_id, "", "", "")
+
+
+def upsert_sku_product(user_id: int, sku: str, data: dict) -> dict:
+    """
+    Insere ou atualiza deterministicamente a precificação e parâmetros de um SKU para o lojista.
+    """
+    if not user_id or not sku:
+        return {"success": False, "error": "Parâmetros user_id e sku obrigatórios"}
+    
+    conn, engine = get_connection()
+    cur = conn.cursor()
+    ph = "%s" if engine == "postgres" else "?"
+    now_str = get_brasilia_now().isoformat()
+
+    titulo = str(data.get("titulo") or data.get("product_name") or data.get("title_raw") or "").strip()
+    categoria = str(data.get("categoria") or data.get("category_hint") or "").strip()
+    marketplace = str(data.get("marketplace", "mercadolivre")).strip().lower()
+    cmv = float(data.get("cmv") or data.get("cost_price") or 0.0)
+    margem_alvo = float(data.get("margem_alvo") or data.get("target_margin") or 0.20)
+    peso_kg = float(data.get("peso_kg") or data.get("weight_kg") or 0.50)
+    embalagem_custo = float(data.get("embalagem_custo") or data.get("packaging_cost") or 3.00)
+    logistica_tipo = str(data.get("logistica_tipo") or data.get("logistics_type") or "both").strip()
+    reputacao = str(data.get("reputacao") or data.get("reputation") or "green").strip()
+    preco_venda = float(data.get("preco_venda_sugerido") or data.get("suggested_price") or 0.0)
+    lucro_liquido = float(data.get("lucro_liquido_unitario") or data.get("net_profit") or 0.0)
+    margem_liquida = float(data.get("margem_liquida_percentual") or data.get("net_margin") or 0.0)
+    comissao_ml = float(data.get("comissao_ml") or data.get("ml_fee") or 0.0)
+    frete_estimado = float(data.get("frete_estimado") or data.get("shipping") or 0.0)
+    imposto_estimado = float(data.get("imposto_estimado") or data.get("tax") or 0.0)
+    estoque_qtd = int(data.get("estoque_qtd") or data.get("stock_quantity") or data.get("monthly_units") or 1)
+    veredito_gate = str(data.get("veredito_gate") or "A").strip()
+    dados_extras = json.dumps(data.get("dados_extras") or {}, ensure_ascii=False)
+
+    try:
+        if engine == "postgres":
+            query = f"""
+                INSERT INTO produtos_precificados (
+                    usuario_id, sku, titulo, categoria, marketplace, cmv, margem_alvo, peso_kg,
+                    embalagem_custo, logistica_tipo, reputacao, preco_venda_sugerido,
+                    lucro_liquido_unitario, margem_liquida_percentual, comissao_ml, frete_estimado,
+                    imposto_estimado, estoque_qtd, veredito_gate, dados_extras, created_at, updated_at
+                ) VALUES (
+                    {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph},
+                    {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph},
+                    {ph}, {ph}, {ph}, {ph}, {ph}, {ph}
+                )
+                ON CONFLICT (usuario_id, sku, marketplace) DO UPDATE SET
+                    titulo = EXCLUDED.titulo,
+                    categoria = EXCLUDED.categoria,
+                    cmv = EXCLUDED.cmv,
+                    margem_alvo = EXCLUDED.margem_alvo,
+                    peso_kg = EXCLUDED.peso_kg,
+                    embalagem_custo = EXCLUDED.embalagem_custo,
+                    logistica_tipo = EXCLUDED.logistica_tipo,
+                    reputacao = EXCLUDED.reputacao,
+                    preco_venda_sugerido = EXCLUDED.preco_venda_sugerido,
+                    lucro_liquido_unitario = EXCLUDED.lucro_liquido_unitario,
+                    margem_liquida_percentual = EXCLUDED.margem_liquida_percentual,
+                    comissao_ml = EXCLUDED.comissao_ml,
+                    frete_estimado = EXCLUDED.frete_estimado,
+                    imposto_estimado = EXCLUDED.imposto_estimado,
+                    estoque_qtd = EXCLUDED.estoque_qtd,
+                    veredito_gate = EXCLUDED.veredito_gate,
+                    dados_extras = EXCLUDED.dados_extras,
+                    updated_at = EXCLUDED.updated_at;
+            """
+        else:
+            query = f"""
+                INSERT INTO produtos_precificados (
+                    usuario_id, sku, titulo, categoria, marketplace, cmv, margem_alvo, peso_kg,
+                    embalagem_custo, logistica_tipo, reputacao, preco_venda_sugerido,
+                    lucro_liquido_unitario, margem_liquida_percentual, comissao_ml, frete_estimado,
+                    imposto_estimado, estoque_qtd, veredito_gate, dados_extras, created_at, updated_at
+                ) VALUES (
+                    {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph},
+                    {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph},
+                    {ph}, {ph}, {ph}, {ph}, {ph}, {ph}
+                )
+                ON CONFLICT(usuario_id, sku, marketplace) DO UPDATE SET
+                    titulo = excluded.titulo,
+                    categoria = excluded.categoria,
+                    cmv = excluded.cmv,
+                    margem_alvo = excluded.margem_alvo,
+                    peso_kg = excluded.peso_kg,
+                    embalagem_custo = excluded.embalagem_custo,
+                    logistica_tipo = excluded.logistica_tipo,
+                    reputacao = excluded.reputacao,
+                    preco_venda_sugerido = excluded.preco_venda_sugerido,
+                    lucro_liquido_unitario = excluded.lucro_liquido_unitario,
+                    margem_liquida_percentual = excluded.margem_liquida_percentual,
+                    comissao_ml = excluded.comissao_ml,
+                    frete_estimado = excluded.frete_estimado,
+                    imposto_estimado = excluded.imposto_estimado,
+                    estoque_qtd = excluded.estoque_qtd,
+                    veredito_gate = excluded.veredito_gate,
+                    dados_extras = excluded.dados_extras,
+                    updated_at = excluded.updated_at;
+            """
+        params = (
+            user_id, sku.strip(), titulo, categoria, marketplace, cmv, margem_alvo, peso_kg,
+            embalagem_custo, logistica_tipo, reputacao, preco_venda, lucro_liquido, margem_liquida,
+            comissao_ml, frete_estimado, imposto_estimado, estoque_qtd, veredito_gate, dados_extras,
+            now_str, now_str
+        )
+        cur.execute(query, params)
+        conn.commit()
+        return {
+            "success": True,
+            "sku": sku,
+            "preco_venda_sugerido": preco_venda,
+            "lucro_liquido_unitario": lucro_liquido,
+            "margem_liquida_percentual": margem_liquida,
+            "updated_at": now_str
+        }
+    except Exception as e:
+        conn.rollback()
+        print(f"[DB] Erro ao salvar SKU {sku} para usuario {user_id}: {e}", flush=True)
+        return {"success": False, "error": str(e)}
+    finally:
+        cur.close()
+        conn.close()
+
+
+def get_sku_product(user_id: int, sku: str, marketplace: str = "mercadolivre") -> dict:
+    """Busca o produto e histórico financeiro de um SKU específico do lojista."""
+    if not user_id or not sku:
+        return None
+    conn, engine = get_connection()
+    cur = conn.cursor()
+    ph = "%s" if engine == "postgres" else "?"
+    try:
+        cur.execute(
+            f"""SELECT * FROM produtos_precificados 
+                WHERE usuario_id = {ph} AND sku = {ph} AND marketplace = {ph}""",
+            (user_id, sku.strip(), marketplace.strip().lower())
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        if engine == "sqlite":
+            return dict(row)
+        cols = [desc[0] for desc in cur.description]
+        return dict(zip(cols, row))
+    except Exception as e:
+        print(f"[DB] Erro ao buscar SKU {sku} do usuario {user_id}: {e}", flush=True)
+        return None
+    finally:
+        cur.close()
+        conn.close()
+
+
+def list_sku_products(user_id: int, marketplace: str = "mercadolivre", limit: int = 50) -> list:
+    """Retorna a lista de produtos precificados salvos para o usuário ordenados pelo mais recente."""
+    if not user_id:
+        return []
+    conn, engine = get_connection()
+    cur = conn.cursor()
+    ph = "%s" if engine == "postgres" else "?"
+    try:
+        cur.execute(
+            f"""SELECT * FROM produtos_precificados 
+                WHERE usuario_id = {ph} AND marketplace = {ph}
+                ORDER BY updated_at DESC LIMIT {limit}""",
+            (user_id, marketplace.strip().lower())
+        )
+        rows = cur.fetchall()
+        if engine == "sqlite":
+            return [dict(r) for r in rows]
+        cols = [desc[0] for desc in cur.description]
+        return [dict(zip(cols, r)) for r in rows]
+    except Exception as e:
+        print(f"[DB] Erro ao listar SKUs do usuario {user_id}: {e}", flush=True)
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+
+def save_competitor_feedback(user_id: int, query: str, product_id: str, status: str, sku: str = "", item_data: dict = None) -> dict:
+    """
+    Salva ou atualiza a classificação de um concorrente ('direct' ou 'ignored') para um termo de busca e SKU.
+    """
+    if not user_id or not query or not product_id:
+        return {"success": False, "error": "Parametros obrigatorios ausentes"}
+    
+    conn, engine = get_connection()
+    cur = conn.cursor()
+    ph = "%s" if engine == "postgres" else "?"
+    now_str = get_brasilia_now().isoformat()
+    q_norm = query.strip().lower()
+    item_data = item_data or {}
+
+    p_title = str(item_data.get("title") or item_data.get("product_title") or "").strip()
+    p_price = float(item_data.get("price") or item_data.get("product_price") or 0.0)
+    p_seller = str(item_data.get("seller") or item_data.get("product_seller") or "").strip()
+    p_permalink = str(item_data.get("permalink") or item_data.get("product_permalink") or "").strip()
+    p_thumb = str(item_data.get("thumbnail") or item_data.get("product_thumbnail") or "").strip()
+    p_is_full = bool(item_data.get("is_full", False))
+    p_free_shipping = bool(item_data.get("free_shipping", False))
+
+    try:
+        if engine == "postgres":
+            sql = f"""
+                INSERT INTO concorrentes_feedback (
+                    usuario_id, query, sku, product_id, status, product_title, product_price,
+                    product_seller, product_permalink, product_thumbnail, is_full, free_shipping,
+                    created_at, updated_at
+                ) VALUES (
+                    {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph},
+                    {ph}, {ph}, {ph}, {ph}, {ph},
+                    {ph}, {ph}
+                )
+                ON CONFLICT (usuario_id, query, product_id) DO UPDATE SET
+                    status = EXCLUDED.status,
+                    sku = CASE WHEN EXCLUDED.sku != '' THEN EXCLUDED.sku ELSE concorrentes_feedback.sku END,
+                    product_title = CASE WHEN EXCLUDED.product_title != '' THEN EXCLUDED.product_title ELSE concorrentes_feedback.product_title END,
+                    product_price = CASE WHEN EXCLUDED.product_price > 0 THEN EXCLUDED.product_price ELSE concorrentes_feedback.product_price END,
+                    product_seller = CASE WHEN EXCLUDED.product_seller != '' THEN EXCLUDED.product_seller ELSE concorrentes_feedback.product_seller END,
+                    product_permalink = CASE WHEN EXCLUDED.product_permalink != '' THEN EXCLUDED.product_permalink ELSE concorrentes_feedback.product_permalink END,
+                    product_thumbnail = CASE WHEN EXCLUDED.product_thumbnail != '' THEN EXCLUDED.product_thumbnail ELSE concorrentes_feedback.product_thumbnail END,
+                    is_full = EXCLUDED.is_full,
+                    free_shipping = EXCLUDED.free_shipping,
+                    updated_at = EXCLUDED.updated_at;
+            """
+        else:
+            sql = f"""
+                INSERT INTO concorrentes_feedback (
+                    usuario_id, query, sku, product_id, status, product_title, product_price,
+                    product_seller, product_permalink, product_thumbnail, is_full, free_shipping,
+                    created_at, updated_at
+                ) VALUES (
+                    {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph},
+                    {ph}, {ph}, {ph}, {ph}, {ph},
+                    {ph}, {ph}
+                )
+                ON CONFLICT(usuario_id, query, product_id) DO UPDATE SET
+                    status = excluded.status,
+                    sku = CASE WHEN excluded.sku != '' THEN excluded.sku ELSE concorrentes_feedback.sku END,
+                    product_title = CASE WHEN excluded.product_title != '' THEN excluded.product_title ELSE concorrentes_feedback.product_title END,
+                    product_price = CASE WHEN excluded.product_price > 0 THEN excluded.product_price ELSE concorrentes_feedback.product_price END,
+                    product_seller = CASE WHEN excluded.product_seller != '' THEN excluded.product_seller ELSE concorrentes_feedback.product_seller END,
+                    product_permalink = CASE WHEN excluded.product_permalink != '' THEN excluded.product_permalink ELSE concorrentes_feedback.product_permalink END,
+                    product_thumbnail = CASE WHEN excluded.product_thumbnail != '' THEN excluded.product_thumbnail ELSE concorrentes_feedback.product_thumbnail END,
+                    is_full = excluded.is_full,
+                    free_shipping = excluded.free_shipping,
+                    updated_at = excluded.updated_at;
+            """
+        params = (
+            user_id, q_norm, sku.strip(), product_id.strip(), status.strip().lower(),
+            p_title, p_price, p_seller, p_permalink, p_thumb,
+            (1 if p_is_full else 0) if engine == "sqlite" else p_is_full,
+            (1 if p_free_shipping else 0) if engine == "sqlite" else p_free_shipping,
+            now_str, now_str
+        )
+        cur.execute(sql, params)
+        conn.commit()
+        return {"success": True, "product_id": product_id, "status": status, "query": q_norm}
+    except Exception as e:
+        conn.rollback()
+        print(f"[DB] Erro ao salvar feedback do concorrente {product_id}: {e}", flush=True)
+        return {"success": False, "error": str(e)}
+    finally:
+        cur.close()
+        conn.close()
+
+
+def remove_competitor_feedback(user_id: int, query: str, product_id: str) -> dict:
+    """Remove a marcação de um concorrente (volta ao estado neutro de potencial concorrente)."""
+    if not user_id or not query:
+        return {"success": False, "error": "Parametros invalidos"}
+    conn, engine = get_connection()
+    cur = conn.cursor()
+    ph = "%s" if engine == "postgres" else "?"
+    q_norm = query.strip().lower()
+    try:
+        if product_id == "all":
+            cur.execute(f"DELETE FROM concorrentes_feedback WHERE usuario_id = {ph} AND query = {ph}", (user_id, q_norm))
+        else:
+            cur.execute(f"DELETE FROM concorrentes_feedback WHERE usuario_id = {ph} AND query = {ph} AND product_id = {ph}", (user_id, q_norm, product_id.strip()))
+        conn.commit()
+        return {"success": True, "message": "Feedback removido com sucesso"}
+    except Exception as e:
+        conn.rollback()
+        print(f"[DB] Erro ao remover feedback do concorrente {product_id}: {e}", flush=True)
+        return {"success": False, "error": str(e)}
+    finally:
+        cur.close()
+        conn.close()
+
+
+def get_competitor_feedback_for_query(user_id: int, query: str, sku: str = "") -> dict:
+    """
+    Retorna as listas de concorrentes validados ('direct') e ignorados ('ignored') para a busca / SKU.
+    """
+    result = {"direct": [], "ignored": []}
+    if not user_id or (not query and not sku):
+        return result
+    conn, engine = get_connection()
+    cur = conn.cursor()
+    ph = "%s" if engine == "postgres" else "?"
+    q_norm = query.strip().lower() if query else ""
+    sku_norm = sku.strip()
+    seen_ids = set()
+    try:
+        if q_norm and sku_norm:
+            sql = f"""SELECT product_id, status, product_title, product_price, product_seller,
+                             product_permalink, product_thumbnail, is_full, free_shipping
+                      FROM concorrentes_feedback
+                      WHERE usuario_id = {ph} AND (query = {ph} OR (sku != '' AND sku = {ph}))
+                      ORDER BY updated_at DESC"""
+            params = (user_id, q_norm, sku_norm)
+        elif sku_norm:
+            sql = f"""SELECT product_id, status, product_title, product_price, product_seller,
+                             product_permalink, product_thumbnail, is_full, free_shipping
+                      FROM concorrentes_feedback
+                      WHERE usuario_id = {ph} AND sku = {ph}
+                      ORDER BY updated_at DESC"""
+            params = (user_id, sku_norm)
+        else:
+            sql = f"""SELECT product_id, status, product_title, product_price, product_seller,
+                             product_permalink, product_thumbnail, is_full, free_shipping
+                      FROM concorrentes_feedback
+                      WHERE usuario_id = {ph} AND query = {ph}
+                      ORDER BY updated_at DESC"""
+            params = (user_id, q_norm)
+
+        cur.execute(sql, params)
+        rows = cur.fetchall()
+        for r in rows:
+            if engine == "sqlite":
+                p_id = r["product_id"]
+                st = r["status"]
+                item = {
+                    "id": p_id,
+                    "title": r["product_title"],
+                    "price": float(r["product_price"] or 0.0),
+                    "seller": r["product_seller"],
+                    "permalink": r["product_permalink"],
+                    "thumbnail": r["product_thumbnail"],
+                    "is_full": bool(r["is_full"]),
+                    "free_shipping": bool(r["free_shipping"]),
+                    "is_direct": (st == "direct"),
+                    "available": True,
+                    "stock_status": "in_stock"
+                }
+            else:
+                p_id = r[0]
+                st = r[1]
+                item = {
+                    "id": p_id,
+                    "title": r[2],
+                    "price": float(r[3] or 0.0),
+                    "seller": r[4],
+                    "permalink": r[5],
+                    "thumbnail": r[6],
+                    "is_full": bool(r[7]),
+                    "free_shipping": bool(r[8]),
+                    "is_direct": (st == "direct"),
+                    "available": True,
+                    "stock_status": "in_stock"
+                }
+            if p_id in seen_ids:
+                continue
+            seen_ids.add(p_id)
+
+            if st == "direct":
+                result["direct"].append(item)
+            elif st == "ignored":
+                result["ignored"].append(p_id)
+        return result
+    except Exception as e:
+        print(f"[DB] Erro ao buscar feedback de concorrentes para '{query}' (SKU: '{sku}'): {e}", flush=True)
+        return result
+    finally:
+        cur.close()
+        conn.close()
+
 
 

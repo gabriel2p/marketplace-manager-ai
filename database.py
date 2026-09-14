@@ -228,6 +228,18 @@ def init_db():
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_concorrentes_feedback_user_query ON concorrentes_feedback(usuario_id, query);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_concorrentes_feedback_user_sku ON concorrentes_feedback(usuario_id, sku);")
+
+            # Tabela de Sessões Persistentes de Usuários (PostgreSQL)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS sessoes_usuarios (
+                    token VARCHAR(64) PRIMARY KEY,
+                    usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    expires_at TIMESTAMP WITH TIME ZONE
+                );
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_sessoes_token ON sessoes_usuarios(token);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_sessoes_usuario_id ON sessoes_usuarios(usuario_id);")
         else:
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS usuarios (
@@ -322,6 +334,19 @@ def init_db():
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_concorrentes_feedback_user_query ON concorrentes_feedback(usuario_id, query);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_concorrentes_feedback_user_sku ON concorrentes_feedback(usuario_id, sku);")
+
+            # Tabela de Sessões Persistentes de Usuários (SQLite)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS sessoes_usuarios (
+                    token TEXT PRIMARY KEY,
+                    usuario_id INTEGER NOT NULL,
+                    created_at TEXT DEFAULT (datetime('now')),
+                    expires_at TEXT,
+                    FOREIGN KEY(usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+                );
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_sessoes_token ON sessoes_usuarios(token);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_sessoes_usuario_id ON sessoes_usuarios(usuario_id);")
 
             # Migrações idempotentes para tabelas SQLite existentes
             cur.execute("PRAGMA table_info(usuarios);")
@@ -1278,6 +1303,111 @@ def get_competitor_feedback_for_query(user_id: int, query: str, sku: str = "") -
     finally:
         cur.close()
         conn.close()
+
+
+def save_user_session(token: str, user_id: int, duration_days: int = 30):
+    """Persiste a sessão do usuário no banco de dados para resistir a reinicializações de contêiner/servidor."""
+    if not token or not user_id:
+        return
+    conn, engine = get_connection()
+    try:
+        cur = conn.cursor()
+        expires = datetime.now(timezone.utc) + timedelta(days=duration_days)
+        if engine == "postgres":
+            cur.execute("""
+                INSERT INTO sessoes_usuarios (token, usuario_id, expires_at)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (token) DO UPDATE SET expires_at = EXCLUDED.expires_at;
+            """, (token, user_id, expires))
+        else:
+            cur.execute("""
+                INSERT INTO sessoes_usuarios (token, usuario_id, expires_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(token) DO UPDATE SET expires_at = excluded.expires_at;
+            """, (token, user_id, expires.isoformat()))
+        conn.commit()
+    except Exception as e:
+        print(f"[DB] Erro ao salvar sessao {token[:8]}...: {e}", flush=True)
+    finally:
+        cur.close()
+        conn.close()
+
+
+def get_user_by_session_token(token: str):
+    """Busca o usuário associado a um token de sessão persistido no banco de dados."""
+    if not token:
+        return None
+    conn, engine = get_connection()
+    try:
+        cur = conn.cursor()
+        if engine == "postgres":
+            cur.execute("""
+                SELECT u.id, u.email, u.nome, u.plano, u.creditos_mensais, u.creditos_restantes, u.status_assinatura
+                FROM sessoes_usuarios s
+                JOIN usuarios u ON s.usuario_id = u.id
+                WHERE s.token = %s AND (s.expires_at IS NULL OR s.expires_at > CURRENT_TIMESTAMP);
+            """, (token,))
+            row = cur.fetchone()
+            if row:
+                return {
+                    "user_id": row[0],
+                    "id": row[0],
+                    "email": row[1],
+                    "username": row[1],
+                    "nome": row[2] or row[1].split("@")[0],
+                    "role": "admin" if row[3] == "Admin" else "user",
+                    "plano": row[3],
+                    "creditos_mensais": row[4],
+                    "creditos_restantes": row[5],
+                    "status_assinatura": row[6]
+                }
+        else:
+            cur.execute("""
+                SELECT u.id, u.email, u.nome, u.plano, u.creditos_mensais, u.creditos_restantes, u.status_assinatura
+                FROM sessoes_usuarios s
+                JOIN usuarios u ON s.usuario_id = u.id
+                WHERE s.token = ? AND (s.expires_at IS NULL OR s.expires_at > datetime('now'));
+            """, (token,))
+            row = cur.fetchone()
+            if row:
+                return {
+                    "user_id": row["id"],
+                    "id": row["id"],
+                    "email": row["email"],
+                    "username": row["email"],
+                    "nome": row["nome"] or row["email"].split("@")[0],
+                    "role": "admin" if row["plano"] == "Admin" else "user",
+                    "plano": row["plano"],
+                    "creditos_mensais": row["creditos_mensais"],
+                    "creditos_restantes": row["creditos_restantes"],
+                    "status_assinatura": row["status_assinatura"]
+                }
+    except Exception as e:
+        print(f"[DB] Erro ao buscar sessao {token[:8]}...: {e}", flush=True)
+    finally:
+        cur.close()
+        conn.close()
+    return None
+
+
+def delete_user_session(token: str):
+    """Remove a sessão persistida ao fazer logout."""
+    if not token:
+        return
+    conn, engine = get_connection()
+    try:
+        cur = conn.cursor()
+        if engine == "postgres":
+            cur.execute("DELETE FROM sessoes_usuarios WHERE token = %s;", (token,))
+        else:
+            cur.execute("DELETE FROM sessoes_usuarios WHERE token = ?;", (token,))
+        conn.commit()
+    except Exception as e:
+        print(f"[DB] Erro ao deletar sessao: {e}", flush=True)
+    finally:
+        cur.close()
+        conn.close()
+
 
 
 

@@ -1628,25 +1628,52 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def get_session_token(self):
-        auth_header = self.headers.get("Authorization", "")
+        auth_header = self.headers.get("Authorization", "").strip()
         if auth_header.startswith("Bearer "):
-            return auth_header[7:].strip()
+            cand = auth_header[7:].strip()
+            # Se for token válido em memória ou banco, é a sessão do usuário
+            if cand in ACTIVE_SESSIONS:
+                return cand
+            db_u = database.get_user_by_session_token(cand)
+            if db_u:
+                ACTIVE_SESSIONS[cand] = db_u
+                return cand
+
+        # Se Authorization não continha token de sessão (ex: token do ML), busca pelo cookie
         cookie_header = self.headers.get("Cookie", "")
         if "session_token=" in cookie_header:
             match = re.search(r'session_token=([^;]+)', cookie_header)
             if match:
-                return match.group(1).strip()
+                cand = match.group(1).strip()
+                if cand in ACTIVE_SESSIONS:
+                    return cand
+                db_u = database.get_user_by_session_token(cand)
+                if db_u:
+                    ACTIVE_SESSIONS[cand] = db_u
+                    return cand
+                return cand
+
+        # Fallback para Bearer se não houver cookie
+        if auth_header.startswith("Bearer "):
+            return auth_header[7:].strip()
         return None
 
     def get_current_user_session(self):
         token = self.get_session_token()
-        if token and token in ACTIVE_SESSIONS:
+        if not token:
+            return None
+        if token in ACTIVE_SESSIONS:
             return ACTIVE_SESSIONS[token]
+        # Re-idrata sessão do banco de dados (resiste a reinicializações no Render)
+        db_u = database.get_user_by_session_token(token)
+        if db_u:
+            ACTIVE_SESSIONS[token] = db_u
+            return db_u
         return None
 
     def is_authenticated(self):
-        token = self.get_session_token()
-        return bool(token and token in ACTIVE_SESSIONS)
+        sess = self.get_current_user_session()
+        return bool(sess is not None)
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
@@ -1707,6 +1734,7 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                     "role": "user",
                     "plano": user_info["plano"]
                 }
+                database.save_user_session(token, user_info["id"])
                 print(f"[AUTH] Novo usuário registrado: '{email}' (Plano: {user_info['plano']} | Trial Concedido: {trial_granted} | Créditos: {user_info['creditos_restantes']} | IP: {client_ip})")
 
                 self.send_response(201)
@@ -1761,6 +1789,7 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                         "role": auth_res.get("role", "user"),
                         "plano": auth_res.get("plano", "Starter")
                     }
+                    database.save_user_session(token, auth_res["user_id"])
                     print(f"[AUTH] Login bem-sucedido (Banco): '{auth_res['email']}' (Plano: {auth_res['plano']})")
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -1805,6 +1834,7 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                         "role": role,
                         "plano": plano
                     }
+                    database.save_user_session(token, uid)
                     print(f"[AUTH] Login bem-sucedido (Legado sincronizado): '{u}' (Perfil: {role})")
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -1842,8 +1872,10 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
         # Autenticação: Logout
         if parsed.path == "/api/auth/logout":
             token = self.get_session_token()
-            if token and token in ACTIVE_SESSIONS:
-                del ACTIVE_SESSIONS[token]
+            if token:
+                if token in ACTIVE_SESSIONS:
+                    del ACTIVE_SESSIONS[token]
+                database.delete_user_session(token)
             print("[AUTH] Usuário desconectado (sessão encerrada).")
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -2585,12 +2617,7 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
         # 3. Busca de Concorrentes via API Oficial
         if parsed.path == "/api/competitors":
             sess = self.get_current_user_session()
-            if not sess:
-                self.send_response(401)
-                self.send_header("Content-Type", "application/json; charset=utf-8")
-                self.end_headers()
-                self.wfile.write(json.dumps({"success": False, "error": "Autenticação necessária para consultar concorrentes."}).encode('utf-8'))
-                return
+            user_id = sess.get("user_id") if sess else None
 
             query_params = urllib.parse.parse_qs(parsed.query)
             search_query = query_params.get("q", [""])[0]
@@ -2618,13 +2645,13 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
             # Resolução de Token com Isolamento Multi-Tenant:
             # 1. Token individual do usuário armazenado no banco de dados
             user_token = ""
-            user_id = sess.get("user_id")
-            try:
-                user_creds = database.get_user_ml_credentials(user_id)
-                if user_creds.get("connected"):
-                    user_token = user_creds.get("access_token", "")
-            except Exception as e:
-                print(f"[Competitors] Erro ao buscar token do usuario {user_id}: {e}", flush=True)
+            if user_id:
+                try:
+                    user_creds = database.get_user_ml_credentials(user_id)
+                    if user_creds.get("connected"):
+                        user_token = user_creds.get("access_token", "")
+                except Exception as e:
+                    print(f"[Competitors] Erro ao buscar token do usuario {user_id}: {e}", flush=True)
 
             # 2. Token explícito no header ou query (se fornecido)
             # 3. Fallback para token global da plataforma (garante busca para quem ainda não conectou conta de vendedor)
@@ -2652,7 +2679,8 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
             except Exception:
                 pass
 
-            print(f"[API] Buscando no Mercado Livre para usuário {user_id} ({sess.get('email')}): '{search_query}' (Marca: '{brand_query}', SKU: '{sku_param}', Diretos salvos: {len(direct_items)}, Ignorados: {len(ignored_ids)}, CMV: R$ {cmv_val:.2f})...", flush=True)
+            user_label = f"usuário {user_id} ({sess.get('email')})" if (sess and user_id) else "modo resiliente/público"
+            print(f"[API] Buscando no Mercado Livre para {user_label}: '{search_query}' (Marca: '{brand_query}', SKU: '{sku_param}', Diretos salvos: {len(direct_items)}, Ignorados: {len(ignored_ids)}, CMV: R$ {cmv_val:.2f})...", flush=True)
             items = search_official_ml_api(search_query, access_token, cfg, cmv=cmv_val, brand=brand_query)
 
             is_live = any(it.get("is_live", False) for it in items)
@@ -2747,16 +2775,17 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
         # Consulta de histórico e precificação salva de um SKU
         if parsed.path.startswith("/api/products/sku/"):
             sess = self.get_current_user_session()
-            if not sess:
-                self.send_response(401)
-                self.send_header("Content-Type", "application/json; charset=utf-8")
-                self.end_headers()
-                self.wfile.write(json.dumps({"success": False, "error": "Autenticação necessária."}).encode('utf-8'))
-                return
             raw_sku = parsed.path[len("/api/products/sku/"):].strip()
             sku = urllib.parse.unquote(raw_sku)
             query_params = urllib.parse.parse_qs(parsed.query)
             marketplace = query_params.get("marketplace", ["mercadolivre"])[0].strip()
+
+            if not sess:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "found": False, "sku": sku, "product": None}).encode('utf-8'))
+                return
 
             product = database.get_sku_product(sess["user_id"], sku, marketplace=marketplace)
             self.send_response(200)

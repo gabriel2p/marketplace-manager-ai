@@ -2182,7 +2182,6 @@
         try { storedToken = localStorage.getItem('ml_access_token'); } catch(e) {}
         const headers = {};
         if (storedToken) {
-          headers['Authorization'] = 'Bearer ' + storedToken;
           headers['X-ML-Token'] = storedToken;
         }
         const res = await fetch(`/api/competitors?q=${q}&cmv=${cmvVal}&brand=${brandVal}`, { headers });
@@ -2465,7 +2464,6 @@
         try { storedToken = localStorage.getItem('ml_access_token'); } catch(e) {}
         const headers = {};
         if (storedToken) {
-          headers['Authorization'] = 'Bearer ' + storedToken;
           headers['X-ML-Token'] = storedToken;
         }
         const skuVal = (payload.sku || '').trim();
@@ -2490,6 +2488,10 @@
               activeCompetitors._is_live = compData.is_live;
               activeCompetitors._source = compData.source;
               console.log(`[Oficial API] ${inStock.length} produtos reais carregados (Diretos: ${compData.direct_count || 0}, Ao vivo: ${compData.is_live})!`);
+            } else if (compData.results.length > 0) {
+              activeCompetitors = compData.results;
+              activeCompetitors._is_live = compData.is_live;
+              activeCompetitors._source = compData.source;
             }
           }
         }

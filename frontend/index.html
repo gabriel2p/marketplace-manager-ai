@@ -453,7 +453,34 @@
         </div>
 
         <div class="col-span-1">
-          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Modalidade Logística *</label>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="input-logistics" class="block text-xs font-semibold text-slate-300">Modalidade Logística *</label>
+            <div class="relative group inline-flex items-center">
+              <button type="button" class="w-4 h-4 rounded-full bg-slate-800 hover:bg-amber-500/20 text-slate-400 hover:text-amber-300 border border-slate-600 hover:border-amber-400/50 flex items-center justify-center text-[10px] font-bold transition focus:outline-none cursor-help shadow-sm" title="Entenda a modalidade logística">
+                ?
+              </button>
+              <!-- Tooltip Popover on Hover -->
+              <div class="absolute right-0 bottom-full mb-2 hidden group-hover:block w-72 sm:w-80 md:w-96 p-3.5 bg-slate-900/98 backdrop-blur-md border border-emerald-500/50 rounded-xl shadow-2xl shadow-black/90 z-50 text-xs text-slate-200 pointer-events-none transition duration-150 animate-in fade-in">
+                <div id="both-logistics-tooltip" class="space-y-1.5 text-slate-300 leading-relaxed">
+                  <p class="font-bold text-emerald-300 text-xs flex items-center gap-1.5"><i data-lucide="split" class="w-3.5 h-3.5 text-amber-400"></i> Modalidade Híbrida Ativada (Convencional + FULL Oficial):</p>
+                  <p>• <strong>Comparativo Financeiro Lado a Lado:</strong> O motor calculará os custos e margens exatos em ambas as modalidades (com e sem desconto de frete do Full, e com embalagem de CD vs. própria).</p>
+                  <p>• <strong>Estratégia Recomendada de Estoque:</strong> Aloque ~60% no CD do FULL (para ganhar Buy Box, tração do algoritmo e entrega no mesmo dia) e ~40% no seu depósito/agência (contingência contra ruptura de estoque).</p>
+                  <p>• <strong>Regra de Frete & Embalagem:</strong> No comparativo, o Full zera a embalagem (R$ 0,00) e concede 10% de desconto adicional no frete para itens ≥ R$ 79; na coleta local, considera sua embalagem própria e tabela padrão.</p>
+                </div>
+                <div id="full-logistics-tooltip" class="hidden space-y-1.5 text-slate-300 leading-relaxed">
+                  <p class="font-bold text-emerald-300 text-xs flex items-center gap-1.5"><i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i> Mercado Envios FULL Oficial:</p>
+                  <p>• <strong>Desconto de Frete (≥ R$ 79,00):</strong> Até <strong>10% de desconto adicional</strong> na tarifa oficial de frete grátis.</p>
+                  <p>• <strong>Entrega Grátis a partir de R$ 19/R$ 29 (&lt; R$ 79,00):</strong> No Full, o comprador tem benefício de frete grátis Meli+ pago 100% pelo Mercado Livre — você NÃO paga frete (apenas a taxa fixa de R$ 6,00), usufruindo de altíssima conversão!</p>
+                  <p>• <strong>Embalagem Inclusa:</strong> Fornecida gratuitamente pelo CD do Mercado Livre (Embalagem R$ 0,00).</p>
+                  <p>• <strong>Armazenagem Prolongada:</strong> Cobertura recomendada de 30 a 45 dias de vendas para evitar taxas de permanência após 60/90 dias.</p>
+                </div>
+                <div id="std-logistics-tooltip" class="hidden space-y-1.5 text-slate-300 leading-relaxed">
+                  <p class="font-bold text-sky-300 text-xs flex items-center gap-1.5"><i data-lucide="package" class="w-3.5 h-3.5 text-sky-400"></i> Mercado Envios Convencional:</p>
+                  <p>• <strong>Coleta ou Agência:</strong> Envio a partir do seu depósito próprio utilizando sua embalagem própria e tabela padrão de frete do Mercado Livre.</p>
+                </div>
+              </div>
+            </div>
+          </div>
           <select id="input-logistics" onchange="onLogisticsChange()" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
             <option value="both" selected>🔄 Ambas (Híbrido / Comparativo Automático) [Recomendado]</option>
             <option value="mercado_envios">📦 Mercado Envios Convencional (Coleta / Agência)</option>
@@ -461,7 +488,7 @@
           </select>
         </div>
 
-        <div class="col-span-1 sm:col-span-2 lg:col-span-1">
+        <div class="col-span-1">
           <label class="block text-xs font-semibold text-slate-300 mb-1.5">Reputação / Nível no ML *</label>
           <select id="input-reputation" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
             <option value="green" selected>🟢 MercadoLíder / Verde (-50% Frete)</option>
@@ -470,34 +497,8 @@
           </select>
         </div>
 
-        <div id="both-logistics-notice" class="col-span-1 sm:col-span-2 lg:col-span-4 bg-gradient-to-r from-blue-950/60 to-emerald-950/60 border border-emerald-500/40 rounded-xl p-3.5 text-xs text-emerald-200 flex items-start space-x-3">
-          <i data-lucide="split" class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5"></i>
-          <div class="space-y-1 text-slate-300 leading-relaxed">
-            <p class="font-bold text-emerald-300 text-xs">🔄 Modalidade Híbrida Ativada (Convencional + FULL Oficial):</p>
-            <p>• <strong>Comparativo Financeiro Lado a Lado:</strong> O motor calculará os custos e margens exatos em ambas as modalidades (com e sem desconto de frete do Full, e com embalagem de CD vs. própria).</p>
-            <p>• <strong>Estratégia Recomendada de Estoque:</strong> Aloque ~60% no CD do FULL (para ganhar Buy Box, tração do algoritmo e entrega no mesmo dia) e ~40% no seu depósito/agência (contingência contra ruptura de estoque).</p>
-            <p>• <strong>Regra de Frete & Embalagem:</strong> No comparativo, o Full zera a embalagem (R$ 0,00) e concede 10% de desconto adicional no frete para itens ≥ R$ 79; na coleta local, considera sua embalagem própria e tabela padrão.</p>
-          </div>
-        </div>
-
-        <div id="full-logistics-notice" class="hidden col-span-1 sm:col-span-2 lg:col-span-4 bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-3.5 text-xs text-emerald-200 flex items-start space-x-3">
-          <i data-lucide="zap" class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5"></i>
-          <div class="space-y-1 text-slate-300 leading-relaxed">
-            <p class="font-bold text-emerald-300 text-xs">⚡ Mercado Envios FULL (Fulfillment Oficial do Mercado Livre) Ativado:</p>
-            <p>• <strong>Desconto de Frete (≥ R$ 79,00):</strong> Benefício oficial de até <strong>10% de desconto adicional</strong> na tarifa de frete grátis do lojista.</p>
-            <p>• <strong>Entrega Grátis a partir de R$ 19/R$ 29 (< R$ 79,00):</strong> No Full, o comprador tem benefício de frete grátis somando itens ao carrinho (Meli+). <strong>Esse frete é 100% pago pelo Mercado Livre</strong> — você lojista NÃO paga frete (apenas a taxa fixa de R$ 6,00), usufruindo de altíssima conversão de vendas!</p>
-            <p>• <strong>Embalagem Inclusa:</strong> O Mercado Livre fornece as caixas e envelopes oficiais e realiza a separação no Centro de Distribuição (Embalagem ajustada para R$ 0,00).</p>
-            <p>• <strong>Política de Armazenagem Prolongada (Stock Aging Fee):</strong> Para evitar cobrança de permanência após 60/90 dias no CD, mantenha remessas planejadas para cobertura de 30 a 45 dias de vendas.</p>
-          </div>
-        </div>
-
-        <div class="col-span-1 sm:col-span-2 lg:col-span-3">
-          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Diferenciais e Benefícios Chave (Separados por vírgula)</label>
-          <input type="text" id="input-features" value="" placeholder="Ex: 8 posições, reclinável, estrutura 100% alumínio, dobrável" class="w-full bg-slate-900 border border-cardborder rounded-lg px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:border-amber-400 min-h-[44px]">
-        </div>
-
         <div class="col-span-1 sm:col-span-2 lg:col-span-1 flex items-end">
-          <button type="submit" id="btn-run-pipeline" class="w-full bg-gradient-to-r from-blue-600 to-amber-500 hover:from-blue-500 hover:to-amber-400 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-blue-500/20 flex items-center justify-center space-x-2 transition transform active:scale-95 min-h-[46px] text-sm sm:text-base">
+          <button type="submit" id="btn-run-pipeline" class="w-full bg-gradient-to-r from-blue-600 to-amber-500 hover:from-blue-500 hover:to-amber-400 text-white font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-blue-500/20 flex items-center justify-center space-x-2 transition transform active:scale-95 min-h-[44px] text-sm font-semibold">
             <i data-lucide="calculator" class="w-4 h-4"></i>
             <span>Analisar Mercado & Viabilidade</span>
           </button>
@@ -2352,22 +2353,18 @@
     // Manipulador da troca de Modalidade Logística (Ambas/Híbrido vs Convencional vs Full)
     function onLogisticsChange() {
       const logSelect = document.getElementById('input-logistics');
-      const noticeFull = document.getElementById('full-logistics-notice');
-      const noticeBoth = document.getElementById('both-logistics-notice');
+      const tooltipBoth = document.getElementById('both-logistics-tooltip');
+      const tooltipFull = document.getElementById('full-logistics-tooltip');
+      const tooltipStd = document.getElementById('std-logistics-tooltip');
       const packInput = document.getElementById('input-packaging');
       if (!logSelect) return;
       const val = logSelect.value;
       const isFull = val === 'full';
       const isBoth = val === 'both';
 
-      if (noticeBoth) {
-        if (isBoth) noticeBoth.classList.remove('hidden');
-        else noticeBoth.classList.add('hidden');
-      }
-      if (noticeFull) {
-        if (isFull) noticeFull.classList.remove('hidden');
-        else noticeFull.classList.add('hidden');
-      }
+      if (tooltipBoth) tooltipBoth.classList.toggle('hidden', !isBoth);
+      if (tooltipFull) tooltipFull.classList.toggle('hidden', !isFull);
+      if (tooltipStd) tooltipStd.classList.toggle('hidden', isBoth || isFull);
 
       if (packInput) {
         if (isFull && (packInput.value === '' || packInput.value === '3' || packInput.value === '3.00' || packInput.value === '3,00')) {
@@ -2397,7 +2394,8 @@
       document.getElementById('input-stock').value = '';
       document.getElementById('input-weight').value = '';
       document.getElementById('input-packaging').value = '';
-      document.getElementById('input-features').value = '';
+      const featInput = document.getElementById('input-features');
+      if (featInput) featInput.value = '';
       const logSelect = document.getElementById('input-logistics');
       if (logSelect) logSelect.value = 'both';
       onLogisticsChange();
@@ -2432,6 +2430,7 @@
       btn.disabled = true;
       btn.innerHTML = `<span class="inline-block animate-spin mr-2">⏳</span> Processando Inteligência Comercial...`;
 
+      const featEl = document.getElementById('input-features');
       const payload = {
         sku: document.getElementById('input-sku').value.trim() || 'SKU-' + Date.now().toString().slice(-4),
         title_raw: rawTitle,
@@ -2443,7 +2442,7 @@
         packaging_cost: parseFormNumber(document.getElementById('input-packaging').value, 3.00),
         logistics_type: document.getElementById('input-logistics') ? document.getElementById('input-logistics').value : 'both',
         reputation: document.getElementById('input-reputation').value || 'green',
-        key_features: document.getElementById('input-features').value.split(',').map(s => s.trim()).filter(Boolean)
+        key_features: featEl ? featEl.value.split(',').map(s => s.trim()).filter(Boolean) : []
       };
 
       // 0. Auditoria e Débito de Crédito SaaS

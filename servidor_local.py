@@ -1924,10 +1924,10 @@ class MarketplaceProxyHandler(SimpleHTTPRequestHandler):
                         "role": role,
                         "plano": plano,
                         "plan": plano,
-                        "creditos_restantes": 999999 if role == "admin" else 250,
-                        "credits_left": 999999 if role == "admin" else 250,
-                        "creditos_mensais": 999999 if role == "admin" else 250,
-                        "monthly_credits": 999999 if role == "admin" else 250,
+                        "creditos_restantes": 999999 if role == "admin" else database.PLANS_CONFIG.get(plano, {}).get("creditos", 120),
+                        "credits_left": 999999 if role == "admin" else database.PLANS_CONFIG.get(plano, {}).get("creditos", 120),
+                        "creditos_mensais": 999999 if role == "admin" else database.PLANS_CONFIG.get(plano, {}).get("creditos", 120),
+                        "monthly_credits": 999999 if role == "admin" else database.PLANS_CONFIG.get(plano, {}).get("creditos", 120),
                         "status_assinatura": "ativo",
                         "status": "ativo"
                     }).encode('utf-8'))

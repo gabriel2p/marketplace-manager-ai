@@ -13,9 +13,9 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 
 PLANS_CONFIG = {
     "Free Trial": {"creditos": 3, "nome": "Free Trial"},
-    "Starter": {"creditos": 50, "nome": "Starter"},
-    "Pro": {"creditos": 250, "nome": "Pro"},
-    "Advanced": {"creditos": 1000, "nome": "Advanced"},
+    "Starter": {"creditos": 120, "nome": "Starter"},
+    "Pro": {"creditos": 400, "nome": "Pro"},
+    "Advanced": {"creditos": 900, "nome": "Advanced"},
     "Admin": {"creditos": 999999, "nome": "Admin"}
 }
 
@@ -135,8 +135,8 @@ def init_db():
                     senha_hash VARCHAR(255) NOT NULL,
                     nome VARCHAR(100) DEFAULT '',
                     plano VARCHAR(50) DEFAULT 'Starter',
-                    creditos_mensais INTEGER DEFAULT 50,
-                    creditos_restantes INTEGER DEFAULT 50,
+                    creditos_mensais INTEGER DEFAULT 120,
+                    creditos_restantes INTEGER DEFAULT 120,
                     status_assinatura VARCHAR(50) DEFAULT 'ativo',
                     data_renovacao TIMESTAMP WITH TIME ZONE,
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -248,8 +248,8 @@ def init_db():
                     senha_hash TEXT NOT NULL,
                     nome TEXT DEFAULT '',
                     plano TEXT DEFAULT 'Starter',
-                    creditos_mensais INTEGER DEFAULT 50,
-                    creditos_restantes INTEGER DEFAULT 50,
+                    creditos_mensais INTEGER DEFAULT 120,
+                    creditos_restantes INTEGER DEFAULT 120,
                     status_assinatura TEXT DEFAULT 'ativo',
                     data_renovacao TEXT,
                     created_at TEXT,
@@ -640,7 +640,7 @@ def authenticate_user(email_or_user: str, password: str) -> dict:
         "nome": user.get("nome", ""),
         "plano": user.get("plano", "Starter"),
         "role": "admin" if user.get("plano") == "Admin" else "user",
-        "creditos_mensais": user.get("creditos_mensais", 50),
+        "creditos_mensais": user.get("creditos_mensais", 120),
         "creditos_restantes": user.get("creditos_restantes", 0),
         "status_assinatura": user.get("status_assinatura", "ativo"),
         "data_renovacao": user.get("data_renovacao")

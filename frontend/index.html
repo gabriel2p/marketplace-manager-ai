@@ -1597,7 +1597,12 @@
                   <span class="text-2xl font-extrabold text-white">R$ 49</span>
                   <span class="text-xs text-slate-400">/mês</span>
                 </div>
-                <p class="text-[11px] text-amber-400 font-semibold mt-0.5">50 análises completas / mês</p>
+                <p class="text-[11px] text-amber-400 font-semibold mt-0.5">120 análises completas / mês</p>
+                <div class="mt-1">
+                  <span class="text-[10px] bg-slate-800/90 text-slate-300 px-2 py-0.5 rounded font-medium border border-slate-700 inline-block">
+                    R$ 0,41 por busca
+                  </span>
+                </div>
               </div>
               <ul class="space-y-1.5 text-slate-300 text-[11px] pt-2 border-t border-cardborder">
                 <li class="flex items-center gap-1.5">
@@ -1618,8 +1623,8 @@
                 </li>
               </ul>
             </div>
-            <button onclick="simulateUpgrade('Starter', 50)" class="w-full mt-4 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-3 rounded-lg border border-cardborder text-xs transition min-h-[40px]">
-              Assinar Starter
+            <button onclick="simulateUpgrade('Starter', 120)" class="w-full mt-4 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-3 rounded-lg border border-cardborder text-xs transition min-h-[40px]">
+              Assinar Starter (120 análises)
             </button>
           </div>
 
@@ -1638,7 +1643,12 @@
                   <span class="text-2xl font-extrabold text-white">R$ 149</span>
                   <span class="text-xs text-slate-400">/mês</span>
                 </div>
-                <p class="text-[11px] text-amber-400 font-semibold mt-0.5">250 análises completas / mês</p>
+                <p class="text-[11px] text-amber-400 font-semibold mt-0.5">400 análises completas / mês</p>
+                <div class="mt-1">
+                  <span class="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-medium border border-amber-500/40 inline-block">
+                    R$ 0,37 por busca (-9% custo)
+                  </span>
+                </div>
               </div>
               <ul class="space-y-1.5 text-slate-200 text-[11px] pt-2 border-t border-cardborder">
                 <li class="flex items-center gap-1.5 font-medium">
@@ -1659,8 +1669,8 @@
                 </li>
               </ul>
             </div>
-            <button onclick="simulateUpgrade('Pro', 250)" class="w-full mt-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold py-2.5 px-3 rounded-lg shadow-lg shadow-amber-500/20 text-xs transition min-h-[40px]">
-              Assinar Plano Pro
+            <button onclick="simulateUpgrade('Pro', 400)" class="w-full mt-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold py-2.5 px-3 rounded-lg shadow-lg shadow-amber-500/20 text-xs transition min-h-[40px]">
+              Assinar Plano Pro (400 análises)
             </button>
           </div>
 
@@ -1676,7 +1686,12 @@
                   <span class="text-2xl font-extrabold text-white">R$ 299</span>
                   <span class="text-xs text-slate-400">/mês</span>
                 </div>
-                <p class="text-[11px] text-purple-300 font-semibold mt-0.5">1.000 análises completas / mês</p>
+                <p class="text-[11px] text-purple-300 font-semibold mt-0.5">900 análises completas / mês</p>
+                <div class="mt-1">
+                  <span class="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded font-medium border border-purple-500/30 inline-block">
+                    R$ 0,33 por busca (Melhor Custo)
+                  </span>
+                </div>
               </div>
               <ul class="space-y-1.5 text-slate-300 text-[11px] pt-2 border-t border-cardborder">
                 <li class="flex items-center gap-1.5">
@@ -1697,8 +1712,8 @@
                 </li>
               </ul>
             </div>
-            <button onclick="simulateUpgrade('Advanced', 1000)" class="w-full mt-4 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 px-3 rounded-lg text-xs transition min-h-[40px]">
-              Assinar Plano Advanced
+            <button onclick="simulateUpgrade('Advanced', 900)" class="w-full mt-4 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 px-3 rounded-lg text-xs transition min-h-[40px]">
+              Assinar Plano Advanced (900 análises)
             </button>
           </div>
         </div>
@@ -4195,9 +4210,9 @@
       const rechargeSection = document.getElementById('upgrade-recharge-section');
       const rechargeSub = document.getElementById('recharge-section-subtitle');
 
-      // Assinante pago ativo possui cota mensal contratada (>= 50 créditos/mês)
+      // Assinante pago ativo possui cota mensal contratada (>= 120 créditos/mês)
       const isPaidSubscriber = Boolean(
-        currentUser.monthly_credits >= 50 && 
+        currentUser.monthly_credits >= 120 && 
         (currentUser.status === 'ativo' || currentUser.status === 'active') && 
         currentUser.plan !== 'Free Trial' &&
         currentUser.plan !== 'Admin'
@@ -4244,7 +4259,7 @@
           btnStarter.className = "w-full mt-4 bg-emerald-600/20 text-emerald-300 font-bold py-2.5 px-3 rounded-lg border border-emerald-500/40 text-xs cursor-default";
           btnStarter.disabled = true;
         } else {
-          btnStarter.innerText = "Assinar Starter";
+          btnStarter.innerText = "Assinar Starter (120 análises)";
           btnStarter.className = "w-full mt-4 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-3 rounded-lg border border-cardborder text-xs transition min-h-[40px]";
           btnStarter.disabled = false;
         }
@@ -4256,11 +4271,11 @@
           btnPro.className = "w-full mt-4 bg-amber-500/20 text-amber-300 font-bold py-2.5 px-3 rounded-lg border border-amber-500/40 text-xs cursor-default";
           btnPro.disabled = true;
         } else if (isPaidSubscriber && currentUser.plan === 'Starter') {
-          btnPro.innerText = "Upgrade para Pro (250 análises)";
+          btnPro.innerText = "Upgrade para Pro (400 análises)";
           btnPro.className = "w-full mt-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold py-2.5 px-3 rounded-lg shadow-lg shadow-amber-500/20 text-xs transition min-h-[40px]";
           btnPro.disabled = false;
         } else {
-          btnPro.innerText = "Assinar Plano Pro";
+          btnPro.innerText = "Assinar Plano Pro (400 análises)";
           btnPro.className = "w-full mt-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold py-2.5 px-3 rounded-lg shadow-lg shadow-amber-500/20 text-xs transition min-h-[40px]";
           btnPro.disabled = false;
         }
@@ -4272,11 +4287,11 @@
           btnAdv.className = "w-full mt-4 bg-purple-600/20 text-purple-300 font-bold py-2.5 px-3 rounded-lg border border-purple-500/40 text-xs cursor-default";
           btnAdv.disabled = true;
         } else if (isPaidSubscriber) {
-          btnAdv.innerText = "Upgrade para Advanced (1.000 análises)";
+          btnAdv.innerText = "Upgrade para Advanced (900 análises)";
           btnAdv.className = "w-full mt-4 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 px-3 rounded-lg text-xs transition min-h-[40px]";
           btnAdv.disabled = false;
         } else {
-          btnAdv.innerText = "Assinar Plano Advanced";
+          btnAdv.innerText = "Assinar Plano Advanced (900 análises)";
           btnAdv.className = "w-full mt-4 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 px-3 rounded-lg text-xs transition min-h-[40px]";
           btnAdv.disabled = false;
         }
